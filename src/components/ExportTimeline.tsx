@@ -30,10 +30,10 @@ const PLANET_COLORS: Record<string, string> = {
 function getNdsColor(pct: number): string {
   if (pct >= 0) {
     const s = Math.min(pct, 100);
-    return \`hsl(150, \${s}%, 50%)\`;
+    return `hsl(150, ${s}%, 50%)`;
   } else {
     const s = Math.min(Math.abs(pct), 100);
-    return \`hsl(0, \${s}%, 55%)\`;
+    return `hsl(0, ${s}%, 55%)`;
   }
 }
 
@@ -59,7 +59,7 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
     // Let's just create a CSV of Transit Data, and append the active Dasha at that date.
     
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Date,MD Lord,AD Lord,Dasha Score,Base Transit Score,Final Transit Score\\n";
+    csvContent += "Date,MD Lord,AD Lord,Dasha Score,Base Transit Score,Final Transit Score\n";
 
     processedTransit.forEach(t => {
       const tTime = new Date(t.date).getTime();
@@ -73,8 +73,8 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
       const adLord = activeDasha ? activeDasha.adLord : '';
       const dashaScore = activeDasha ? activeDasha.score : 0;
       
-      const row = \`\${t.date.split('T')[0]},\${mdLord},\${adLord},\${dashaScore.toFixed(2)},\${t.baseNds.toFixed(2)},\${t.finalScore.toFixed(2)}\`;
-      csvContent += row + "\\n";
+      const row = `${t.date.split('T')[0]},${mdLord},${adLord},${dashaScore.toFixed(2)},${t.baseNds.toFixed(2)},${t.finalScore.toFixed(2)}`;
+      csvContent += row + "\n";
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -100,18 +100,18 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
 
     const toX = (t: number) => ((t - minTime) / totalSpan) * W;
 
-    let svgContent = \`
-      <svg xmlns="http://www.w3.org/2000/svg" width="\${W}" height="\${H}" viewBox="0 0 \${W} \${H}">
-        <rect width="\${W}" height="\${H}" fill="#1e293b" />
-    \`;
+    let svgContent = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+        <rect width="${W}" height="${H}" fill="#1e293b" />
+    `;
 
     // 1. Draw Dasha Chart (Top 400px)
-    svgContent += \`<g transform="translate(0, 0)">\`;
+    svgContent += `<g transform="translate(0, 0)">`;
     const dashaH = 300;
     const dashaY = 50;
     
     // Draw Center Line for Dasha
-    svgContent += \`<line x1="0" y1="\${dashaY + dashaH/2}" x2="\${W}" y2="\${dashaY + dashaH/2}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />\`;
+    svgContent += `<line x1="0" y1="${dashaY + dashaH/2}" x2="${W}" y2="${dashaY + dashaH/2}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />`;
     
     dashaData.forEach(d => {
       const tStart = new Date(d.date).getTime();
@@ -132,12 +132,12 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
         y = dashaY + dashaH / 2;
       }
 
-      svgContent += \`<rect x="\${x1}" y="\${y}" width="\${w}" height="\${h}" fill="\${color}" opacity="0.8" />\`;
+      svgContent += `<rect x="${x1}" y="${y}" width="${w}" height="${h}" fill="${color}" opacity="0.8" />`;
       
       // Draw labels if wide enough
       if (w > 40) {
-        svgContent += \`<text x="\${x1 + 4}" y="\${dashaY + 20}" fill="\${PLANET_COLORS[d.mdLord] || '#fff'}" font-family="sans-serif" font-size="12" font-weight="bold">\${d.mdLord.substring(0,2)}</text>\`;
-        svgContent += \`<text x="\${x1 + 4}" y="\${dashaY + 36}" fill="\${PLANET_COLORS[d.adLord] || '#fff'}" font-family="sans-serif" font-size="10">\${d.adLord.substring(0,2)}</text>\`;
+        svgContent += `<text x="${x1 + 4}" y="${dashaY + 20}" fill="${PLANET_COLORS[d.mdLord] || '#fff'}" font-family="sans-serif" font-size="12" font-weight="bold">${d.mdLord.substring(0,2)}</text>`;
+        svgContent += `<text x="${x1 + 4}" y="${dashaY + 36}" fill="${PLANET_COLORS[d.adLord] || '#fff'}" font-family="sans-serif" font-size="10">${d.adLord.substring(0,2)}</text>`;
       }
     });
     
@@ -145,15 +145,15 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
     const startYear = new Date(minTime).getFullYear();
     const endYear = new Date(maxTime).getFullYear();
     for (let y = startYear; y <= endYear; y++) {
-      const tx = toX(new Date(\`\${y}-01-01\`).getTime());
-      svgContent += \`<line x1="\${tx}" y1="0" x2="\${tx}" y2="\${H}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4" />\`;
-      svgContent += \`<text x="\${tx + 5}" y="\${H - 10}" fill="rgba(255,255,255,0.5)" font-family="sans-serif" font-size="12">\${y}</text>\`;
+      const tx = toX(new Date(`${y}-01-01`).getTime());
+      svgContent += `<line x1="${tx}" y1="0" x2="${tx}" y2="${H}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4" />`;
+      svgContent += `<text x="${tx + 5}" y="${H - 10}" fill="rgba(255,255,255,0.5)" font-family="sans-serif" font-size="12">${y}</text>`;
     }
     
-    svgContent += \`</g>\`;
+    svgContent += `</g>`;
 
     // 2. Draw Transit Chart (Bottom 400px)
-    svgContent += \`<g transform="translate(0, 400)">\`;
+    svgContent += `<g transform="translate(0, 400)">`;
     const transH = 300;
     const transY = 50;
     
@@ -169,27 +169,27 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
     };
 
     const zeroY = toY(0);
-    svgContent += \`<line x1="0" y1="\${zeroY}" x2="\${W}" y2="\${zeroY}" stroke="rgba(255,255,255,0.2)" stroke-width="2" />\`;
+    svgContent += `<line x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}" stroke="rgba(255,255,255,0.2)" stroke-width="2" />`;
 
     // Mountain path
-    let pathD = \`M \${toX(new Date(processedTransit[0].date).getTime())} \${zeroY}\`;
+    let pathD = `M ${toX(new Date(processedTransit[0].date).getTime())} ${zeroY}`;
     processedTransit.forEach(d => {
-      pathD += \` L \${toX(new Date(d.date).getTime())} \${toY(d.finalScore)}\`;
+      pathD += ` L ${toX(new Date(d.date).getTime())} ${toY(d.finalScore)}`;
     });
-    pathD += \` L \${toX(new Date(processedTransit[processedTransit.length - 1].date).getTime())} \${zeroY} Z\`;
+    pathD += ` L ${toX(new Date(processedTransit[processedTransit.length - 1].date).getTime())} ${zeroY} Z`;
     
-    svgContent += \`<path d="\${pathD}" fill="rgba(201, 168, 106, 0.2)" />\`;
+    svgContent += `<path d="${pathD}" fill="rgba(201, 168, 106, 0.2)" />`;
 
     // Line path
-    let lineD = \`M \${toX(new Date(processedTransit[0].date).getTime())} \${toY(processedTransit[0].finalScore)}\`;
+    let lineD = `M ${toX(new Date(processedTransit[0].date).getTime())} ${toY(processedTransit[0].finalScore)}`;
     processedTransit.forEach((d, i) => {
-      if (i > 0) lineD += \` L \${toX(new Date(d.date).getTime())} \${toY(d.finalScore)}\`;
+      if (i > 0) lineD += ` L ${toX(new Date(d.date).getTime())} ${toY(d.finalScore)}`;
     });
     
-    svgContent += \`<path d="\${lineD}" fill="none" stroke="#C9A86A" stroke-width="2" />\`;
+    svgContent += `<path d="${lineD}" fill="none" stroke="#C9A86A" stroke-width="2" />`;
     
-    svgContent += \`</g>\`;
-    svgContent += \`</svg>\`;
+    svgContent += `</g>`;
+    svgContent += `</svg>`;
 
     const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
