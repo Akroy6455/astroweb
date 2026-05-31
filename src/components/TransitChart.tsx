@@ -86,18 +86,18 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
 
   // Generate SVG path for the "mountain"
   const zeroY = mapY(0);
-  let pathD = \`M \${mapX(0)} \${zeroY}\`;
+  let pathD = `M ${mapX(0)} ${zeroY}`;
 
   visibleData.forEach((d, i) => {
-    pathD += \` L \${mapX(i)} \${mapY(d.finalScore)}\`;
+    pathD += ` L ${mapX(i)} ${mapY(d.finalScore)}`;
   });
   
-  pathD += \` L \${mapX(visibleData.length - 1)} \${zeroY} Z\`;
+  pathD += ` L ${mapX(visibleData.length - 1)} ${zeroY} Z`;
 
   // Generate line only path
-  let lineD = \`M \${mapX(0)} \${mapY(visibleData[0].finalScore)}\`;
+  let lineD = `M ${mapX(0)} ${mapY(visibleData[0].finalScore)}`;
   visibleData.forEach((d, i) => {
-    if (i > 0) lineD += \` L \${mapX(i)} \${mapY(d.finalScore)}\`;
+    if (i > 0) lineD += ` L ${mapX(i)} ${mapY(d.finalScore)}`;
   });
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -153,7 +153,7 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
 
       <div 
         ref={containerRef}
-        style={{ width: '100%', height: \`\${height}px\`, position: 'relative', cursor: 'crosshair', overflow: 'hidden' }}
+        style={{ width: '100%', height: `${height}px`, position: 'relative', cursor: 'crosshair', overflow: 'hidden' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredPoint(null)}
       >
@@ -161,8 +161,8 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
           <defs>
             <linearGradient id="transitGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="rgba(34, 197, 94, 0.4)" />
-              <stop offset={\`\${(yMax / (yMax - yMin)) * 100}%\`} stopColor="rgba(34, 197, 94, 0)" />
-              <stop offset={\`\${(yMax / (yMax - yMin)) * 100}%\`} stopColor="rgba(239, 68, 68, 0)" />
+              <stop offset={`${(yMax / (yMax - yMin)) * 100}%`} stopColor="rgba(34, 197, 94, 0)" />
+              <stop offset={`${(yMax / (yMax - yMin)) * 100}%`} stopColor="rgba(239, 68, 68, 0)" />
               <stop offset="100%" stopColor="rgba(239, 68, 68, 0.4)" />
             </linearGradient>
           </defs>
@@ -239,7 +239,7 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
         {xTicks.map((tick, i) => (
           <div key={i} style={{ 
             position: 'absolute', 
-            left: \`\${tick.x}px\`, 
+            left: `${tick.x}px`, 
             transform: 'translateX(-50%)', 
             fontSize: '0.75rem', 
             color: 'var(--text-muted)',
@@ -268,10 +268,10 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
           }}
           className="dasha-scrubber"
         />
-        <style dangerouslySetInnerHTML={{__html: \`
+        <style dangerouslySetInnerHTML={{__html: `
           .dasha-scrubber::-webkit-slider-thumb { 
             pointer-events: auto; 
-            width: \${Math.max(20, zoom * 100)}%;
+            width: ${Math.max(20, zoom * 100)}%;
             height: 12px;
             background: var(--primary);
             border-radius: 6px;
@@ -283,14 +283,14 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
           }
           .dasha-scrubber::-moz-range-thumb { 
             pointer-events: auto; 
-            width: \${Math.max(20, zoom * 100)}%;
+            width: ${Math.max(20, zoom * 100)}%;
             height: 12px;
             background: var(--primary);
             border-radius: 6px;
             cursor: grab;
             border: none;
           }
-        \`}} />
+        `}} />
       </div>
     </div>
   );
