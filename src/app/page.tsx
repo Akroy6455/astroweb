@@ -20,6 +20,7 @@ import PanchangTab from '@/components/PanchangTab';
 import { getVargaDevta, getDivisionalSign, getDivPart, getDivSignName, getDivSignShort, getD60Nature } from '@/lib/vargaDevtas';
 import { Settings, Save, LayoutTemplate, Aperture, Grid3X3, BarChart, Clock, Moon, Sparkles, Database, TrendingUp } from 'lucide-react';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
+import ThemeSwitcher from '@/components/ThemeSwitcher';
 
 // Firebase Client Imports
 import { auth, db, googleProvider } from '@/lib/firebaseClient';
@@ -375,6 +376,7 @@ export default function Home() {
     <main className="app-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1400px' }}>
       <header className="header" style={{ borderBottom: 'none', paddingBottom: '0', marginBottom: '0' }}>
         <div className="header-brand">
+          <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}><ThemeSwitcher /></div>
           <h1>Vedic Astrology</h1>
           <p style={{ color: 'var(--text-muted)' }}>Precision Kundli generator</p>
         </div>

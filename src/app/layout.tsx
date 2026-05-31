@@ -4,6 +4,7 @@ import "./globals.css";
 import CursorGlow from "@/components/CursorGlow";
 import BackgroundChakra from "@/components/BackgroundChakra";
 import CookieConsent from "@/components/CookieConsent";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,10 +38,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ThemeProvider>
+
         <BackgroundChakra />
         <CursorGlow />
         {children}
         <CookieConsent />
+      
+        </ThemeProvider>
       </body>
     </html>
   );
