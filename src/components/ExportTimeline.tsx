@@ -42,9 +42,9 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
   const processTransitData = () => {
     return transitData.map(d => {
       const avgM = weights.enableTransitMultiplier ? d.avgMultiplier : 1.0;
-      const mdAdM = weights.enableMdAdTransitMultiplier ? (d.mdPlanetMultiplier * d.adPlanetMultiplier) : 1.0;
+      const mdAdM = weights.enableMdAdTransitMultiplier ? (d.mdLordMultiplier * d.adLordMultiplier) : 1.0;
       const navtaraAvgM = weights.enableNavtaraTransit && d.avgNavtaraMultiplier ? d.avgNavtaraMultiplier : 1.0;
-      const navtaraMdAdM = weights.enableNavtaraMdAd && d.mdPlanetNavtaraMultiplier && d.adPlanetNavtaraMultiplier ? (d.mdPlanetNavtaraMultiplier * d.adPlanetNavtaraMultiplier) : 1.0;
+      const navtaraMdAdM = weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier ? (d.mdLordNavtaraMultiplier * d.adLordNavtaraMultiplier) : 1.0;
       const includeBase = weights.enableBaseNdsInTransit ?? true;
       const finalScore = includeBase ? (d.baseNds * avgM * mdAdM * navtaraAvgM * navtaraMdAdM) : (avgM * mdAdM * navtaraAvgM * navtaraMdAdM * 100);
       return { ...d, finalScore };
