@@ -47,8 +47,19 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
       const navtaraAvgM = weights.enableNavtaraTransit && d.avgNavtaraMultiplier ? d.avgNavtaraMultiplier : 1.0;
       const navtaraMdAdM = weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier ? (d.mdLordNavtaraMultiplier * d.adLordNavtaraMultiplier) : 1.0;
 
-      const includeBase = weights.enableBaseNdsInTransit ?? true;
-      const finalScore = includeBase ? (d.baseNds * avgM * mdAdM * navtaraAvgM * navtaraMdAdM) : (avgM * mdAdM * navtaraAvgM * navtaraMdAdM * 100);
+            const includeBase = weights.enableBaseNdsInTransit ?? true;
+      const M = avgM * mdAdM * navtaraAvgM * navtaraMdAdM;
+      let finalScore = 0;
+      
+      if (includeBase) {
+        if (d.baseNds >= 0) {
+          finalScore = d.baseNds * M;
+        } else {
+          finalScore = d.baseNds / Math.max(0.01, M);
+        }
+      } else {
+        finalScore = M * 100;
+      }
       return { ...d, finalScore };
     });
   }, [data, weights]);
