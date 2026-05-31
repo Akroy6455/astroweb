@@ -129,6 +129,8 @@ export interface NDSWeights {
   mdWeightPercentage?: number;
   enableTransitMultiplier?: boolean;
   enableMdAdTransitMultiplier?: boolean;
+  enableNavtaraTransit?: boolean;
+  enableNavtaraMdAd?: boolean;
   enableBaseNdsInTransit?: boolean;
 
   // Toggles — one per module
@@ -149,6 +151,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   mdWeightPercentage: 50,
   enableTransitMultiplier: false,
   enableMdAdTransitMultiplier: false,
+  enableNavtaraTransit: false,
+  enableNavtaraMdAd: false,
   enableBaseNdsInTransit: true,
   disabledParams: {},
   lordHouse1: 90,
