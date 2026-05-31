@@ -23,7 +23,10 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<(TransitDataPoint & { finalScore: number, x: number, y: number }) | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(800);
-  const [viewRange, setViewRange] = useState({ start: 0, end: 0.5 }); // Match 50% default zoom
+  
+  // Zoom and Pan state
+  const [zoom, setZoom] = useState(0.5); // 0.5 = 50% of the timeline
+  const [pan, setPan] = useState(0.5); // 0.5 = middle of the timeline
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -58,14 +61,17 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
   const minScore = Math.min(...processedData.map(d => d.finalScore), -100);
   const maxScore = Math.max(...processedData.map(d => d.finalScore), 100);
   const range = Math.max(Math.abs(minScore), Math.abs(maxScore));
-  // Provide padding top and bottom
   const yMin = -range * 1.1;
   const yMax = range * 1.1;
 
   const totalPoints = processedData.length;
-  const startIndex = Math.floor(viewRange.start * totalPoints);
-  const endIndex = Math.floor(viewRange.end * totalPoints);
-  const visibleData = processedData.slice(startIndex, endIndex);
+  
+  const startFraction = pan * (1 - zoom);
+  const endFraction = startFraction + zoom;
+
+  const startIndex = Math.floor(startFraction * totalPoints);
+  const endIndex = Math.min(totalPoints - 1, Math.floor(endFraction * totalPoints));
+  const visibleData = processedData.slice(startIndex, endIndex + 1);
 
   if (visibleData.length === 0) return null;
 
@@ -80,18 +86,18 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
 
   // Generate SVG path for the "mountain"
   const zeroY = mapY(0);
-  let pathD = `M ${mapX(0)} ${zeroY}`;
+  let pathD = \`M \${mapX(0)} \${zeroY}\`;
 
   visibleData.forEach((d, i) => {
-    pathD += ` L ${mapX(i)} ${mapY(d.finalScore)}`;
+    pathD += \` L \${mapX(i)} \${mapY(d.finalScore)}\`;
   });
   
-  pathD += ` L ${mapX(visibleData.length - 1)} ${zeroY} Z`;
+  pathD += \` L \${mapX(visibleData.length - 1)} \${zeroY} Z\`;
 
   // Generate line only path
-  let lineD = `M ${mapX(0)} ${mapY(visibleData[0].finalScore)}`;
+  let lineD = \`M \${mapX(0)} \${mapY(visibleData[0].finalScore)}\`;
   visibleData.forEach((d, i) => {
-    if (i > 0) lineD += ` L ${mapX(i)} ${mapY(d.finalScore)}`;
+    if (i > 0) lineD += \` L \${mapX(i)} \${mapY(d.finalScore)}\`;
   });
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -99,7 +105,6 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     
-    // Find closest point
     const fraction = x / containerWidth;
     const idx = Math.round(fraction * (visibleData.length - 1));
     if (idx >= 0 && idx < visibleData.length) {
@@ -108,18 +113,47 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
     }
   };
 
+  // X-Axis Ticks
+  const xTicks = [];
+  const numTicks = 5;
+  for (let i = 0; i < numTicks; i++) {
+    const fraction = i / (numTicks - 1);
+    const idx = Math.floor(fraction * (visibleData.length - 1));
+    const dataPt = visibleData[idx];
+    if (dataPt) {
+      const dateStr = new Date(dataPt.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+      xTicks.push({ x: mapX(idx), label: dateStr });
+    }
+  }
+
   return (
     <div style={{ marginBottom: '1.5rem', background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--foreground)' }}>Transit weighted NDF flow</h3>
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          {weights.enableTransitMultiplier ? '7-Planet Avg Enabled' : 'Avg Disabled'} • {weights.enableMdAdTransitMultiplier ? 'MD/AD Lords Enabled' : 'MD/AD Disabled'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Zoom:</span>
+            <select 
+              value={zoom} 
+              onChange={e => setZoom(parseFloat(e.target.value))}
+              style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'var(--bg)', color: 'var(--foreground)', border: '1px solid var(--border)', fontSize: '0.8rem' }}
+            >
+              <option value={1.0}>100% (120 Years)</option>
+              <option value={0.5}>50% (60 Years)</option>
+              <option value={0.25}>25% (30 Years)</option>
+              <option value={0.1}>10% (12 Years)</option>
+              <option value={0.05}>5% (6 Years)</option>
+            </select>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            {weights.enableTransitMultiplier ? '7-Planet Avg Enabled' : 'Avg Disabled'} • {weights.enableMdAdTransitMultiplier ? 'MD/AD Lords Enabled' : 'MD/AD Disabled'}
+          </div>
         </div>
       </div>
 
       <div 
         ref={containerRef}
-        style={{ width: '100%', height: `${height}px`, position: 'relative', cursor: 'crosshair', overflow: 'hidden' }}
+        style={{ width: '100%', height: \`\${height}px\`, position: 'relative', cursor: 'crosshair', overflow: 'hidden' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredPoint(null)}
       >
@@ -127,8 +161,8 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
           <defs>
             <linearGradient id="transitGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="rgba(34, 197, 94, 0.4)" />
-              <stop offset={`${(yMax / (yMax - yMin)) * 100}%`} stopColor="rgba(34, 197, 94, 0)" />
-              <stop offset={`${(yMax / (yMax - yMin)) * 100}%`} stopColor="rgba(239, 68, 68, 0)" />
+              <stop offset={\`\${(yMax / (yMax - yMin)) * 100}%\`} stopColor="rgba(34, 197, 94, 0)" />
+              <stop offset={\`\${(yMax / (yMax - yMin)) * 100}%\`} stopColor="rgba(239, 68, 68, 0)" />
               <stop offset="100%" stopColor="rgba(239, 68, 68, 0.4)" />
             </linearGradient>
           </defs>
@@ -200,28 +234,63 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
         )}
       </div>
 
-      {/* Scrubber / Panner (Matching DashaChart zoom logic roughly, or simply an independent scrubber) */}
-      <div style={{ marginTop: '1.5rem', position: 'relative', height: '30px' }}>
+      {/* X-Axis Dates */}
+      <div style={{ position: 'relative', width: '100%', height: '24px', marginTop: '12px' }}>
+        {xTicks.map((tick, i) => (
+          <div key={i} style={{ 
+            position: 'absolute', 
+            left: \`\${tick.x}px\`, 
+            transform: 'translateX(-50%)', 
+            fontSize: '0.75rem', 
+            color: 'var(--text-muted)',
+            fontWeight: 500,
+            whiteSpace: 'nowrap'
+          }}>
+            {tick.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Scrubber / Panner */}
+      <div style={{ marginTop: '1rem', position: 'relative', height: '30px', opacity: zoom === 1.0 ? 0.4 : 1, pointerEvents: zoom === 1.0 ? 'none' : 'auto' }}>
         <div style={{ position: 'absolute', width: '100%', height: '8px', background: 'var(--border)', borderRadius: '4px', top: '11px' }} />
         
         <input 
-          type="range" min="0" max="90" step="1"
-          value={viewRange.start * 100}
+          type="range" min="0" max="1000" step="1"
+          value={pan * 1000}
           onChange={e => {
-            const start = parseInt(e.target.value) / 100;
-            const end = Math.min(start + 0.5, 1);
-            setViewRange({ start, end });
+            const p = parseInt(e.target.value, 10) / 1000;
+            setPan(p);
           }}
           style={{
             position: 'absolute', width: '100%', top: '5px',
-            WebkitAppearance: 'none', background: 'transparent', pointerEvents: 'none'
+            WebkitAppearance: 'none', background: 'transparent', cursor: 'grab'
           }}
           className="dasha-scrubber"
         />
-        <style dangerouslySetInnerHTML={{__html: `
-          .dasha-scrubber::-webkit-slider-thumb { pointer-events: auto; }
-          .dasha-scrubber::-moz-range-thumb { pointer-events: auto; }
-        `}} />
+        <style dangerouslySetInnerHTML={{__html: \`
+          .dasha-scrubber::-webkit-slider-thumb { 
+            pointer-events: auto; 
+            width: \${Math.max(20, zoom * 100)}%;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 6px;
+            -webkit-appearance: none;
+            cursor: grab;
+          }
+          .dasha-scrubber:active::-webkit-slider-thumb {
+            cursor: grabbing;
+          }
+          .dasha-scrubber::-moz-range-thumb { 
+            pointer-events: auto; 
+            width: \${Math.max(20, zoom * 100)}%;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 6px;
+            cursor: grab;
+            border: none;
+          }
+        \`}} />
       </div>
     </div>
   );
