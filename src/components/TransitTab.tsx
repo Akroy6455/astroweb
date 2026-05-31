@@ -1,0 +1,637 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import KundliChart from './KundliChart';
+import { getKundliData, findNextTransitEvent } from '@/app/actions';
+
+const NAKSHATRAS_27 = [
+  "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
+  "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni",
+  "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
+  "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha",
+  "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+];
+
+const NAKSHATRAS_28 = [
+  "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
+  "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni",
+  "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
+  "Mula", "Purva Ashadha", "Uttara Ashadha", "Abhijit", "Shravana", "Dhanishta", "Shatabhisha",
+  "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+];
+
+function get28Name(longitude: number) {
+  if (longitude >= 276.6666667 && longitude < 280.8888889) {
+    return "Abhijit";
+  }
+  const index27 = Math.floor(longitude / (360/27));
+  let index28 = index27;
+  if (index27 >= 21) index28 = index27 + 1;
+  return NAKSHATRAS_28[index28];
+}
+
+function get28Index(longitude: number) {
+  if (longitude >= 276.6666667 && longitude < 280.8888889) {
+    return 21;
+  }
+  const index27 = Math.floor(longitude / (360/27));
+  return index27 >= 21 ? index27 + 1 : index27;
+}
+
+function get28NakshatraRange(index28: number): [number, number] {
+  if (index28 < 20) {
+    return [index28 * 13.333333333333334, (index28 + 1) * 13.333333333333334];
+  } else if (index28 === 20) {
+    return [266.6666666666667, 276.6666666666667];
+  } else if (index28 === 21) {
+    return [276.6666666666667, 280.8888888888889];
+  } else if (index28 === 22) {
+    return [280.8888888888889, 293.3333333333333];
+  } else {
+    const idx27 = index28 - 1;
+    return [idx27 * 13.333333333333334, (idx27 + 1) * 13.333333333333334];
+  }
+}
+
+const SBC_CELLS = Array(9).fill(null).map(() => Array(9).fill(''));
+SBC_CELLS[0] = ['अ', 'Dhanishta', 'Shatabhisha', 'Purva Bhadrapada', 'Uttara Bhadrapada', 'Revati', 'Ashwini', 'Bharani', 'आ'];
+SBC_CELLS[8] = ['ई', 'Vishakha', 'Swati', 'Chitra', 'Hasta', 'Uttara Phalguni', 'Purva Phalguni', 'Magha', 'इ'];
+
+SBC_CELLS[1][0] = 'Shravana'; SBC_CELLS[1][8] = 'Krittika';
+SBC_CELLS[2][0] = 'Abhijit';  SBC_CELLS[2][8] = 'Rohini';
+SBC_CELLS[3][0] = 'Uttara Ashadha'; SBC_CELLS[3][8] = 'Mrigashira';
+SBC_CELLS[4][0] = 'Purva Ashadha';  SBC_CELLS[4][8] = 'Ardra';
+SBC_CELLS[5][0] = 'Mula';     SBC_CELLS[5][8] = 'Punarvasu';
+SBC_CELLS[6][0] = 'Jyeshtha'; SBC_CELLS[6][8] = 'Pushya';
+SBC_CELLS[7][0] = 'Anuradha'; SBC_CELLS[7][8] = 'Ashlesha';
+
+const innerSBC = [
+  ['rii', 'g', 's', 'd', 'ch', 'l', 'u'],
+  ['kh', 'ai', 'Aquarius', 'Pisces', 'Aries', 'lu', 'a'],
+  ['j', 'Capricorn', 'ah', 'Rikta\nFri', 'o', 'Taurus', 'v'],
+  ['bh', 'Sagittarius', 'Jaya\nThu', 'Poorna\nSat', 'Nanda\nSun, Tue', 'Gemini', 'k'],
+  ['y', 'Scorpio', 'am', 'Bhadra\nMon, Wed', 'au', 'Cancer', 'h'],
+  ['n', 'e', 'Libra', 'Virgo', 'Leo', 'luu', 'd'],
+  ['ri', 't', 'r', 'p', 't~', 'm', 'uu']
+];
+
+for (let r = 0; r < 7; r++) {
+  for (let c = 0; c < 7; c++) {
+    SBC_CELLS[r + 1][c + 1] = innerSBC[r][c];
+  }
+}
+
+export default function TransitTab({ mainData, ayanamsha = 'Raman' }: { mainData: any, ayanamsha?: string }) {
+  const [transitData, setTransitData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [subTab, setSubTab] = useState<'Overview' | 'SBC' | 'Sahamas' | 'Finder'>('Overview');
+
+  // Finder State
+  const [fPlanet, setFPlanet] = useState('Jupiter');
+  const [fAspect, setFAspect] = useState('0');
+  const [fEvent, setFEvent] = useState('Rasi');
+  const [fValue, setFValue] = useState('0');
+  const [fSearchDate, setFSearchDate] = useState(new Date().toISOString().split('T')[0]);
+  const [fSearchTime, setFSearchTime] = useState(new Date().toTimeString().slice(0, 5));
+  const [fDirection, setFDirection] = useState<number>(1);
+  const [fResult, setFResult] = useState<any>(null);
+  const [fLoading, setFLoading] = useState(false);
+
+  // Form State
+  const [tDate, setTDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tTime, setTTime] = useState(new Date().toTimeString().slice(0, 5));
+  const [tLat, setTLat] = useState('28.6139');
+  const [tLon, setTLon] = useState('77.2090');
+  const [tTz, setTTz] = useState((-new Date().getTimezoneOffset() / 60).toString());
+
+  useEffect(() => {
+    const now = new Date();
+    const tzOffset = -now.getTimezoneOffset() / 60;
+    const formData = new FormData();
+    formData.append('date', tDate);
+    formData.append('time', tTime);
+    formData.append('lat', tLat);
+    formData.append('lon', tLon);
+    formData.append('tzOffset', tTz);
+    
+    getKundliData(formData).then(setTransitData).catch(console.error);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    try {
+      const res = await getKundliData(formData);
+      setTransitData(res);
+    } catch (err: any) {
+      alert(err.message);
+    }
+    setLoading(false);
+  };
+
+  if (!mainData) return <div>Load a main chart first.</div>;
+
+  const transitMap: Record<string, any[]> = {};
+  if (transitData) {
+    transitData.positions.forEach((p: any) => {
+      const nak = get28Name(p.longitude);
+      if (!transitMap[nak]) transitMap[nak] = [];
+      transitMap[nak].push(p);
+
+      const rasi = p.rasi.name;
+      if (!transitMap[rasi]) transitMap[rasi] = [];
+      transitMap[rasi].push(p);
+    });
+  }
+
+  const natalMap: Record<string, any[]> = {};
+  mainData.positions.forEach((p: any) => {
+    const nak = get28Name(p.longitude);
+    if (!natalMap[nak]) natalMap[nak] = [];
+    natalMap[nak].push(p);
+
+    const rasi = p.rasi.name;
+    if (!natalMap[rasi]) natalMap[rasi] = [];
+    natalMap[rasi].push(p);
+  });
+
+  const moonLong = mainData.positions.find((p: any) => p.name === 'Moon')?.longitude || 0;
+  const lagnaLong = mainData.lagna?.longitude || 0;
+
+  const moon27 = Math.floor(moonLong / (360/27));
+  const lagna27 = Math.floor(lagnaLong / (360/27));
+  const moon28 = get28Index(moonLong);
+
+  const getNavtaraList = (startIndex: number) => {
+    const list = Array(9).fill(null).map(() => [] as string[]);
+    for (let i = 0; i < 27; i++) {
+      const offset = (i - startIndex + 27) % 27;
+      list[offset % 9].push(NAKSHATRAS_27[i]);
+    }
+    return list;
+  };
+
+  const moonNavtara = getNavtaraList(moon27);
+  const lagnaNavtara = getNavtaraList(lagna27);
+  const taraNames = ["Janma", "Sampat", "Vipat", "Kshema", "Pratyari", "Sadhaka", "Vadha", "Mitra", "Ati Mitra"];
+
+  const lagna28 = get28Index(lagnaLong);
+
+  const getSBCTara = (base28: number, offset: number) => NAKSHATRAS_28[(base28 + offset - 1) % 28];
+
+  // Sahamas Calculations
+  const getLong = (name: string) => mainData.positions.find((p: any) => p.name === name)?.longitude || 0;
+  const lSun = getLong('Sun');
+  const lMoon = getLong('Moon');
+  const lMars = getLong('Mars');
+  const lMerc = getLong('Mercury');
+  const lJup = getLong('Jupiter');
+  const lVen = getLong('Venus');
+  const lSat = getLong('Saturn');
+  
+  const isDay = ((lagnaLong - lSun + 360) % 360) < 180;
+
+  const calcSahama = (A: number, B: number, C: number, reverseForNight: boolean = true) => {
+    let pA = A, pB = B;
+    if (!isDay && reverseForNight) { pA = B; pB = A; }
+    let sahama = (pA - pB + C + 360) % 360;
+    let arcBA = (pA - pB + 360) % 360;
+    let arcBL = (lagnaLong - pB + 360) % 360;
+    if (arcBL > arcBA) sahama = (sahama + 30) % 360;
+    return sahama;
+  };
+
+  const RULER = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
+  const getLord = (deg: number) => getLong(RULER[Math.floor(deg / 30)]);
+
+  const h2 = (lagnaLong + 30) % 360;
+  const h6 = (lagnaLong + 150) % 360;
+  const h8 = (lagnaLong + 210) % 360;
+  const h9 = (lagnaLong + 240) % 360;
+  const h11 = (lagnaLong + 300) % 360;
+
+  const lagnaLord = getLord(lagnaLong);
+  const lord2 = getLord(h2);
+  const lord9 = getLord(h9);
+  const lord11 = getLord(h11);
+  const sunLord = getLord(lSun);
+  const moonLord = getLord(lMoon);
+
+  const punya = calcSahama(lMoon, lSun, lagnaLong);
+  const sastra = calcSahama(lJup, lSat, lMerc);
+
+  let samarthaA = lMars;
+  let samarthaB = lagnaLord;
+  if (RULER[Math.floor(lagnaLong / 30)] === 'Mars') {
+    samarthaA = lJup;
+    samarthaB = lMars;
+  }
+
+  let karyaA = lSat, karyaB = lSun, karyaC = sunLord;
+  if (!isDay) {
+    karyaA = lSat;
+    karyaB = lMoon;
+    karyaC = moonLord;
+  }
+  const karyasiddhi = calcSahama(karyaA, karyaB, karyaC, false);
+
+  const sahamasList = [
+    { name: '1. Punya (Fortune/Good Deeds)', val: punya },
+    { name: '2. Vidya (Education)', val: calcSahama(lSun, lMoon, lagnaLong) },
+    { name: '3. Yasas (Fame)', val: calcSahama(lJup, punya, lagnaLong) },
+    { name: '4. Mitra (Friend)', val: calcSahama(lJup, punya, lVen) },
+    { name: '5. Mahatmya (Greatness)', val: calcSahama(punya, lMars, lagnaLong) },
+    { name: '6. Asha (Desires)', val: calcSahama(lSat, lMars, lagnaLong) },
+    { name: '7. Samartha (Enterprise/Ability)', val: calcSahama(samarthaA, samarthaB, lagnaLong) },
+    { name: '8. Bhratri (Brothers)', val: calcSahama(lJup, lSat, lagnaLong, false) },
+    { name: '9. Gaurava (Respect/Regard)', val: calcSahama(lJup, lMoon, lSun) },
+    { name: '10. Pitri (Father)', val: calcSahama(lSat, lSun, lagnaLong) },
+    { name: '11. Rajya (Kingdom)', val: calcSahama(lSat, lSun, lagnaLong) },
+    { name: '12. Matri (Mother)', val: calcSahama(lMoon, lVen, lagnaLong) },
+    { name: '13. Putra (Children)', val: calcSahama(lJup, lMoon, lagnaLong) },
+    { name: '14. Jeeva (Life)', val: calcSahama(lSat, lJup, lagnaLong) },
+    { name: '15. Karma (Action/Work)', val: calcSahama(lMars, lMerc, lagnaLong) },
+    { name: '16. Roga (Disease)', val: calcSahama(lagnaLong, lMoon, lagnaLong, false) },
+    { name: '17. Kali (Great Misfortune)', val: calcSahama(lJup, lMars, lagnaLong) },
+    { name: '18. Sastra (Sciences)', val: sastra },
+    { name: '19. Bandhu (Relatives)', val: calcSahama(lMerc, lMoon, lagnaLong) },
+    { name: '20. Mrityu (Death)', val: calcSahama(h8, lMoon, lagnaLong, false) },
+    { name: '21. Paradesa (Foreign)', val: calcSahama(h9, lord9, lagnaLong, false) },
+    { name: '22. Artha (Money)', val: calcSahama(h2, lord2, lagnaLong, false) },
+    { name: '23. Paradara (Adultery)', val: calcSahama(lVen, lSun, lagnaLong) },
+    { name: '24. Vanik (Commerce)', val: calcSahama(lMoon, lMerc, lagnaLong) },
+    { name: '25. Karyasiddhi (Success)', val: karyasiddhi },
+    { name: '26. Vivaha (Marriage)', val: calcSahama(lVen, lSat, lagnaLong) },
+    { name: '27. Santapa (Sadness)', val: calcSahama(lSat, lMoon, h6) },
+    { name: '28. Sraddha (Devotion/Sincerity)', val: calcSahama(lVen, lMars, lagnaLong) },
+    { name: '29. Preeti (Love/Attachment)', val: calcSahama(sastra, punya, lagnaLong) },
+    { name: '30. Jadya (Chronic Disease)', val: calcSahama(lMars, lSat, lMerc) },
+    { name: '31. Vyapara (Business)', val: calcSahama(lMars, lSat, lagnaLong, false) },
+    { name: '32. Satru (Enemy)', val: calcSahama(lMars, lSat, lagnaLong) },
+    { name: '33. Jalapatana (Ocean Crossing)', val: calcSahama(105, lSat, lagnaLong) },
+    { name: '34. Bandhana (Imprisonment)', val: calcSahama(punya, lSat, lagnaLong) },
+    { name: '35. Apamrityu (Bad Death)', val: calcSahama(h8, lMars, lagnaLong) },
+    { name: '36. Labha (Material Gains)', val: calcSahama(h11, lord11, lagnaLong, false) }
+  ];
+
+  const formatSahama = (long: number) => {
+    const signs = ["Ar", "Ta", "Ge", "Ca", "Le", "Vi", "Li", "Sc", "Sg", "Cp", "Aq", "Pi"];
+    return `${signs[Math.floor(long / 30)]} ${(long % 30).toFixed(2)}°`;
+  };
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+        <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+          <label>Transit Date</label>
+          <input type="date" name="date" value={tDate} onChange={(e) => setTDate(e.target.value)} required />
+        </div>
+        <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+          <label>Transit Time</label>
+          <input type="time" name="time" value={tTime} onChange={(e) => setTTime(e.target.value)} required />
+        </div>
+        <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+          <label>Latitude</label>
+          <input type="number" step="any" name="lat" value={tLat} onChange={(e) => setTLat(e.target.value)} required />
+        </div>
+        <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+          <label>Longitude</label>
+          <input type="number" step="any" name="lon" value={tLon} onChange={(e) => setTLon(e.target.value)} required />
+        </div>
+        <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+          <label>Timezone Offset</label>
+          <input type="number" step="any" name="tzOffset" value={tTz} onChange={(e) => setTTz(e.target.value)} required />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <button type="submit" className="submit-btn" disabled={loading} style={{ padding: '0.75rem 1.5rem' }}>
+            {loading ? '...' : 'Update'}
+          </button>
+        </div>
+      </form>
+
+      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', overflowX: 'auto' }}>
+        <button onClick={() => setSubTab('Overview')} className={`tab ${subTab === 'Overview' ? 'active' : ''}`}>Overview</button>
+        <button onClick={() => setSubTab('SBC')} className={`tab ${subTab === 'SBC' ? 'active' : ''}`}>SBC & Taras</button>
+        <button onClick={() => setSubTab('Sahamas')} className={`tab ${subTab === 'Sahamas' ? 'active' : ''}`}>Sahamas</button>
+        <button onClick={() => setSubTab('Finder')} className={`tab ${subTab === 'Finder' ? 'active' : ''}`}>Transit Finder</button>
+      </div>
+
+      {subTab === 'Overview' && transitData && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%', maxWidth: '600px' }}>
+             <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--primary)' }}>Transit D-1 Chart</h3>
+             <KundliChart data={{ lagna: transitData.lagna, houses: transitData.houses }} />
+          </div>
+          <div style={{ overflowX: 'auto', background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%' }}>
+             <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>Transit Info</h3>
+             <table className="details-table" style={{ width: '100%', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr>
+                    <th>Planet</th>
+                    <th>Longitude</th>
+                    <th>Rasi</th>
+                    <th>Nakshatra</th>
+                    <th>Navtara (Natal Moon)</th>
+                    <th>Sahamas in Rasi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transitData.positions.map((p: any) => {
+                    const pNak27 = Math.floor(p.longitude / (360/27));
+                    const taraIdx = (pNak27 - moon27 + 27) % 9;
+                    const pTara = taraNames[taraIdx];
+                    
+                    const pRasiIdx = Math.floor(p.longitude / 30);
+                    const sahamasInRasi = sahamasList
+                      .filter(s => Math.floor(s.val / 30) === pRasiIdx)
+                      .map(s => s.name.split(' ')[1])
+                      .join(', ');
+
+                    return (
+                      <tr key={p.name}>
+                        <td style={{ fontWeight: 'bold' }}>{p.name} {p.retrograde ? '(R)' : ''}</td>
+                        <td>{p.longitude.toFixed(2)}°</td>
+                        <td>{p.rasi.name}</td>
+                        <td>{p.nakshatra.name}</td>
+                        <td style={{ color: 'var(--primary)' }}>{pTara}</td>
+                        <td style={{ color: '#8b5cf6', fontSize: '0.8rem' }}>{sahamasInRasi || '-'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+             </table>
+          </div>
+        </div>
+      )}
+
+      {subTab === 'SBC' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', overflowX: 'auto' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--primary)' }}>Sarvatobhadra Chakra</h2>
+            <p style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <span style={{ color: '#ef4444' }}>Red</span> = Natal Planets | <span style={{ color: '#3b82f6' }}>Blue</span> = Transit Planets
+            </p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '2px', background: 'var(--border)', border: '2px solid var(--border)', width: 'fit-content', margin: '0 auto' }}>
+              {SBC_CELLS.flat().map((cell, idx) => {
+                const isNak = NAKSHATRAS_28.includes(cell);
+                const isRasi = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'].includes(cell);
+                const tPlanets = transitMap[cell] || [];
+                const nPlanets = natalMap[cell] || [];
+                
+                let bg = 'rgba(15, 23, 42, 0.6)';
+                if (isNak) bg = 'rgba(139, 92, 246, 0.15)';
+                else if (isRasi) bg = 'rgba(56, 189, 248, 0.15)';
+                else if (cell) bg = 'rgba(255, 255, 255, 0.05)';
+
+                return (
+                  <div key={idx} style={{ background: bg, width: '80px', height: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: cell ? '600' : 'normal', color: 'var(--foreground)', marginBottom: '4px', wordBreak: 'break-word', lineHeight: 1.1 }}>{cell}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 'bold' }}>{tPlanets.map(p => p.short).join(', ')}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#ef4444' }}>{nPlanets.map(p => p.short).join(', ')}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+            <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>Navtara (from Moon)</h3>
+              <table className="details-table" style={{ fontSize: '0.8rem', width: '100%' }}>
+                <thead><tr><th>Tara</th><th>Nakshatras</th></tr></thead>
+                <tbody>
+                  {taraNames.map((t, i) => (
+                    <tr key={t}><td>{i+1}. {t}</td><td>{moonNavtara[i].join(', ')}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>Navtara (from Lagna)</h3>
+              <table className="details-table" style={{ fontSize: '0.8rem', width: '100%' }}>
+                <thead><tr><th>Tara</th><th>Nakshatras</th></tr></thead>
+                <tbody>
+                  {taraNames.map((t, i) => (
+                    <tr key={t}><td>{i+1}. {t}</td><td>{lagnaNavtara[i].join(', ')}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>SBC Special Taras (from Moon)</h3>
+              <table className="details-table" style={{ width: '100%', fontSize: '0.85rem' }}>
+                <tbody>
+                  <tr><td>Karma (10th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 10)}</td></tr>
+                  <tr><td>Sanghatika (16th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 16)}</td></tr>
+                  <tr><td>Samudaya (18th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 18)}</td></tr>
+                  <tr><td>Vainashika (23rd)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 23)}</td></tr>
+                  <tr><td>Manasa (25th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 25)}</td></tr>
+                  <tr><td>Jati (26th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 26)}</td></tr>
+                  <tr><td>Abhisheka (27th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 27)}</td></tr>
+                  <tr><td>Desha (28th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 28)}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>SBC Special Taras (from Lagna)</h3>
+              <table className="details-table" style={{ width: '100%', fontSize: '0.85rem' }}>
+                <tbody>
+                  <tr><td>Karma (10th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 10)}</td></tr>
+                  <tr><td>Sanghatika (16th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 16)}</td></tr>
+                  <tr><td>Samudaya (18th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 18)}</td></tr>
+                  <tr><td>Vainashika (23rd)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 23)}</td></tr>
+                  <tr><td>Manasa (25th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 25)}</td></tr>
+                  <tr><td>Jati (26th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 26)}</td></tr>
+                  <tr><td>Abhisheka (27th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 27)}</td></tr>
+                  <tr><td>Desha (28th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 28)}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {subTab === 'Sahamas' && (
+        <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', overflowX: 'auto' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--primary)' }}>Natal Sahamas (Arabic Parts)</h2>
+          <p style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            Sensitive points calculated from the main natal chart using standard Tajika formulas.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            {sahamasList.map(s => (
+              <div key={s.name} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: '500', color: 'var(--text-muted)' }}>{s.name}</span>
+                <span style={{ fontWeight: 'bold', color: 'var(--foreground)' }}>{formatSahama(s.val)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {subTab === 'Finder' && (
+        <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          <h2 style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>Transit Prediction Finder</h2>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+            <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+              <label>Search From Date</label>
+              <input type="date" value={fSearchDate} onChange={e => setFSearchDate(e.target.value)} />
+            </div>
+            <div className="form-group" style={{ flex: 1, minWidth: '120px' }}>
+              <label>Search Time</label>
+              <input type="time" value={fSearchTime} onChange={e => setFSearchTime(e.target.value)} />
+            </div>
+            <div className="form-group" style={{ flex: 1, minWidth: '120px' }}>
+              <label>Direction</label>
+              <select value={fDirection} onChange={e => setFDirection(parseInt(e.target.value))}>
+                <option value={1}>Future</option>
+                <option value={-1}>Past</option>
+              </select>
+            </div>
+            <div style={{ flexBasis: '100%', height: 0 }}></div>
+            <div className="form-group" style={{ flex: 1, minWidth: '200px' }}>
+              <label>Target Planet</label>
+              <select value={fPlanet} onChange={(e) => { setFPlanet(e.target.value); setFAspect('0'); }}>
+                {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'].map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ flex: 1, minWidth: '200px' }}>
+              <label>Aspect / View</label>
+              <select value={fAspect} onChange={(e) => setFAspect(e.target.value)}>
+                <option value="0">Direct (Self)</option>
+                <option value="180">7th Aspect</option>
+                {fPlanet === 'Saturn' && <option value="60">3rd Aspect</option>}
+                {fPlanet === 'Saturn' && <option value="270">10th Aspect</option>}
+                {fPlanet === 'Jupiter' && <option value="120">5th Aspect</option>}
+                {fPlanet === 'Jupiter' && <option value="240">9th Aspect</option>}
+                {fPlanet === 'Mars' && <option value="90">4th Aspect</option>}
+                {fPlanet === 'Mars' && <option value="210">8th Aspect</option>}
+              </select>
+            </div>
+            <div className="form-group" style={{ flex: 1, minWidth: '200px' }}>
+              <label>Transit Through</label>
+              <select value={fEvent} onChange={(e) => { setFEvent(e.target.value); setFValue('0'); }}>
+                <option value="Rasi">Rasi</option>
+                <option value="Nakshatra">Nakshatra</option>
+                <option value="NavtaraLagna">Navtara (from Lagna)</option>
+                <option value="NavtaraMoon">Navtara (from Moon)</option>
+                <option value="SpecialTaraLagna">SBC Special Tara (Lagna)</option>
+                <option value="SpecialTaraMoon">SBC Special Tara (Moon)</option>
+                <option value="Sahama">Sahama</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ flex: 2, minWidth: '300px' }}>
+              <label>Specific Target</label>
+              <select value={fValue} onChange={(e) => setFValue(e.target.value)}>
+                {fEvent === 'Rasi' && ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"].map((v, i) => <option key={i} value={i}>{v}</option>)}
+                {fEvent === 'Nakshatra' && NAKSHATRAS_27.map((v, i) => <option key={i} value={i}>{v}</option>)}
+                {(fEvent === 'NavtaraLagna' || fEvent === 'NavtaraMoon') && Array.from({length: 27}).map((_, i) => <option key={i} value={i}>{taraNames[i % 9]} ({Math.floor(i / 9) + 1})</option>)}
+                {(fEvent === 'SpecialTaraLagna' || fEvent === 'SpecialTaraMoon') && [
+                  { name: 'Karma (10th)', val: 10 }, { name: 'Sanghatika (16th)', val: 16 },
+                  { name: 'Samudaya (18th)', val: 18 }, { name: 'Vainashika (23rd)', val: 23 },
+                  { name: 'Manasa (25th)', val: 25 }, { name: 'Jati (26th)', val: 26 },
+                  { name: 'Abhisheka (27th)', val: 27 }, { name: 'Desha (28th)', val: 28 }
+                ].map(o => <option key={o.val} value={o.val}>{o.name}</option>)}
+                {fEvent === 'Sahama' && sahamasList.map((s, i) => <option key={i} value={i}>{s.name} ({formatSahama(s.val)})</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0.2rem' }}>
+              <button 
+                className="submit-btn" 
+                disabled={fLoading}
+                onClick={async () => {
+                  setFLoading(true);
+                  setFResult(null);
+                  try {
+                    let ranges: [number, number][] = [];
+                    let isPoint = false;
+                    const val = parseInt(fValue);
+
+                    if (fEvent === 'Rasi') {
+                      ranges = [[val * 30, (val + 1) * 30]];
+                    } else if (fEvent === 'Nakshatra') {
+                      ranges = [[val * 13.333333333333334, (val + 1) * 13.333333333333334]];
+                    } else if (fEvent === 'NavtaraLagna' || fEvent === 'NavtaraMoon') {
+                      const base27 = fEvent === 'NavtaraLagna' ? lagna27 : moon27;
+                      const nTarget = (base27 + val) % 27;
+                      ranges = [[nTarget * 13.333333333333334, (nTarget + 1) * 13.333333333333334]];
+                    } else if (fEvent === 'SpecialTaraLagna' || fEvent === 'SpecialTaraMoon') {
+                      const base28 = fEvent === 'SpecialTaraLagna' ? lagna28 : moon28;
+                      const target28 = (base28 + val - 1) % 28;
+                      ranges = [get28NakshatraRange(target28)];
+                    } else if (fEvent === 'Sahama') {
+                      const sVal = sahamasList[val].val;
+                      ranges = [[sVal, sVal]];
+                      isPoint = true;
+                    }
+
+                    // Attempt to parse local search date/time
+                    let searchIso = new Date().toISOString();
+                    try {
+                      searchIso = new Date(`${fSearchDate}T${fSearchTime}:00`).toISOString();
+                    } catch (e) {
+                      console.warn("Invalid search date, using now.");
+                    }
+
+                    const res = await findNextTransitEvent(fPlanet, parseFloat(fAspect), ranges, isPoint, searchIso, fDirection, ayanamsha);
+                    setFResult(res);
+
+                      if (res && res.dateUTC) {
+                        const d = new Date(res.dateUTC);
+                        const newTDate = d.toISOString().split('T')[0];
+                        const newTTime = d.toTimeString().slice(0, 5);
+                        const newTTz = (-d.getTimezoneOffset() / 60).toString();
+                        
+                        setTDate(newTDate);
+                        setTTime(newTTime);
+                        setTTz(newTTz);
+
+                        const formData = new FormData();
+                        formData.append('date', newTDate);
+                        formData.append('time', newTTime);
+                        formData.append('lat', tLat || '28.6139');
+                        formData.append('lon', tLon || '77.2090');
+                        formData.append('tzOffset', newTTz);
+                        formData.append('ayanamsha', ayanamsha);
+
+                        const newData = await getKundliData(formData);
+                        setTransitData(newData);
+                      }
+                  } catch (e: any) {
+                    alert(e.message);
+                  }
+                  setFLoading(false);
+                }}
+              >
+                {fLoading ? 'Searching...' : 'Find Next Transit'}
+              </button>
+            </div>
+          </div>
+
+          {fResult ? (
+            <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              <h3 style={{ color: '#10b981', marginBottom: '0.5rem' }}>Transit Found!</h3>
+              <p style={{ fontSize: '1.1rem' }}>
+                The {fDirection === 1 ? 'next' : 'previous'} occurrence {fDirection === 1 ? 'happens' : 'happened'} on: <strong>{new Date(fResult.dateUTC).toLocaleString()}</strong>
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                At this exact moment, {fPlanet}'s true longitude is {fResult.longitude.toFixed(2)}°.
+              </p>
+              <button 
+                onClick={() => setSubTab('Overview')} 
+                style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
+              >
+                View Transit Chart
+              </button>
+            </div>
+          ) : fResult === null && !fLoading ? (
+            <div style={{ color: 'var(--text-muted)' }}>Select your parameters and click find to calculate the next exact transit.</div>
+          ) : fResult === undefined && !fLoading ? (
+            <div style={{ color: '#ef4444' }}>No transit found within the next 30 years.</div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}

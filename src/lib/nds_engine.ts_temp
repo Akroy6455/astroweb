@@ -1,0 +1,862 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * NDS Engine — Net Dasha Score Calculator (Fully Weight-Configurable, Additive)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+import {
+  Planet,
+  House,
+  PLANETS,
+  EXALTATION,
+  DEBILITATION,
+  PLANET_NATURE,
+  KENDRA_HOUSES,
+  DUSTHANA_HOUSES,
+  SIGN_LORDS,
+  Sign
+} from './yoga_engine/constants';
+import { YogaState } from './yoga_engine/types';
+
+function isExalted(planet: Planet, sign: Sign): boolean {
+  if (planet === 'Rahu' && (sign === 'Taurus' || sign === 'Gemini')) return true;
+  return EXALTATION[planet]?.sign === sign;
+}
+
+function isDebilitated(planet: Planet, sign: Sign): boolean {
+  if (planet === 'Rahu' && (sign === 'Sagittarius' || sign === 'Pisces')) return true;
+  return DEBILITATION[planet]?.sign === sign;
+}
+
+function isOwnSign(planet: Planet, sign: Sign): boolean {
+  if (planet === 'Rahu' && (sign === 'Aquarius' || sign === 'Cancer' || sign === 'Virgo')) return true;
+  return SIGN_LORDS[sign] === planet;
+}
+
+import type { DashaPeriod } from './dasha';
+
+// ─── Exported Result Types ────────────────────────────────────────────────────
+
+export interface NDSWeights {
+  // Module 1: Lordship
+  lordHouse1: number;
+  lordHouse2: number;
+  lordHouse3: number;
+  lordHouse4: number;
+  lordHouse5: number;
+  lordHouse6: number;
+  lordHouse7: number;
+  lordHouse8: number;
+  lordHouse9: number;
+  lordHouse10: number;
+  lordHouse11: number;
+  lordHouse12: number;
+  lordPlacementMatrix: number[][]; // 12x12 matrix [lordOfHouse - 1][placedInHouse - 1]
+  planetPlacementMatrix: number[][]; // 9x12 matrix [planetIndex][placedInHouse - 1]
+  yogaKaraka: number;
+  rahuKetuYogKaraka: number;
+  functionalBenefic: number;
+  functionalMalefic: number;
+
+  // Module 2: Dignity (Additive points, not multipliers)
+  exaltation: number;         
+  ownSign: number;            
+  friendlySign: number;       
+  neutralSign: number;        
+  enemySign: number;          
+  debilitation: number;       
+  vargottama: number;         
+  combustion: number;         
+  sushupti: number;           
+  neechaBhanga: number;       
+
+  // Module 3: Mutual Placement Distance
+  mutualDistance1: number;
+  mutualDistance2: number;
+  mutualDistance3: number;
+  mutualDistance4: number;
+  mutualDistance5: number;
+  mutualDistance6: number;
+  mutualDistance7: number;
+  mutualDistance8: number;
+  mutualDistance9: number;
+  mutualDistance10: number;
+  mutualDistance11: number;
+  mutualDistance12: number;
+
+  // Module 4: Arudha
+  arudha11thAny: number;
+  arudha11thBenefic: number;
+  arudha12thAny: number;
+  arudha12thMalefic: number;
+  arudha3rdMalefic: number;
+  arudha6thMalefic: number;
+  papaKartari: number;        
+  shubhaKartari: number;
+
+  // Module 5: Awasthas
+  lajita: number;             
+  garvita: number;
+  kshudita: number;           
+  trushita: number;           
+  mudita: number;
+  kshobita: number;           
+
+  // Module 6: Dasha Pravesh
+  praveshHouse1: number;
+  praveshHouse2: number;
+  praveshHouse3: number;
+  praveshHouse4: number;
+  praveshHouse5: number;
+  praveshHouse6: number;
+  praveshHouse7: number;
+  praveshHouse8: number;
+  praveshHouse9: number;
+  praveshHouse10: number;
+  praveshHouse11: number;
+  praveshHouse12: number;
+  praveshExalted: number;
+  praveshOwnSign: number;
+  praveshDebilitated: number;
+
+  // Toggles — one per module
+disabledParams?: Record<string, boolean>;
+}
+
+export function getW(w: NDSWeights, key: keyof NDSWeights): number {
+  if (getW(w, 'disabledParams')?.[key as string]) return 0;
+  return w[key] as number;
+}
+
+export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
+  lordHouse1: 5,
+  lordHouse2: 2,
+  lordHouse3: 1,
+  lordHouse4: 4,
+  lordHouse5: 5,
+  lordHouse6: -5,
+  lordHouse7: -2,
+  lordHouse8: -5,
+  lordHouse9: 5,
+  lordHouse10: 5,
+  lordHouse11: -1,
+  lordHouse12: -1,
+  lordPlacementMatrix: [
+    [ 10,  4,  1,  6,  7, -3,  5, -5,  6,   7,  4, -4],
+    [  4, 10,  3,  5,  7,  1,  5, -2,  6,   6,  8, -1],
+    [  1,  4, 10,  2,  4,  3,  3, -1,  4,   3,  6,  0],
+    [  6,  3,  2, 10,  7, -1,  4, -3,  5,   7,  3, -2],
+    [  6,  4,  3,  7, 10,  1,  5, -2,  8,   7,  6,  0],
+    [ -2,  2,  3,  0,  2, 10,  1,  2,  1,   4,  2,  3],
+    [  3,  4,  2,  4,  5,  1, 10, -1,  5,   4,  4, -1],
+    [ -3,  1,  1,  0,  2,  2,  0, 10,  2,   3,  1,  2],
+    [  6,  5,  4,  6,  8,  1,  5, -1, 10,   7,  5,  0],
+    [  7,  5,  4,  7,  8,  2,  5, -1,  7,  10,  5, -2],
+    [  3,  6,  5,  4,  7,  2,  4,  0,  5,   6, 10,  1],
+    [ -4,  0,  1, -1,  1,  2, -1,  1,  0,   2,  1, 10],
+  ],
+  planetPlacementMatrix: [
+    [ 1,  0,  1, -1,  0,  1, -1, -1,  1,  1,  1, -1], // Sun
+    [ 1,  1,  0,  1,  1, -1,  1, -1,  1,  0,  1, -1], // Moon
+    [ 1, -1,  1, -1,  0,  1, -1, -1,  0,  1,  1, -1], // Mars
+    [ 1,  1,  1,  1,  1,  0,  0, -1,  1,  1,  1, -1], // Mercury
+    [ 1,  1,  0,  1,  1, -1,  1, -1,  1,  1,  1,  0], // Jupiter
+    [ 1,  1,  0,  1,  1, -1,  1, -1,  1,  0,  1,  0], // Venus
+    [-1, -1,  1, -1, -1,  1, -1, -1,  0,  1,  1,  0], // Saturn
+    [-1, -1,  1, -1, -1,  1, -1, -1,  0,  1,  1,  1], // Rahu
+    [-1, -1,  1, -1,  0,  1, -1,  0,  1,  0,  0,  1]  // Ketu
+  ],
+  yogaKaraka: 5,
+  rahuKetuYogKaraka: 5,
+  functionalBenefic: 5,
+  functionalMalefic: 0,
+
+  exaltation: 0,
+  ownSign: 0,
+  friendlySign: 0,
+  neutralSign: 0,
+  enemySign: 0,
+  debilitation: 0,
+  vargottama: 0,
+  combustion: 0,
+  sushupti: 0,
+  neechaBhanga: 0,
+
+  mutualDistance1: 0,
+  mutualDistance2: 0,
+  mutualDistance3: 0,
+  mutualDistance4: 0,
+  mutualDistance5: 0,
+  mutualDistance6: 0,
+  mutualDistance7: 0,
+  mutualDistance8: 0,
+  mutualDistance9: 0,
+  mutualDistance10: 0,
+  mutualDistance11: 0,
+  mutualDistance12: 0,
+
+  arudha11thAny: 0,
+  arudha11thBenefic: 0,
+  arudha12thAny: 0,
+  arudha12thMalefic: 0,
+  arudha3rdMalefic: 0,
+  arudha6thMalefic: 0,
+  papaKartari: 0,
+  shubhaKartari: 0,
+
+  lajita: 0,
+  garvita: 0,
+  kshudita: 0,
+  trushita: 0,
+  mudita: 0,
+  kshobita: 0,
+
+  praveshHouse1: 0,
+  praveshHouse2: 0,
+  praveshHouse3: 0,
+  praveshHouse4: 0,
+  praveshHouse5: 0,
+  praveshHouse6: 0,
+  praveshHouse7: 0,
+  praveshHouse8: 0,
+  praveshHouse9: 0,
+  praveshHouse10: 0,
+  praveshHouse11: 0,
+  praveshHouse12: 0,
+  praveshExalted: 0,
+  praveshOwnSign: 0,
+  praveshDebilitated: 0,
+
+  disabledParams: {},
+};
+
+export interface AppliedCondition {
+  key: keyof NDSWeights;
+  name: string;
+  value: number;
+}
+
+export interface NDSResult {
+  percentage: number;
+  netScore: number;
+  maxPossible: number;
+  conditions: AppliedCondition[];
+  breakdown: {
+    baseLordship: number;
+    dignityScore: number;
+    mutualPlacement: number;
+    arudhaModifiers: number;
+    awasthaModifiers: number;
+    praveshOffset: number;
+  };
+}
+
+export interface DashaTimePoint {
+  date: string;          // ISO-8601
+  mdPlanet: string;
+  adPlanet: string;
+  pdPlanet: string;
+  percentage: number;
+  mdPercentage: number;
+  adPercentage: number;
+  mdResult: NDSResult;
+  adResult: NDSResult;
+}
+
+// ─── Internal Helpers ─────────────────────────────────────────────────────────
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function H(n: number): House {
+  return n as House;
+}
+
+function isNaturalMalefic(planet: Planet): boolean {
+  return PLANET_NATURE[planet] === 'Malefic';
+}
+
+function isNaturalBenefic(planet: Planet): boolean {
+  return PLANET_NATURE[planet] === 'Benefic';
+}
+
+function buildLordshipMap(yogaState: YogaState): Map<Planet, House[]> {
+  const map = new Map<Planet, House[]>();
+  for (const p of PLANETS) {
+    map.set(p as Planet, []);
+  }
+  for (let h = 1; h <= 12; h++) {
+    const lord = yogaState.houses[H(h)].lord;
+    map.get(lord)!.push(H(h));
+  }
+  return map;
+}
+
+function hasVedicAspect(planet: Planet, sourceHouse: House, targetHouse: House): boolean {
+  const dist = ((targetHouse - sourceHouse) + 12) % 12; 
+  if (dist === 6) return true;
+  switch (planet) {
+    case 'Mars': return dist === 3 || dist === 7;
+    case 'Jupiter': return dist === 4 || dist === 8;
+    case 'Saturn': case 'Rahu': case 'Ketu': return dist === 2 || dist === 9;
+    default: return false;
+  }
+}
+
+const PARASHARA_NATURES: Record<Sign, { fb: Planet[], fm: Planet[], yk: Planet[] }> = {
+  Aries: { fb: ['Sun', 'Jupiter'], fm: ['Saturn', 'Mercury', 'Venus'], yk: ['Sun', 'Moon'] },
+  Taurus: { fb: ['Saturn', 'Sun'], fm: ['Jupiter', 'Venus', 'Moon'], yk: ['Saturn'] },
+  Gemini: { fb: ['Venus'], fm: ['Mars', 'Jupiter', 'Sun'], yk: ['Venus', 'Mercury'] },
+  Cancer: { fb: ['Mars', 'Jupiter'], fm: ['Venus', 'Mercury'], yk: ['Mars'] },
+  Leo: { fb: ['Mars', 'Sun'], fm: ['Saturn', 'Venus', 'Mercury'], yk: ['Mars'] },
+  Virgo: { fb: ['Venus'], fm: ['Mars', 'Jupiter', 'Moon'], yk: ['Venus', 'Mercury'] },
+  Libra: { fb: ['Saturn', 'Mercury'], fm: ['Jupiter', 'Sun', 'Mars'], yk: ['Saturn'] },
+  Scorpio: { fb: ['Jupiter', 'Moon'], fm: ['Mercury', 'Venus', 'Saturn'], yk: ['Sun', 'Moon'] },
+  Sagittarius: { fb: ['Mars', 'Sun'], fm: ['Venus', 'Saturn', 'Mercury'], yk: ['Sun', 'Mercury'] },
+  Capricorn: { fb: ['Venus', 'Mercury'], fm: ['Mars', 'Jupiter', 'Moon'], yk: ['Venus'] },
+  Aquarius: { fb: ['Venus', 'Saturn'], fm: ['Jupiter', 'Moon', 'Mars'], yk: ['Venus'] },
+  Pisces: { fb: ['Mars', 'Moon'], fm: ['Saturn', 'Venus', 'Sun', 'Mercury'], yk: ['Mars', 'Jupiter'] },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 1 — Base Lordship Score
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function getBaseLordshipScore(planet: Planet, yogaState: YogaState, w: NDSWeights): { score: number, conditions: AppliedCondition[] } {
+  const lordshipMap = buildLordshipMap(yogaState);
+  const houses = lordshipMap.get(planet) ?? [];
+  const conditions: AppliedCondition[] = [];
+  let score = 0;
+
+  if (planet === 'Ketu') {
+    if (houses.length === 0) return { score, conditions };
+  } else if (planet === 'Rahu') {
+    if (houses.length === 0) return { score, conditions };
+  } else {
+    if (houses.length === 0) return { score, conditions };
+  }
+
+  // Parashari Yogakaraka and Functional Natures (Strict Lagna-based Lookup)
+  const lagnaSign = yogaState.houses[1 as House].sign;
+  const natures = PARASHARA_NATURES[lagnaSign];
+  
+  if (getW(w, 'enableLordshipSliders') !== false && natures) {
+    if (natures.fb.includes(planet)) {
+      score += getW(w, 'functionalBenefic');
+      conditions.push({ key: 'functionalBenefic', name: 'Functional Benefic', value: getW(w, 'functionalBenefic') });
+    } else if (natures.fm.includes(planet)) {
+      score += getW(w, 'functionalMalefic');
+      conditions.push({ key: 'functionalMalefic', name: 'Functional Malefic', value: getW(w, 'functionalMalefic') });
+    }
+
+    const isYogakaraka = natures.yk.includes(planet);
+    if (isYogakaraka) {
+      score += getW(w, 'yogaKaraka');
+      conditions.push({ key: 'yogaKaraka', name: `Parashari Yogakaraka (${lagnaSign} Lagna)`, value: getW(w, 'yogaKaraka') });
+    }
+  }
+
+  const planetHouse = yogaState.planets[planet].house;
+  
+  // Planet in House Matrix Score
+  if (getW(w, 'enablePlanetMatrix') !== false) {
+    const planetIndex = PLANETS.indexOf(planet);
+    if (planetIndex !== -1) {
+      if (!getW(w, 'planetPlacementMatrix')) getW(w, 'planetPlacementMatrix') = DEFAULT_NDS_WEIGHTS.planetPlacementMatrix;
+      const pScore = getW(w, 'planetPlacementMatrix')[planetIndex][planetHouse - 1];
+      if (pScore !== 0) {
+        score += pScore;
+        conditions.push({ key: 'planetPlacementMatrix' as keyof NDSWeights, name: `${planet} in House ${planetHouse}`, value: pScore });
+      }
+    }
+  }
+
+  for (const h of houses) {
+    // Graceful fallback if lordPlacementMatrix is undefined (from old local storage)
+    if (!getW(w, 'lordPlacementMatrix')) getW(w, 'lordPlacementMatrix') = DEFAULT_NDS_WEIGHTS.lordPlacementMatrix;
+    
+    // Matrix score
+    if (getW(w, 'enableLordshipMatrix') !== false) {
+      const matrixScore = getW(w, 'lordPlacementMatrix')[h - 1][planetHouse - 1];
+      if (matrixScore !== 0) {
+        score += matrixScore;
+        conditions.push({ key: 'lordPlacementMatrix' as keyof NDSWeights, name: `Lord of ${h} in ${planetHouse}`, value: matrixScore });
+      }
+    }
+
+    // Flat score fallback check
+    if (getW(w, 'lordHouse1') === undefined) {
+      Object.assign(w, {
+        lordHouse1: 5, lordHouse2: 2, lordHouse3: 1, lordHouse4: 4, lordHouse5: 5, lordHouse6: -5, 
+        lordHouse7: -2, lordHouse8: -5, lordHouse9: 5, lordHouse10: 5, lordHouse11: -1, lordHouse12: -1
+      });
+    }
+
+    // Flat score
+    if (getW(w, 'enableLordshipSliders') !== false) {
+      let flatScore = 0;
+      let key: keyof NDSWeights = 'lordHouse1';
+      switch (h) {
+        case 1: flatScore = getW(w, 'lordHouse1'); key = 'lordHouse1'; break;
+        case 2: flatScore = getW(w, 'lordHouse2'); key = 'lordHouse2'; break;
+        case 3: flatScore = getW(w, 'lordHouse3'); key = 'lordHouse3'; break;
+        case 4: flatScore = getW(w, 'lordHouse4'); key = 'lordHouse4'; break;
+        case 5: flatScore = getW(w, 'lordHouse5'); key = 'lordHouse5'; break;
+        case 6: flatScore = getW(w, 'lordHouse6'); key = 'lordHouse6'; break;
+        case 7: flatScore = getW(w, 'lordHouse7'); key = 'lordHouse7'; break;
+        case 8: flatScore = getW(w, 'lordHouse8'); key = 'lordHouse8'; break;
+        case 9: flatScore = getW(w, 'lordHouse9'); key = 'lordHouse9'; break;
+        case 10: flatScore = getW(w, 'lordHouse10'); key = 'lordHouse10'; break;
+        case 11: flatScore = getW(w, 'lordHouse11'); key = 'lordHouse11'; break;
+        case 12: flatScore = getW(w, 'lordHouse12'); key = 'lordHouse12'; break;
+      }
+      
+      if (flatScore !== 0) {
+        score += flatScore;
+        conditions.push({ key, name: `Lord of House ${h} (Base)`, value: flatScore });
+      }
+    }
+  }
+
+  return { score, conditions };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 2 — Dignity Score (Pure Addition/Subtraction)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function getDignityScore(planet: Planet, yogaState: YogaState, _positions: any[], w: NDSWeights): { score: number, conditions: AppliedCondition[] } {
+  const info = yogaState.planets[planet];
+  const dignity = info.dignity;
+  const conditions: AppliedCondition[] = [];
+  let score = 0;
+
+  switch (dignity) {
+    case 'Deep Exaltation':
+    case 'Exaltation':
+    case 'Moolatrikona': 
+      score += getW(w, 'exaltation'); 
+      conditions.push({ key: 'exaltation', name: 'Exalted/Moolatrikona', value: getW(w, 'exaltation') });
+      break;
+    case 'Own Sign': 
+      score += getW(w, 'ownSign'); 
+      conditions.push({ key: 'ownSign', name: 'Own Sign', value: getW(w, 'ownSign') });
+      break;
+    case 'Friendly Sign': 
+      score += getW(w, 'friendlySign'); 
+      conditions.push({ key: 'friendlySign', name: 'Friendly Sign', value: getW(w, 'friendlySign') });
+      break;
+    case 'Neutral Sign': 
+      score += getW(w, 'neutralSign'); 
+      conditions.push({ key: 'neutralSign', name: 'Neutral Sign', value: getW(w, 'neutralSign') });
+      break;
+    case 'Enemy Sign': 
+      score += getW(w, 'enemySign'); 
+      conditions.push({ key: 'enemySign', name: 'Enemy Sign', value: getW(w, 'enemySign') });
+      break;
+    case 'Debilitation':
+    case 'Deep Debilitation': 
+      score += getW(w, 'debilitation'); 
+      conditions.push({ key: 'debilitation', name: 'Debilitated', value: getW(w, 'debilitation') });
+      break;
+  }
+
+  if (dignity === 'Debilitation' || dignity === 'Deep Debilitation') {
+    let nbConditions = 0;
+    const dispositor = info.dispositor;
+    const dispositorHouse = yogaState.planets[dispositor].house;
+    const planetSignIndex = info.position.rasi.index;
+
+    if (KENDRA_HOUSES.includes(dispositorHouse)) nbConditions++;
+
+    for (const p of PLANETS) {
+      if (isExalted(p as Planet, info.position.rasi.name as Sign)) {
+        const exaltLordHouse = yogaState.planets[p as Planet].house;
+        if (KENDRA_HOUSES.includes(exaltLordHouse)) nbConditions++;
+        break;
+      }
+    }
+
+    const dispositorSign = yogaState.planets[dispositor].position.rasi.index;
+    if (planetSignIndex === dispositorSign) nbConditions++;
+    if (hasVedicAspect(dispositor, dispositorHouse, info.house)) nbConditions++;
+    if (KENDRA_HOUSES.includes(info.house)) nbConditions++;
+
+    if (nbConditions >= 3) {
+      const v = getW(w, 'neechaBhanga');
+      score += v;
+      conditions.push({ key: 'neechaBhanga', name: 'Full Neecha Bhanga Raja Yoga', value: v });
+    } else if (nbConditions >= 2) {
+      const v = Math.round(getW(w, 'neechaBhanga') * 0.8);
+      score += v;
+      conditions.push({ key: 'neechaBhanga', name: 'Strong Neecha Bhanga', value: v });
+    } else if (nbConditions >= 1) {
+      const v = Math.round(getW(w, 'neechaBhanga') * 0.5);
+      score += v;
+      conditions.push({ key: 'neechaBhanga', name: 'Partial Neecha Bhanga', value: v });
+    }
+  }
+
+  if (info.position.rasi.name === info.position.navamsha.name) {
+    score += getW(w, 'vargottama');
+    conditions.push({ key: 'vargottama', name: 'Vargottama (D1=D9)', value: getW(w, 'vargottama') });
+  }
+
+  if (info.isCombust) {
+    if (planet !== 'Mars' && planet !== 'Saturn') {
+      score += getW(w, 'combustion');
+      conditions.push({ key: 'combustion', name: 'Combust (Burned by Sun)', value: getW(w, 'combustion') });
+    } else {
+      const v = Math.round(getW(w, 'combustion') * 0.5); // Less penalty for Mars/Saturn
+      score += v;
+      conditions.push({ key: 'combustion', name: 'Combust (Mars/Saturn reduced penalty)', value: v });
+    }
+  }
+
+  const signIdx = info.position.rasi.index;
+  const deg = info.position.rasi.degreesInSign;
+  if ((signIdx % 2 === 1 && deg < 6) || (signIdx % 2 === 0 && deg > 24)) {
+    score += getW(w, 'sushupti');
+    conditions.push({ key: 'sushupti', name: 'Sushupti Avastha (Deep Sleep)', value: getW(w, 'sushupti') });
+  }
+
+  return { score, conditions };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 3 — Mutual Placement
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function getMutualPlacement(mdLord: Planet, adLord: Planet, yogaState: YogaState, w: NDSWeights): { score: number, conditions: AppliedCondition[] } {
+  const conditions: AppliedCondition[] = [];
+  let score = 0;
+
+  if (mdLord !== adLord) {
+    const mdHouse = yogaState.planets[mdLord].house;
+    const adHouse = yogaState.planets[adLord].house;
+
+    const forward = ((adHouse - mdHouse + 12) % 12) + 1;
+    const reverse = ((mdHouse - adHouse + 12) % 12) + 1;
+
+    const scoreDistance = (d: number): { key: keyof NDSWeights, val: number } => {
+      switch (d) {
+        case 1: return { key: 'mutualDistance1', val: getW(w, 'mutualDistance1') };
+        case 2: return { key: 'mutualDistance2', val: getW(w, 'mutualDistance2') };
+        case 3: return { key: 'mutualDistance3', val: getW(w, 'mutualDistance3') };
+        case 4: return { key: 'mutualDistance4', val: getW(w, 'mutualDistance4') };
+        case 5: return { key: 'mutualDistance5', val: getW(w, 'mutualDistance5') };
+        case 6: return { key: 'mutualDistance6', val: getW(w, 'mutualDistance6') };
+        case 7: return { key: 'mutualDistance7', val: getW(w, 'mutualDistance7') };
+        case 8: return { key: 'mutualDistance8', val: getW(w, 'mutualDistance8') };
+        case 9: return { key: 'mutualDistance9', val: getW(w, 'mutualDistance9') };
+        case 10: return { key: 'mutualDistance10', val: getW(w, 'mutualDistance10') };
+        case 11: return { key: 'mutualDistance11', val: getW(w, 'mutualDistance11') };
+        case 12: return { key: 'mutualDistance12', val: getW(w, 'mutualDistance12') };
+        default: return { key: 'mutualDistance1', val: 0 };
+      }
+    };
+
+    const fwd = scoreDistance(forward);
+    const rev = scoreDistance(reverse);
+
+    // Take the stronger absolute distance score
+    const selected = Math.abs(fwd.val) >= Math.abs(rev.val) ? { dist: forward, ...fwd } : { dist: reverse, ...rev };
+    
+    if (selected.val !== 0) {
+      score += selected.val;
+      conditions.push({ key: selected.key, name: `Mutual Placement (${selected.dist} houses apart)`, value: selected.val });
+    }
+  }
+
+  // Node Mutual Yoga Check (MD/AD pair where one is Node and other aspects it)
+  const checkNodeYoga = (node: Planet, other: Planet) => {
+    if (node !== 'Rahu' && node !== 'Ketu') return false;
+    const nodeHouse = yogaState.planets[node].house;
+    const otherHouse = yogaState.planets[other].house;
+    
+    const isInfluencing = (nodeHouse === otherHouse) || hasVedicAspect(other, otherHouse, nodeHouse);
+    if (!isInfluencing) return false;
+
+    const inKendra = [1,4,7,10].includes(nodeHouse);
+    const inTrikona = [1,5,9].includes(nodeHouse);
+    if (!inKendra && !inTrikona) return false;
+
+    const lordshipMap = buildLordshipMap(yogaState);
+    const otherHouses = lordshipMap.get(other) || [];
+    
+    const otherLordsKendra = otherHouses.some(h => [1,4,7,10].includes(h));
+    const otherLordsTrikona = otherHouses.some(h => [1,5,9].includes(h));
+
+    if (inKendra && otherLordsTrikona) return true;
+    if (inTrikona && otherLordsKendra) return true;
+    
+    return false;
+  };
+
+  if (checkNodeYoga(mdLord, adLord) || checkNodeYoga(adLord, mdLord)) {
+    score += getW(w, 'rahuKetuYogKaraka');
+    conditions.push({ key: 'rahuKetuYogKaraka', name: 'Node + Aspect Yog Karaka', value: getW(w, 'rahuKetuYogKaraka') });
+  }
+
+  return { score, conditions };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 4 — Arudha Lagna Modifiers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function getArudhaModifiers(planet: Planet, yogaState: YogaState, alSignIndex: number, w: NDSWeights): { score: number, conditions: AppliedCondition[] } {
+  let score = 0;
+  const conditions: AppliedCondition[] = [];
+  const planetSignIndex = yogaState.planets[planet].position.rasi.index;
+
+  const isBenefic = isNaturalBenefic(planet);
+  const isMalefic = isNaturalMalefic(planet);
+
+  // 11th from AL
+  if ((planetSignIndex - alSignIndex + 12) % 12 === 10) {
+    score += getW(w, 'arudha11thAny');
+    conditions.push({ key: 'arudha11thAny', name: 'Placed 11th from Arudha Lagna', value: getW(w, 'arudha11thAny') });
+    if (isBenefic) {
+      score += getW(w, 'arudha11thBenefic');
+      conditions.push({ key: 'arudha11thBenefic', name: 'Benefic in 11th from AL', value: getW(w, 'arudha11thBenefic') });
+    }
+  }
+
+  // 12th from AL
+  if ((planetSignIndex - alSignIndex + 12) % 12 === 11) {
+    score += getW(w, 'arudha12thAny');
+    conditions.push({ key: 'arudha12thAny', name: 'Placed 12th from Arudha Lagna', value: getW(w, 'arudha12thAny') });
+    if (isMalefic) {
+      score += getW(w, 'arudha12thMalefic');
+      conditions.push({ key: 'arudha12thMalefic', name: 'Malefic in 12th from AL', value: getW(w, 'arudha12thMalefic') });
+    }
+  }
+
+  const signOccupants: Map<number, Planet[]> = new Map();
+  for (const p of PLANETS) {
+    const sIdx = yogaState.planets[p as Planet].position.rasi.index;
+    if (!signOccupants.has(sIdx)) signOccupants.set(sIdx, []);
+    signOccupants.get(sIdx)!.push(p as Planet);
+  }
+
+  const sign3rd = (alSignIndex + 2) % 12;
+  const sign6th = (alSignIndex + 5) % 12;
+
+  const maleficsIn3rd = (signOccupants.get(sign3rd) ?? []).filter(isNaturalMalefic);
+  const maleficsIn6th = (signOccupants.get(sign6th) ?? []).filter(isNaturalMalefic);
+
+  if (maleficsIn3rd.length > 0) {
+    score += getW(w, 'arudha3rdMalefic');
+    conditions.push({ key: 'arudha3rdMalefic', name: 'Malefics in 3rd from AL', value: getW(w, 'arudha3rdMalefic') });
+  }
+  if (maleficsIn6th.length > 0) {
+    score += getW(w, 'arudha6thMalefic');
+    conditions.push({ key: 'arudha6thMalefic', name: 'Malefics in 6th from AL', value: getW(w, 'arudha6thMalefic') });
+  }
+
+  const prevSign = (planetSignIndex - 1 + 12) % 12;
+  const nextSign = (planetSignIndex + 1) % 12;
+
+  const prevOccupants = signOccupants.get(prevSign) ?? [];
+  const nextOccupants = signOccupants.get(nextSign) ?? [];
+
+  if (prevOccupants.length > 0 && nextOccupants.length > 0 &&
+      prevOccupants.every(isNaturalMalefic) && nextOccupants.every(isNaturalMalefic)) {
+    score += getW(w, 'papaKartari');
+    conditions.push({ key: 'papaKartari', name: 'Papa Kartari Yoga (Hemmed by Malefics)', value: getW(w, 'papaKartari') });
+  }
+  else if (prevOccupants.length > 0 && nextOccupants.length > 0 &&
+           prevOccupants.every(isNaturalBenefic) && nextOccupants.every(isNaturalBenefic)) {
+    score += getW(w, 'shubhaKartari');
+    conditions.push({ key: 'shubhaKartari', name: 'Shubha Kartari Yoga (Hemmed by Benefics)', value: getW(w, 'shubhaKartari') });
+  }
+
+  return { score, conditions };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 5 — Awasthas
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function getAwasthaModifiers(planet: Planet, awasthasData: any, w: NDSWeights): { score: number, conditions: AppliedCondition[] } {
+  if (!awasthasData || !awasthasData[planet]) return { score: 0, conditions: [] };
+  
+  let score = 0;
+  const conditions: AppliedCondition[] = [];
+  
+  const lajjitadiStr: string = awasthasData[planet].lajjitadi || 'None';
+  if (lajjitadiStr !== 'None') {
+    const parts = lajjitadiStr.split(',').map(s => s.trim());
+    for (const part of parts) {
+      const [name, multiplierStr] = part.split('^');
+      const multiplier = multiplierStr ? parseInt(multiplierStr, 10) : 1;
+      
+      let s = 0;
+      let key: keyof NDSWeights | null = null;
+      
+      switch (name) {
+        case 'Lajita': s = getW(w, 'lajita') * multiplier; key = 'lajita'; break;
+        case 'Garvita': s = getW(w, 'garvita') * multiplier; key = 'garvita'; break;
+        case 'Kshudita': s = getW(w, 'kshudita') * multiplier; key = 'kshudita'; break;
+        case 'Trushita': s = getW(w, 'trushita') * multiplier; key = 'trushita'; break;
+        case 'Mudita': s = getW(w, 'mudita') * multiplier; key = 'mudita'; break;
+        case 'Kshobita': s = getW(w, 'kshobita') * multiplier; key = 'kshobita'; break;
+      }
+
+      if (key && s !== 0) {
+        score += s;
+        conditions.push({ key, name: `${name} Awastha${multiplier > 1 ? ' (x' + multiplier + ')' : ''}`, value: s });
+      }
+    }
+  }
+
+  return { score, conditions };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 6 — Pravesh Offset
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function getPraveshOffset(planet: Planet, praveshData: any, w: NDSWeights): { score: number, conditions: AppliedCondition[] } {
+  if (!praveshData) return { score: 0, conditions: [] };
+  
+  let score = 0;
+  const conditions: AppliedCondition[] = [];
+
+  let hScore = 0;
+  let hKey: keyof NDSWeights = 'praveshHouse1';
+  switch (praveshData.house) {
+    case 1: hScore = getW(w, 'praveshHouse1'); hKey = 'praveshHouse1'; break;
+    case 2: hScore = getW(w, 'praveshHouse2'); hKey = 'praveshHouse2'; break;
+    case 3: hScore = getW(w, 'praveshHouse3'); hKey = 'praveshHouse3'; break;
+    case 4: hScore = getW(w, 'praveshHouse4'); hKey = 'praveshHouse4'; break;
+    case 5: hScore = getW(w, 'praveshHouse5'); hKey = 'praveshHouse5'; break;
+    case 6: hScore = getW(w, 'praveshHouse6'); hKey = 'praveshHouse6'; break;
+    case 7: hScore = getW(w, 'praveshHouse7'); hKey = 'praveshHouse7'; break;
+    case 8: hScore = getW(w, 'praveshHouse8'); hKey = 'praveshHouse8'; break;
+    case 9: hScore = getW(w, 'praveshHouse9'); hKey = 'praveshHouse9'; break;
+    case 10: hScore = getW(w, 'praveshHouse10'); hKey = 'praveshHouse10'; break;
+    case 11: hScore = getW(w, 'praveshHouse11'); hKey = 'praveshHouse11'; break;
+    case 12: hScore = getW(w, 'praveshHouse12'); hKey = 'praveshHouse12'; break;
+  }
+  
+  if (hScore !== 0) {
+    score += hScore;
+    conditions.push({ key: hKey, name: `Dasha Pravesh in House ${praveshData.house}`, value: hScore });
+  }
+  
+  const rasiName = praveshData.rasi.name as Sign;
+  if (isExalted(planet, rasiName)) {
+    score += getW(w, 'praveshExalted');
+    conditions.push({ key: 'praveshExalted', name: 'Dasha Pravesh Exalted', value: getW(w, 'praveshExalted') });
+  } else if (isDebilitated(planet, rasiName)) {
+    score += getW(w, 'praveshDebilitated');
+    conditions.push({ key: 'praveshDebilitated', name: 'Dasha Pravesh Debilitated', value: getW(w, 'praveshDebilitated') });
+  } else if (isOwnSign(planet, rasiName)) {
+    score += getW(w, 'praveshOwnSign');
+    conditions.push({ key: 'praveshOwnSign', name: 'Dasha Pravesh Own Sign', value: getW(w, 'praveshOwnSign') });
+  }
+  
+  return { score, conditions };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MASTER — calculateNDS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function calculateNDS(
+  planet: Planet,
+  yogaState: YogaState,
+  positions: any[],
+  alSignIndex: number,
+  awasthasData: any,
+  weights: NDSWeights,
+  mdLord?: Planet,
+  praveshData?: any
+): NDSResult {
+  const base = getBaseLordshipScore(planet, yogaState, weights);
+  const dignity = getW(weights, 'enableDignity') !== false ? getDignityScore(planet, yogaState, positions, weights) : { score: 0, conditions: [] };
+  const mutual = mdLord && getW(weights, 'enableMutualPlacement') !== false ? getMutualPlacement(mdLord, planet, yogaState, weights) : { score: 0, conditions: [] };
+  const arudha = getW(weights, 'enableArudha') !== false ? getArudhaModifiers(planet, yogaState, alSignIndex, weights) : { score: 0, conditions: [] };
+  const awastha = getW(weights, 'enableAwastha') !== false ? getAwasthaModifiers(planet, awasthasData, weights) : { score: 0, conditions: [] };
+  const pravesh = getW(weights, 'enablePravesh') !== false ? getPraveshOffset(planet, praveshData, weights) : { score: 0, conditions: [] };
+
+  const allConditions = [
+    ...base.conditions,
+    ...dignity.conditions,
+    ...mutual.conditions,
+    ...arudha.conditions,
+    ...awastha.conditions,
+    ...pravesh.conditions
+  ].filter(c => c.value !== 0);
+
+  const netScore = base.score + dignity.score + mutual.score + arudha.score + awastha.score + pravesh.score;
+  const maxPossible = allConditions.reduce((sum, c) => sum + Math.abs(c.value), 0);
+  
+  let percentage = 0;
+  if (maxPossible > 0) {
+    percentage = Math.round((netScore / maxPossible) * 100);
+  }
+
+  return {
+    percentage: clamp(percentage, -100, 100),
+    netScore,
+    maxPossible,
+    conditions: allConditions,
+    breakdown: {
+      baseLordship: base.score,
+      dignityScore: dignity.score,
+      mutualPlacement: mutual.score,
+      arudhaModifiers: arudha.score,
+      awasthaModifiers: awastha.score,
+      praveshOffset: pravesh.score,
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIME-SERIES GENERATOR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function generateDashaTimeSeries(
+  dashas: DashaPeriod[],
+  yogaState: YogaState,
+  positions: any[],
+  alSignIndex: number,
+  awasthasData: any,
+  weights: NDSWeights = DEFAULT_NDS_WEIGHTS
+): DashaTimePoint[] {
+  const points: DashaTimePoint[] = [];
+
+  for (const md of dashas) {
+    const mdPlanet = md.planet as Planet;
+    const mdResult = calculateNDS(mdPlanet, yogaState, positions, alSignIndex, awasthasData, weights, undefined, md.pravesh);
+    const adPeriods = md.subPeriods ?? [];
+
+    for (const ad of adPeriods) {
+      const adPlanet = ad.planet as Planet;
+      const adResult = calculateNDS(adPlanet, yogaState, positions, alSignIndex, awasthasData, weights, mdPlanet, ad.pravesh);
+
+      const blendedPercentage = clamp(Math.round(mdResult.percentage * 0.6 + adResult.percentage * 0.4), -100, 100);
+      const pdPlanet = ad.subPeriods?.[0]?.planet ?? '';
+
+      points.push({
+        date: ad.start,
+        mdPlanet,
+        adPlanet,
+        pdPlanet,
+        percentage: blendedPercentage,
+        mdPercentage: mdResult.percentage,
+        adPercentage: adResult.percentage,
+        mdResult,
+        adResult
+      });
+    }
+  }
+
+  return points;
+}
+
+

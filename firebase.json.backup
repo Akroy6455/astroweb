@@ -1,0 +1,38 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "us-central1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "authorizedDomains": [
+      "localhost",
+      "127.0.0.1",
+      "project-astro-91620.firebaseapp.com",
+      "project-astro-91620.web.app",
+      "astro-web-xi.vercel.app",
+      "vercel.app"
+    ],
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Project Astro",
+        "supportEmail": "adarsh6455@gmail.com",
+        "authorizedRedirectUris": [
+          "https://astro-web-xi.vercel.app",
+          "https://project-astro-91620.firebaseapp.com/__/auth/handler",
+          "https://project-astro-91620.web.app/__/auth/handler",
+          "http://localhost"
+        ]
+      }
+    }
+  },
+  "hosting": {
+    "source": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
