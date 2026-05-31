@@ -21,6 +21,7 @@ import { getVargaDevta, getDivisionalSign, getDivPart, getDivSignName, getDivSig
 import { Settings, Save, LayoutTemplate, Aperture, Grid3X3, BarChart, Clock, Moon, Sparkles, Database, TrendingUp } from 'lucide-react';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import ThemeSwitcher from '@/components/ThemeSwitcher';
+import ExportTimeline from '@/components/ExportTimeline';
 
 // Firebase Client Imports
 import { auth, db, googleProvider } from '@/lib/firebaseClient';
@@ -737,6 +738,13 @@ export default function Home() {
                         onSave={handleSaveNdsWeights}
                       />
                     </DashaChart>
+                    {data?.transitTimeSeries && (
+                      <ExportTimeline 
+                        dashaData={activeDashaTimeSeries} 
+                        transitData={data.transitTimeSeries} 
+                        weights={ndsWeights} 
+                      />
+                    )}
                   </div>
                 </div>
               )}
