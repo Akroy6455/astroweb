@@ -72,7 +72,10 @@ export interface NDSWeights {
   enemySign: number;          
   debilitation: number;       
   vargottama: number;         
-  combustion: number;         
+  combustion: number;
+  combustionBadLord?: number;
+  combustionGoodLord?: number;
+  enableCombustionTradeoff?: boolean;         
   sushupti: number;           
   neechaBhanga: number;       
 
@@ -218,6 +221,9 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   debilitation: -100,
   vargottama: 50,
   combustion: -80,
+  combustionBadLord: -80,
+  combustionGoodLord: -40,
+  enableCombustionTradeoff: false,
   sushupti: -90,
   neechaBhanga: 60,
   mutualDistance1: 50,
@@ -547,15 +553,37 @@ export function getDignityScore(planet: Planet, yogaState: YogaState, _positions
     conditions.push({ key: 'vargottama', name: 'Vargottama (D1=D9)', value: w.vargottama });
   }
 
-  if (info.isCombust) {
-    if (planet !== 'Mars' && planet !== 'Saturn') {
-      score += w.combustion;
-      conditions.push({ key: 'combustion', name: 'Combust (Burned by Sun)', value: w.combustion });
-    } else {
-      const v = Math.round(w.combustion * 0.5); // Less penalty for Mars/Saturn
-      score += v;
-      conditions.push({ key: 'combustion', name: 'Combust (Mars/Saturn reduced penalty)', value: v });
+  if (planet === 'Sun' && w.enableCombustionTradeoff) {
+    let absorbedPoints = 0;
+    const ascendantPos = _positions.find(p => p.name === 'Ascendant');
+    const ascendantSignIndex = ascendantPos ? ascendantPos.rasi.index : 0;
+    const sunLordOfHouse = (4 - ascendantSignIndex + 12) % 12 + 1;
+    const isSunBadLord = [2, 3, 6, 7, 8, 12].includes(sunLordOfHouse);
+    const combustionVal = isSunBadLord ? (w.combustionBadLord ?? w.combustion) : (w.combustionGoodLord ?? w.combustion);
+
+    for (const otherP of Object.keys(yogaState.planets)) {
+      if (otherP === 'Sun' || otherP === 'Rahu' || otherP === 'Ketu') continue;
+      const otherInfo = yogaState.planets[otherP];
+      if (otherInfo.isCombust) {
+         absorbedPoints += -(combustionVal);
+      }
     }
+    
+    if (absorbedPoints !== 0) {
+      score += absorbedPoints;
+      conditions.push({ key: 'combustion', name: `Tradeoff: Absorbed points from combust planets`, value: absorbedPoints });
+    }
+  }
+
+  if (info.isCombust && planet !== 'Sun' && planet !== 'Rahu' && planet !== 'Ketu') {
+    const ascendantPos = _positions.find(p => p.name === 'Ascendant');
+    const ascendantSignIndex = ascendantPos ? ascendantPos.rasi.index : 0;
+    const sunLordOfHouse = (4 - ascendantSignIndex + 12) % 12 + 1;
+    const isSunBadLord = [2, 3, 6, 7, 8, 12].includes(sunLordOfHouse);
+    const combustionVal = isSunBadLord ? (w.combustionBadLord ?? w.combustion) : (w.combustionGoodLord ?? w.combustion);
+
+    score += combustionVal;
+    conditions.push({ key: 'combustion', name: `Combust (Sun is Lord of ${sunLordOfHouse})`, value: combustionVal });
   }
 
   const signIdx = info.position.rasi.index;

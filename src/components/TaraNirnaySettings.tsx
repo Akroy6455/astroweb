@@ -62,6 +62,8 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   papaKartari: "Applied if the planet's sign is hemmed between Malefics on both sides (Papa Kartari Yoga).",
   shubhaKartari: "Applied if the planet's sign is hemmed between Benefics on both sides (Shubha Kartari Yoga).",
 
+  combustionBadLord: "Applied to combusted planets if Sun rules houses 2, 3, 6, 7, 8, or 12.",
+  combustionGoodLord: "Applied to combusted planets if Sun rules houses 1, 4, 5, 9, 10, or 11.",
   lajita: "Applied if the planet is in Lajjitadi Avastha: Lajjita (Humiliated - e.g. placed in 5th with Rahu/Ketu/Sun/Saturn/Mars).",
   garvita: "Applied if the planet is in Lajjitadi Avastha: Garvita (Proud - placed in Exaltation or Moolatrikona).",
   kshudita: "Applied if the planet is in Lajjitadi Avastha: Kshudhita (Starved - in enemy sign, aspected by enemy, or conjunct Saturn).",
@@ -152,7 +154,7 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
       title: 'Module 2: Dignity (-100% to +100%)',
       keys: [
         'exaltation', 'ownSign', 'friendlySign', 'neutralSign', 'enemySign', 'debilitation', 
-        'vargottama', 'combustion', 'sushupti', 'neechaBhanga'
+        'vargottama', 'combustionBadLord', 'combustionGoodLord', 'sushupti', 'neechaBhanga'
       ]
     },
     {
@@ -597,9 +599,23 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
             {DESCRIPTIONS.sayanadiAwasthaMatrix}
             <br/><br/>
             <strong>Disclaimer:</strong> This awastha is subject to various other factors like planetary strength, your name, planetary position, etc as said by Rishi Parasara which were very tough to be coded but who knows the future!
+          
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable Sun Combustion Tradeoff</span>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sun absorbs the exact points that are added or reduced from combusted planets.</p>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={localWeights.enableCombustionTradeoff ?? false} 
+                onChange={(e) => setLocalWeights(prev => ({ ...prev, enableCombustionTradeoff: e.target.checked }))}
+                style={{ accentColor: 'var(--primary)', transform: 'scale(1.2)' }}
+              />
+            </label>
           </div>
         </div>
-
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
         {groups.map((group, idx) => {
           return (
