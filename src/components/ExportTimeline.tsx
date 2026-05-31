@@ -42,9 +42,9 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
   const processTransitData = () => {
     return transitData.map(d => {
       const avgM = weights.enableTransitMultiplier ? d.avgMultiplier : 1.0;
-      const mdAdM = weights.enableMdAdTransitMultiplier ? (d.mdLordMultiplier * d.adLordMultiplier) : 1.0;
+      const mdAdM = weights.enableMdAdTransitMultiplier ? (d.mdPlanetMultiplier * d.adPlanetMultiplier) : 1.0;
       const navtaraAvgM = weights.enableNavtaraTransit && d.avgNavtaraMultiplier ? d.avgNavtaraMultiplier : 1.0;
-      const navtaraMdAdM = weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier ? (d.mdLordNavtaraMultiplier * d.adLordNavtaraMultiplier) : 1.0;
+      const navtaraMdAdM = weights.enableNavtaraMdAd && d.mdPlanetNavtaraMultiplier && d.adPlanetNavtaraMultiplier ? (d.mdPlanetNavtaraMultiplier * d.adPlanetNavtaraMultiplier) : 1.0;
       const includeBase = weights.enableBaseNdsInTransit ?? true;
       const finalScore = includeBase ? (d.baseNds * avgM * mdAdM * navtaraAvgM * navtaraMdAdM) : (avgM * mdAdM * navtaraAvgM * navtaraMdAdM * 100);
       return { ...d, finalScore };
@@ -63,15 +63,12 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
 
     processedTransit.forEach(t => {
       const tTime = new Date(t.date).getTime();
-      const activeDasha = dashaData.find(d => {
-        const dTime = new Date(d.date).getTime();
-        const dEnd = new Date(d.endDate).getTime();
-        return tTime >= dTime && tTime <= dEnd;
-      });
+      const activeDashaIndex = dashaData.findIndex(d => new Date(d.date).getTime() > tTime);
+      const activeDasha = activeDashaIndex > 0 ? dashaData[activeDashaIndex - 1] : (activeDashaIndex === 0 ? dashaData[0] : dashaData[dashaData.length - 1]);
 
-      const mdLord = activeDasha ? activeDasha.mdLord : '';
-      const adLord = activeDasha ? activeDasha.adLord : '';
-      const dashaScore = activeDasha ? activeDasha.score : 0;
+      const mdLord = activeDasha ? activeDasha.mdPlanet : '';
+      const adLord = activeDasha ? activeDasha.adPlanet : '';
+      const dashaScore = activeDasha ? activeDasha.percentage : 0;
       
       const row = `${t.date.split('T')[0]},${mdLord},${adLord},${dashaScore.toFixed(2)},${t.baseNds.toFixed(2)},${t.finalScore.toFixed(2)}`;
       csvContent += row + "\n";
@@ -95,7 +92,7 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
     const H = 800; // 400px for Dasha, 400px for Transit
     
     const minTime = new Date(dashaData[0].date).getTime();
-    const maxTime = new Date(dashaData[dashaData.length - 1].endDate).getTime();
+    const maxTime = new Date(dashaData[dashaData.length - 1].date).getTime() + (30 * 24 * 60 * 60 * 1000);
     const totalSpan = maxTime - minTime || 1;
 
     const toX = (t: number) => ((t - minTime) / totalSpan) * W;
@@ -113,14 +110,14 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
     // Draw Center Line for Dasha
     svgContent += `<line x1="0" y1="${dashaY + dashaH/2}" x2="${W}" y2="${dashaY + dashaH/2}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />`;
     
-    dashaData.forEach(d => {
+    dashaData.forEach((d, i) => {
       const tStart = new Date(d.date).getTime();
-      const tEnd = new Date(d.endDate).getTime();
+      const tEnd = i < dashaData.length - 1 ? new Date(dashaData[i+1].date).getTime() : new Date(d.date).getTime() + (30 * 24 * 60 * 60 * 1000);
       const x1 = toX(tStart);
       const x2 = toX(tEnd);
       const w = Math.max(1, x2 - x1);
       
-      const pct = Math.max(-100, Math.min(100, d.score));
+      const pct = Math.max(-100, Math.min(100, d.percentage));
       const color = getNdsColor(pct);
       
       let y, h;
@@ -136,8 +133,8 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
       
       // Draw labels if wide enough
       if (w > 40) {
-        svgContent += `<text x="${x1 + 4}" y="${dashaY + 20}" fill="${PLANET_COLORS[d.mdLord] || '#fff'}" font-family="sans-serif" font-size="12" font-weight="bold">${d.mdLord.substring(0,2)}</text>`;
-        svgContent += `<text x="${x1 + 4}" y="${dashaY + 36}" fill="${PLANET_COLORS[d.adLord] || '#fff'}" font-family="sans-serif" font-size="10">${d.adLord.substring(0,2)}</text>`;
+        svgContent += `<text x="${x1 + 4}" y="${dashaY + 20}" fill="${PLANET_COLORS[d.mdPlanet] || '#fff'}" font-family="sans-serif" font-size="12" font-weight="bold">${d.mdPlanet.substring(0,2)}</text>`;
+        svgContent += `<text x="${x1 + 4}" y="${dashaY + 36}" fill="${PLANET_COLORS[d.adPlanet] || '#fff'}" font-family="sans-serif" font-size="10">${d.adPlanet.substring(0,2)}</text>`;
       }
     });
     
