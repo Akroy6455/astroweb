@@ -563,7 +563,7 @@ export function getDignityScore(planet: Planet, yogaState: YogaState, _positions
 
     for (const otherP of Object.keys(yogaState.planets)) {
       if (otherP === 'Sun' || otherP === 'Rahu' || otherP === 'Ketu') continue;
-      const otherInfo = yogaState.planets[otherP];
+      const otherInfo = yogaState.planets[otherP as keyof typeof yogaState.planets];
       if (otherInfo.isCombust) {
          absorbedPoints += -(combustionVal);
       }
