@@ -13,6 +13,9 @@ interface TransitDataPoint {
   avgNavtaraMultiplier?: number;
   mdLordNavtaraMultiplier?: number;
   adLordNavtaraMultiplier?: number;
+  mdPlanet?: string;
+  adPlanet?: string;
+  advancedTriggers?: Record<string, { mAsc: boolean, mMoon: boolean, bAsc: boolean, bMoon: boolean }>;
 }
 
 interface ExportTimelineProps {
@@ -40,15 +43,37 @@ function getNdsColor(pct: number): string {
 export default function ExportTimeline({ dashaData, transitData, weights }: ExportTimelineProps) {
 
   const processTransitData = () => {
+    
     return transitData.map(d => {
       const avgM = weights.enableTransitMultiplier ? d.avgMultiplier : 1.0;
       const mdAdM = weights.enableMdAdTransitMultiplier ? (d.mdLordMultiplier * d.adLordMultiplier) : 1.0;
+      
       const navtaraAvgM = weights.enableNavtaraTransit && d.avgNavtaraMultiplier ? d.avgNavtaraMultiplier : 1.0;
       const navtaraMdAdM = weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier ? (d.mdLordNavtaraMultiplier * d.adLordNavtaraMultiplier) : 1.0;
-            const includeBase = weights.enableBaseNdsInTransit ?? true;
-      const M = avgM * mdAdM * navtaraAvgM * navtaraMdAdM;
+
+      const calcAdvM = (planet?: string) => {
+        if (!d.advancedTriggers || !planet || !d.advancedTriggers[planet]) return 1.0;
+        const t = d.advancedTriggers[planet];
+        let sum = 0; let count = 0;
+        if (t.mAsc) { sum += (weights.advancedMaleficAsc ?? 0.6); count++; }
+        if (t.mMoon) { sum += (weights.advancedMaleficMoon ?? 0.8); count++; }
+        if (t.bAsc) { sum += (weights.advancedBeneficAsc ?? 1.4); count++; }
+        if (t.bMoon) { sum += (weights.advancedBeneficMoon ?? 1.2); count++; }
+        return count > 0 ? (sum / count) : 1.0;
+      };
+
+      let advAvgM = 1.0;
+      let advMdAdM = 1.0;
+
+      if (weights.enableAdvancedTransitMultiplier && d.advancedTriggers) {
+        const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+        advAvgM = planets.reduce((acc, p) => acc + calcAdvM(p), 0) / 7;
+        advMdAdM = calcAdvM(d.mdPlanet) * calcAdvM(d.adPlanet);
+      }
+
+      const M = avgM * mdAdM * navtaraAvgM * navtaraMdAdM * advAvgM * advMdAdM;
       let finalScore = 0;
-      
+      const includeBase = weights.enableBaseNdsInTransit ?? true;
       if (includeBase) {
         if (d.baseNds >= 0) {
           finalScore = d.baseNds * M;
@@ -60,6 +85,7 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
       }
       return { ...d, finalScore };
     });
+  
   };
 
   const exportCSV = () => {

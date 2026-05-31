@@ -23,8 +23,8 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Vedic Astrology",
-  description: "Offline precision Kundli generator",
+  title: "Tara Nirnay",
+  description: "सबसे उन्नत एल्गोरिदम आधारित फालित ज्योतिष वेब एप्लिकेशन में से एक",
 };
 
 export default function RootLayout({

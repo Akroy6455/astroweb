@@ -484,7 +484,9 @@ export function calculateChart(year: number, month: number, day: number, hour: n
 export function generateMonthlyTransitTimeSeries(
   dashaTimeSeries: any[],
   ashtakavarga: any,
-  panchang?: any
+  panchang?: any,
+  positions?: any[],
+  lagna?: any
 ) {
   if (!dashaTimeSeries || dashaTimeSeries.length === 0 || !ashtakavarga?.bav) {
     return [];
@@ -565,9 +567,9 @@ export function generateMonthlyTransitTimeSeries(
     for (const p of transitPlanets) {
       let multiplier = 1.0;
       if (p === 'Moon') {
-        multiplier = 1.0; 
+        multiplier = 1.0;
       } else {
-        const bindus = ashtakavarga.bav[p] ? ashtakavarga.bav[p][currentPlanetSigns[p]] : 4; 
+        const bindus = ashtakavarga.bav[p] ? ashtakavarga.bav[p][currentPlanetSigns[p]] : 4;
         multiplier = 0.6 + (bindus * 0.1);
       }
       astMultipliersSum += multiplier;
@@ -643,6 +645,80 @@ export function generateMonthlyTransitTimeSeries(
        }
     }
 
+
+    const ascIndex = lagna ? lagna.rasi.index : 0;
+    const moonIndex = positions ? (positions.find(p => p.name === 'Moon')?.rasi?.index ?? 0) : 0;
+
+    const getOwnedHouses = (planetName: string, refSignIndex: number) => {
+      const ownedHouses = [];
+      const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+      const signLords: Record<string, string> = {
+        'Aries': 'Mars', 'Taurus': 'Venus', 'Gemini': 'Mercury', 'Cancer': 'Moon', 'Leo': 'Sun', 'Virgo': 'Mercury',
+        'Libra': 'Venus', 'Scorpio': 'Mars', 'Sagittarius': 'Jupiter', 'Capricorn': 'Saturn', 'Aquarius': 'Saturn', 'Pisces': 'Jupiter'
+      };
+      for (let i = 0; i < 12; i++) {
+        if (signLords[signs[i]] === planetName) {
+          const houseNum = (i - refSignIndex + 12) % 12 + 1;
+          ownedHouses.push(houseNum);
+        }
+      }
+      return ownedHouses;
+    };
+
+    const advancedTriggers: Record<string, any> = {};
+    for (const p of transitPlanets) { // Only 7 planets
+      const ownedFromAsc = getOwnedHouses(p, ascIndex);
+      const ownedFromMoon = getOwnedHouses(p, moonIndex);
+      
+      const isMaleficAsc = ownedFromAsc.includes(6) || ownedFromAsc.includes(8) || ownedFromAsc.includes(12);
+      const isMaleficMoon = ownedFromMoon.includes(6) || ownedFromMoon.includes(8) || ownedFromMoon.includes(12);
+      const isBeneficAsc = ownedFromAsc.includes(1) || ownedFromAsc.includes(5) || ownedFromAsc.includes(9);
+      const isBeneficMoon = ownedFromMoon.includes(1) || ownedFromMoon.includes(5) || ownedFromMoon.includes(9);
+
+      const transitSignIndex = currentPlanetSigns[p];
+      const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+      const transitSignName = signs[transitSignIndex];
+
+      const isExalted = (p === 'Sun' && transitSignName === 'Aries') || 
+                        (p === 'Moon' && transitSignName === 'Taurus') || 
+                        (p === 'Mars' && transitSignName === 'Capricorn') || 
+                        (p === 'Mercury' && transitSignName === 'Virgo') || 
+                        (p === 'Jupiter' && transitSignName === 'Cancer') || 
+                        (p === 'Venus' && transitSignName === 'Pisces') || 
+                        (p === 'Saturn' && transitSignName === 'Libra');
+
+      const isDebilitated = (p === 'Sun' && transitSignName === 'Libra') || 
+                            (p === 'Moon' && transitSignName === 'Scorpio') || 
+                            (p === 'Mars' && transitSignName === 'Cancer') || 
+                            (p === 'Mercury' && transitSignName === 'Pisces') || 
+                            (p === 'Jupiter' && transitSignName === 'Capricorn') || 
+                            (p === 'Venus' && transitSignName === 'Virgo') || 
+                            (p === 'Saturn' && transitSignName === 'Aries');
+
+const signLords: Record<string, string> = {
+        'Aries': 'Mars', 'Taurus': 'Venus', 'Gemini': 'Mercury', 'Cancer': 'Moon', 'Leo': 'Sun', 'Virgo': 'Mercury',
+        'Libra': 'Venus', 'Scorpio': 'Mars', 'Sagittarius': 'Jupiter', 'Capricorn': 'Saturn', 'Aquarius': 'Saturn', 'Pisces': 'Jupiter'
+      };
+      const isOwn = signLords[transitSignName] === p;
+
+      const houseFromAsc = (transitSignIndex - ascIndex + 12) % 12 + 1;
+      const houseFromMoon = (transitSignIndex - moonIndex + 12) % 12 + 1;
+
+      
+      const in159Asc = houseFromAsc === 1 || houseFromAsc === 5 || houseFromAsc === 9;
+      const in159Moon = houseFromMoon === 1 || houseFromMoon === 5 || houseFromMoon === 9;
+      const in6812Asc = houseFromAsc === 6 || houseFromAsc === 8 || houseFromAsc === 12;
+      const in6812Moon = houseFromMoon === 6 || houseFromMoon === 8 || houseFromMoon === 12;
+
+      advancedTriggers[p] = {
+        mAsc: (isMaleficAsc && (isExalted || in159Asc)) || (isBeneficAsc && (isDebilitated || in6812Asc)),
+        mMoon: (isMaleficMoon && (isExalted || in159Moon)) || (isBeneficMoon && (isDebilitated || in6812Moon)),
+        bAsc: (isBeneficAsc && (isExalted || isOwn || in159Asc)) || (isMaleficAsc && (isDebilitated || in6812Asc)),
+        bMoon: (isBeneficMoon && (isExalted || isOwn || in159Moon)) || (isMaleficMoon && (isDebilitated || in6812Moon))
+      };
+  
+    }
+
     points.push({
       date: dDate.toISOString(),
       baseNds: activePeriod.baseNds,
@@ -651,7 +727,10 @@ export function generateMonthlyTransitTimeSeries(
       adLordMultiplier: adLordAstMultiplier,
       avgNavtaraMultiplier,
       mdLordNavtaraMultiplier,
-      adLordNavtaraMultiplier
+      adLordNavtaraMultiplier,
+      mdPlanet: mdLord,
+      adPlanet: adLord,
+      advancedTriggers
     });
 
     currentDateTs += 30 * 24 * 60 * 60 * 1000;

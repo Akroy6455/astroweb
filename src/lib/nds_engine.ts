@@ -135,6 +135,11 @@ export interface NDSWeights {
   enableNavtaraTransit?: boolean;
   enableNavtaraMdAd?: boolean;
   enableBaseNdsInTransit?: boolean;
+  enableAdvancedTransitMultiplier?: boolean;
+  advancedMaleficAsc?: number;
+  advancedMaleficMoon?: number;
+  advancedBeneficAsc?: number;
+  advancedBeneficMoon?: number;
 
   // Toggles — one per module
   disabledParams?: Record<string, boolean>;
@@ -157,6 +162,11 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   enableNavtaraTransit: true,
   enableNavtaraMdAd: true,
   enableBaseNdsInTransit: false,
+  enableAdvancedTransitMultiplier: true,
+  advancedMaleficAsc: 0.6,
+  advancedMaleficMoon: 0.8,
+  advancedBeneficAsc: 1.4,
+  advancedBeneficMoon: 1.2,
   disabledParams: {},
   lordHouse1: 90,
   lordHouse2: -15,
