@@ -187,3 +187,160 @@ export function calculateAwasthas(positions: any[], lagna: any, jd: number, lat:
 
   return result;
 }
+
+export const DASAVARGA_NAMES: Record<number, string> = {
+  0: 'Shunyavarga',
+  1: 'Shunyavarga',
+  2: 'Parijatha',
+  3: 'Uttama',
+  4: 'Gopura',
+  5: 'Simhasana',
+  6: 'Paravata',
+  7: 'Devaloka',
+  8: 'Brahmaloka',
+  9: 'Shakravahana',
+  10: 'Shridham'
+};
+
+export function calculateDasavarga(
+  positions: any[],
+  divisionalCharts: any,
+  shadbala: any,
+  arudhaLagna: any,
+  awasthas: any
+) {
+  const result: Record<string, { score: number; name: string; details: string[] }> = {};
+  
+  if (!arudhaLagna || !shadbala || !awasthas) return result;
+
+  const alSignIndex = arudhaLagna.rasi.index;
+  const anglesFromAL = [0, 3, 6, 9].map(offset => (alSignIndex + offset) % 12);
+  
+  const targetArudhaSigns = new Set<number>();
+  anglesFromAL.forEach(angleSign => {
+    const lord = SIGN_RULERS[angleSign];
+    // Find all signs owned by this lord
+    for (let i = 0; i < 12; i++) {
+      if (SIGN_RULERS[i] === lord) {
+        targetArudhaSigns.add(i);
+      }
+    }
+  });
+
+  const truePlanets = ['Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+  
+  for (const pos of positions) {
+    if (!P_STATUS[pos.name as PlanetName]) continue;
+    const pName = pos.name as PlanetName;
+
+    let isExcluded = false;
+    let exclusionReason = '';
+
+    // Combust check
+    if (pos.isCombust) {
+      isExcluded = true;
+      exclusionReason = 'Combust';
+    }
+
+    // Weak check
+    if (!isExcluded && shadbala[pName] && shadbala[pName].totalRupas < shadbala[pName].requiredRupas) {
+      isExcluded = true;
+      exclusionReason = 'Weak (Low Shadbala)';
+    }
+
+    // Defeated check (Graha Yuddha)
+    if (!isExcluded && truePlanets.includes(pName)) {
+      for (const other of positions) {
+        if (other.name !== pName && truePlanets.includes(other.name)) {
+          let diff = Math.abs(pos.longitude - other.longitude);
+          if (diff > 180) diff = 360 - diff;
+          if (diff <= 1.0) {
+            // In planetary war. Check who has lower Shadbala
+            const mySb = shadbala[pName]?.totalRupas || 0;
+            const otherSb = shadbala[other.name]?.totalRupas || 0;
+            if (mySb < otherSb) {
+              isExcluded = true;
+              exclusionReason = 'Defeated in Planetary War';
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Bad Awastha check
+    const myAwastha = awasthas[pName]?.sayanadi;
+    if (!isExcluded && (myAwastha === 'Nidra' || myAwastha === 'Gaman' || myAwastha === 'Sayana')) {
+      isExcluded = true;
+      exclusionReason = `Bad Awastha (${myAwastha})`;
+    }
+
+    if (isExcluded) {
+      result[pName] = { score: 0, name: 'Shunyavarga', details: [`Excluded: ${exclusionReason}`] };
+      continue;
+    }
+
+    let score = 0;
+    const details: string[] = [];
+    const divisions = [1, 2, 3, 7, 9, 10, 12, 16, 20, 24];
+
+    for (const div of divisions) {
+      const varga = divisionalCharts[`D${div}`];
+      if (!varga || !varga.houses) continue;
+
+      let vSignIndex = -1;
+      for (const h of varga.houses) {
+        if (h.planets && h.planets.some((p: any) => p.name === pName)) {
+          vSignIndex = h.signIndex;
+          break;
+        }
+      }
+
+      if (vSignIndex === -1) {
+        // Fallback if not found, but it should be found
+        continue;
+      }
+      
+      let gotPoint = false;
+
+      if (div === 2) {
+        if (['Sun', 'Mars', 'Jupiter'].includes(pName) && vSignIndex === 4) {
+          gotPoint = true;
+          details.push(`D2: Leo Hora`);
+        } else if (['Moon', 'Venus', 'Saturn', 'Rahu', 'Ketu'].includes(pName) && vSignIndex === 3) {
+          gotPoint = true;
+          details.push(`D2: Cancer Hora`);
+        } else if (pName === 'Mercury') {
+          gotPoint = true;
+          details.push(`D2: Mercury gets point in both`);
+        }
+      } else {
+        if (myAwastha === 'Prakash' || myAwastha === 'Sabha') {
+          gotPoint = true;
+          details.push(`D${div}: Awastha (${myAwastha})`);
+        } else if (MOOLATRIKONA[pName] === vSignIndex) {
+          gotPoint = true;
+          details.push(`D${div}: Moolatrikona`);
+        } else if (SIGN_RULERS[vSignIndex] === pName) {
+          gotPoint = true;
+          details.push(`D${div}: Own Sign`);
+        } else if (targetArudhaSigns.has(vSignIndex)) {
+          gotPoint = true;
+          details.push(`D${div}: AL Angle Lord Sign`);
+        }
+      }
+
+      if (gotPoint) {
+        score++;
+      }
+    }
+
+    result[pName] = {
+      score,
+      name: DASAVARGA_NAMES[score] || 'Unknown',
+      details: details.length > 0 ? details : ['No good vargas']
+    };
+  }
+
+  return result;
+}

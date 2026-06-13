@@ -12,6 +12,11 @@ interface AwasthasTableProps {
     a: number;
     g: number;
     r: number;
+    dasavarga?: {
+      score: number;
+      name: string;
+      details: string[];
+    };
   }>;
 }
 
@@ -32,6 +37,7 @@ export default function AwasthasTable({ data }: AwasthasTableProps) {
             <th>Lajjitadi Awastha</th>
             <th>Sayanadi Awastha</th>
             <th title="Sayanadi Calculation Remainder">Rem</th>
+            <th title="Dasavarga Classification">Dasavarga Class</th>
           </tr>
         </thead>
         <tbody>
@@ -45,6 +51,15 @@ export default function AwasthasTable({ data }: AwasthasTableProps) {
                 <td style={{ color: 'var(--text-muted)' }}>{planetData.lajjitadi}</td>
                 <td>{planetData.sayanadi}</td>
                 <td>{planetData.sayanadiRemainder}</td>
+                <td title={planetData.dasavarga ? planetData.dasavarga.details.join('\n') : ''}>
+                  {planetData.dasavarga ? (
+                    <span style={{ borderBottom: '1px dotted currentColor', cursor: 'help' }}>
+                      {planetData.dasavarga.name} ({planetData.dasavarga.score}/10)
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)' }}>N/A</span>
+                  )}
+                </td>
               </tr>
             );
           })}

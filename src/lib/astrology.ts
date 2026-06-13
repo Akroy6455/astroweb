@@ -4,7 +4,7 @@ import fs from 'fs';
 import { calculateAshtakavarga } from './ashtakavarga';
 import { calculateShadbala } from './shadbala';
 import { extractMLFeatures } from './ml_features';
-import { calculateAwasthas } from './awasthas';
+import { calculateAwasthas, calculateDasavarga } from './awasthas';
 import { calculateVimshottariDasha } from './dasha';
 import { calculatePanchang } from './panchang';
 import { evaluateYogaState } from './yoga_engine/engine';
@@ -530,6 +530,15 @@ export function calculateChart(year: number, month: number, day: number, hour: n
   const vimshopakBala = calculateVimshopakBala(positions, divisionalCharts, yogaState);
   
   const specialLagnas = calculateSpecialLagnas(jd, lat, lon, positions, lagna, housesMap);
+  
+  // Calculate Dasavarga
+  const dasavarga = calculateDasavarga(positions, divisionalCharts, shadbala, specialLagnas?.arudhaLagna, awasthas);
+  // Merge dasavarga into awasthas
+  for (const pName of Object.keys(awasthas)) {
+    if (dasavarga[pName]) {
+      awasthas[pName].dasavarga = dasavarga[pName];
+    }
+  }
 
   // NDS time series — one data point per Antardasha boundary
   const alSignIndex = specialLagnas?.arudhaLagna?.rasi?.index ?? 0;
