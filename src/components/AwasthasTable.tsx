@@ -12,11 +12,10 @@ interface AwasthasTableProps {
     a: number;
     g: number;
     r: number;
-    dasavarga?: {
-      score: number;
-      name: string;
-      details: string[];
-    };
+    dasavarga?: { score: number; name: string; details: string[]; };
+    shadvarga?: { score: number; name: string; details: string[]; };
+    saptavarga?: { score: number; name: string; details: string[]; };
+    shodashvarga?: { score: number; name: string; details: string[]; };
   }>;
 }
 
@@ -37,7 +36,10 @@ export default function AwasthasTable({ data }: AwasthasTableProps) {
             <th>Lajjitadi Awastha</th>
             <th>Sayanadi Awastha</th>
             <th title="Sayanadi Calculation Remainder">Rem</th>
-            <th title="Dasavarga Classification">Dasavarga Class</th>
+            <th title="Shadvarga Classification">Shadvarga</th>
+            <th title="Saptavarga Classification">Saptavarga</th>
+            <th title="Dasavarga Classification">Dasavarga</th>
+            <th title="Shodashvarga Classification">Shodashvarga</th>
           </tr>
         </thead>
         <tbody>
@@ -51,14 +53,33 @@ export default function AwasthasTable({ data }: AwasthasTableProps) {
                 <td style={{ color: 'var(--text-muted)' }}>{planetData.lajjitadi}</td>
                 <td>{planetData.sayanadi}</td>
                 <td>{planetData.sayanadiRemainder}</td>
+                <td title={planetData.shadvarga ? planetData.shadvarga.details.join('\n') : ''}>
+                  {planetData.shadvarga ? (
+                    <span style={{ borderBottom: '1px dotted currentColor', cursor: 'help' }}>
+                      {planetData.shadvarga.name} ({planetData.shadvarga.score}/6)
+                    </span>
+                  ) : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
+                </td>
+                <td title={planetData.saptavarga ? planetData.saptavarga.details.join('\n') : ''}>
+                  {planetData.saptavarga ? (
+                    <span style={{ borderBottom: '1px dotted currentColor', cursor: 'help' }}>
+                      {planetData.saptavarga.name} ({planetData.saptavarga.score}/7)
+                    </span>
+                  ) : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
+                </td>
                 <td title={planetData.dasavarga ? planetData.dasavarga.details.join('\n') : ''}>
                   {planetData.dasavarga ? (
                     <span style={{ borderBottom: '1px dotted currentColor', cursor: 'help' }}>
                       {planetData.dasavarga.name} ({planetData.dasavarga.score}/10)
                     </span>
-                  ) : (
-                    <span style={{ color: 'var(--text-muted)' }}>N/A</span>
-                  )}
+                  ) : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
+                </td>
+                <td title={planetData.shodashvarga ? planetData.shodashvarga.details.join('\n') : ''}>
+                  {planetData.shodashvarga ? (
+                    <span style={{ borderBottom: '1px dotted currentColor', cursor: 'help' }}>
+                      {planetData.shodashvarga.name} ({planetData.shodashvarga.score}/16)
+                    </span>
+                  ) : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
                 </td>
               </tr>
             );

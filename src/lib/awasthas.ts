@@ -188,28 +188,51 @@ export function calculateAwasthas(positions: any[], lagna: any, jd: number, lat:
   return result;
 }
 
-export const DASAVARGA_NAMES: Record<number, string> = {
-  0: 'Shunyavarga',
-  1: 'Shunyavarga',
-  2: 'Parijatha',
-  3: 'Uttama',
-  4: 'Gopura',
-  5: 'Simhasana',
-  6: 'Paravata',
-  7: 'Devaloka',
-  8: 'Brahmaloka',
-  9: 'Shakravahana',
-  10: 'Shridham'
+export const SHADVARGA_NAMES: Record<number, string> = {
+  0: 'Shunyavarga', 1: 'Shunyavarga', 2: 'Kimsuka', 3: 'Vyanjana', 
+  4: 'Chamara', 5: 'Chatra', 6: 'Kundala'
 };
 
-export function calculateDasavarga(
+export const SAPTAVARGA_NAMES: Record<number, string> = {
+  0: 'Shunyavarga', 1: 'Shunyavarga', 2: 'Kimsuka', 3: 'Vyanjana', 
+  4: 'Chamara', 5: 'Chatra', 6: 'Kundala', 7: 'Mukuta'
+};
+
+export const DASAVARGA_NAMES: Record<number, string> = {
+  0: 'Shunyavarga', 1: 'Shunyavarga', 2: 'Parijatha', 3: 'Uttama', 
+  4: 'Gopura', 5: 'Simhasana', 6: 'Paravata', 7: 'Devaloka', 
+  8: 'Brahmaloka', 9: 'Shakravahana', 10: 'Shridham'
+};
+
+export const SHODASHVARGA_NAMES: Record<number, string> = {
+  0: 'Shunyavarga', 1: 'Shunyavarga', 2: 'Bhedaka', 3: 'Kusuma', 
+  4: 'Nagapurusha', 5: 'Kanduka', 6: 'Kerala', 7: 'Kalpavriksha', 
+  8: 'Chandanavana', 9: 'Purnachandra', 10: 'Uchchaisrava', 
+  11: 'Dhanvantari', 12: 'Suryakanta', 13: 'Vidruma', 
+  14: 'Shakra-Simhasana', 15: 'Goloka', 16: 'Sri Vallabha'
+};
+
+export interface VargaClassificationResult {
+  score: number;
+  name: string;
+  details: string[];
+}
+
+export interface VargaClassifications {
+  shadvarga: VargaClassificationResult;
+  saptavarga: VargaClassificationResult;
+  dasavarga: VargaClassificationResult;
+  shodashvarga: VargaClassificationResult;
+}
+
+export function calculateVargaClassifications(
   positions: any[],
   divisionalCharts: any,
   shadbala: any,
   arudhaLagna: any,
   awasthas: any
 ) {
-  const result: Record<string, { score: number; name: string; details: string[] }> = {};
+  const result: Record<string, VargaClassifications> = {};
   
   if (!arudhaLagna || !shadbala || !awasthas) return result;
 
@@ -228,8 +251,6 @@ export function calculateDasavarga(
 
   const truePlanets = ['Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   
-  // Pre-calculate which planets are "bad" (combust/weak/defeated/bad awastha)
-  // and which are in Prakash/Sabha.
   const badSignLords = new Set<string>();
   const prakashSabhaLords = new Set<string>();
 
@@ -264,22 +285,26 @@ export function calculateDasavarga(
       isBad = true;
     }
 
-    if (isBad) {
-      badSignLords.add(pName);
-    }
-
-    if (myAwastha === 'Prakash' || myAwastha === 'Sabha') {
-      prakashSabhaLords.add(pName);
-    }
+    if (isBad) badSignLords.add(pName);
+    if (myAwastha === 'Prakash' || myAwastha === 'Sabha') prakashSabhaLords.add(pName);
   }
 
   for (const pos of positions) {
     if (!P_STATUS[pos.name as PlanetName]) continue;
     const pName = pos.name as PlanetName;
 
-    let score = 0;
-    const details: string[] = [];
-    const divisions = [1, 2, 3, 7, 9, 10, 12, 16, 20, 24];
+    // Accumulators for each classification
+    const scores = { shadvarga: 0, saptavarga: 0, dasavarga: 0, shodashvarga: 0 };
+    const details = { shadvarga: [] as string[], saptavarga: [] as string[], dasavarga: [] as string[], shodashvarga: [] as string[] };
+
+    const divisions = [1, 2, 3, 4, 7, 9, 10, 12, 16, 20, 24, 27, 30, 40, 45, 60];
+
+    const sysDefs = [
+      { key: 'shadvarga' as const, divs: [1, 2, 3, 9, 12, 30] },
+      { key: 'saptavarga' as const, divs: [1, 2, 3, 7, 9, 12, 30] },
+      { key: 'dasavarga' as const, divs: [1, 2, 3, 7, 9, 10, 12, 16, 20, 24] },
+      { key: 'shodashvarga' as const, divs: [1, 2, 3, 4, 7, 9, 10, 12, 16, 20, 24, 27, 30, 40, 45, 60] }
+    ];
 
     for (const div of divisions) {
       const varga = divisionalCharts[`D${div}`];
@@ -301,46 +326,59 @@ export function calculateDasavarga(
 
       if (div === 2) {
         if (['Sun', 'Mars', 'Jupiter'].includes(pName) && vSignIndex === 4) {
-          gotPoint = true;
-          reason = `D2: Leo Hora`;
+          gotPoint = true; reason = `D2: Leo Hora`;
         } else if (['Moon', 'Venus', 'Saturn', 'Rahu', 'Ketu'].includes(pName) && vSignIndex === 3) {
-          gotPoint = true;
-          reason = `D2: Cancer Hora`;
+          gotPoint = true; reason = `D2: Cancer Hora`;
         } else if (pName === 'Mercury') {
-          gotPoint = true;
-          reason = `D2: Mercury gets point in both`;
+          gotPoint = true; reason = `D2: Mercury gets point in both`;
         }
       } else {
         if (MOOLATRIKONA[pName] === vSignIndex) {
-          gotPoint = true;
-          reason = `D${div}: Moolatrikona`;
+          gotPoint = true; reason = `D${div}: Moolatrikona`;
         } else if (lord === pName) {
-          gotPoint = true;
-          reason = `D${div}: Own Sign`;
+          gotPoint = true; reason = `D${div}: Own Sign`;
         } else if (targetArudhaSigns.has(vSignIndex)) {
-          gotPoint = true;
-          reason = `D${div}: AL Angle Lord Sign`;
+          gotPoint = true; reason = `D${div}: AL Angle Lord Sign`;
         } else if (prakashSabhaLords.has(lord)) {
-          gotPoint = true;
-          reason = `D${div}: Lord in Prakash/Sabha`;
+          gotPoint = true; reason = `D${div}: Lord in Prakash/Sabha`;
         }
       }
 
-      // Exclusion: "divisions of a combust/weak/defeated planet are not counted"
       if (gotPoint && badSignLords.has(lord)) {
         gotPoint = false;
       }
 
       if (gotPoint) {
-        score++;
-        details.push(reason);
+        for (const sys of sysDefs) {
+          if (sys.divs.includes(div)) {
+            scores[sys.key]++;
+            details[sys.key].push(reason);
+          }
+        }
       }
     }
 
     result[pName] = {
-      score,
-      name: DASAVARGA_NAMES[score] || 'Unknown',
-      details: details.length > 0 ? details : ['No good vargas']
+      shadvarga: {
+        score: scores.shadvarga,
+        name: SHADVARGA_NAMES[scores.shadvarga] || 'Unknown',
+        details: details.shadvarga.length > 0 ? details.shadvarga : ['No good vargas']
+      },
+      saptavarga: {
+        score: scores.saptavarga,
+        name: SAPTAVARGA_NAMES[scores.saptavarga] || 'Unknown',
+        details: details.saptavarga.length > 0 ? details.saptavarga : ['No good vargas']
+      },
+      dasavarga: {
+        score: scores.dasavarga,
+        name: DASAVARGA_NAMES[scores.dasavarga] || 'Unknown',
+        details: details.dasavarga.length > 0 ? details.dasavarga : ['No good vargas']
+      },
+      shodashvarga: {
+        score: scores.shodashvarga,
+        name: SHODASHVARGA_NAMES[scores.shodashvarga] || 'Unknown',
+        details: details.shodashvarga.length > 0 ? details.shodashvarga : ['No good vargas']
+      }
     };
   }
 

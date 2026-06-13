@@ -4,7 +4,7 @@ import fs from 'fs';
 import { calculateAshtakavarga } from './ashtakavarga';
 import { calculateShadbala } from './shadbala';
 import { extractMLFeatures } from './ml_features';
-import { calculateAwasthas, calculateDasavarga } from './awasthas';
+import { calculateAwasthas, calculateVargaClassifications } from './awasthas';
 import { calculateVimshottariDasha } from './dasha';
 import { calculatePanchang } from './panchang';
 import { evaluateYogaState } from './yoga_engine/engine';
@@ -531,12 +531,15 @@ export function calculateChart(year: number, month: number, day: number, hour: n
   
   const specialLagnas = calculateSpecialLagnas(jd, lat, lon, positions, lagna, housesMap);
   
-  // Calculate Dasavarga
-  const dasavarga = calculateDasavarga(positions, divisionalCharts, shadbala, specialLagnas?.arudhaLagna, awasthas);
-  // Merge dasavarga into awasthas
+  // Calculate Varga Classifications
+  const vargaClasses = calculateVargaClassifications(positions, divisionalCharts, shadbala, specialLagnas?.arudhaLagna, awasthas);
+  // Merge varga classifications into awasthas
   for (const pName of Object.keys(awasthas)) {
-    if (dasavarga[pName]) {
-      awasthas[pName].dasavarga = dasavarga[pName];
+    if (vargaClasses[pName]) {
+      awasthas[pName].shadvarga = vargaClasses[pName].shadvarga;
+      awasthas[pName].saptavarga = vargaClasses[pName].saptavarga;
+      awasthas[pName].dasavarga = vargaClasses[pName].dasavarga;
+      awasthas[pName].shodashvarga = vargaClasses[pName].shodashvarga;
     }
   }
 
