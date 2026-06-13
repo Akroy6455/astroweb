@@ -2,7 +2,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import KundliChart from './KundliChart';
+import { formatDMS } from '@/lib/utils';
 import { getKundliData, findNextTransitEvent } from '@/app/actions';
+import yavanajatakaTransitSun from '@/data/yavanajataka_transit_sun.json';
+import yavanajatakaTransitSaturn from '@/data/yavanajataka_transit_saturn.json';
+import yavanajatakaTransitJupiter from '@/data/yavanajataka_transit_jupiter.json';
+import yavanajatakaTransitVenus from '@/data/yavanajataka_transit_venus.json';
+import yavanajatakaTransitMars from '@/data/yavanajataka_transit_mars.json';
+import yavanajatakaTransitMercury from '@/data/yavanajataka_transit_mercury.json';
+import yavanajatakaTransitMoon from '@/data/yavanajataka_transit_moon.json';
+import taraNirnayData from '@/data/tara_nirnay_ndf.json';
 
 const NAKSHATRAS_27 = [
   "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
@@ -81,10 +90,11 @@ for (let r = 0; r < 7; r++) {
   }
 }
 
-export default function TransitTab({ mainData, ayanamsha = 'Raman' }: { mainData: any, ayanamsha?: string }) {
+export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: { mainData: any, ayanamsha?: string, weights?: any }) {
   const [transitData, setTransitData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [subTab, setSubTab] = useState<'Overview' | 'SBC' | 'Sahamas' | 'Finder'>('Overview');
+  const [subTab, setSubTab] = useState<'Overview' | 'SBC' | 'Sahamas' | 'Finder' | 'YogResult' | 'TaraNDF'>('Overview');
+  const [selectedNdfPlanet, setSelectedNdfPlanet] = useState('Sun');
 
   // Finder State
   const [fPlanet, setFPlanet] = useState('Jupiter');
@@ -277,7 +287,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman' }: { mainData
 
   const formatSahama = (long: number) => {
     const signs = ["Ar", "Ta", "Ge", "Ca", "Le", "Vi", "Li", "Sc", "Sg", "Cp", "Aq", "Pi"];
-    return `${signs[Math.floor(long / 30)]} ${(long % 30).toFixed(2)}°`;
+    return `${signs[Math.floor(long / 30)]} ${formatDMS(long % 30)}`;
   };
   
   return (
@@ -315,6 +325,8 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman' }: { mainData
         <button onClick={() => setSubTab('SBC')} className={`tab ${subTab === 'SBC' ? 'active' : ''}`}>SBC & Taras</button>
         <button onClick={() => setSubTab('Sahamas')} className={`tab ${subTab === 'Sahamas' ? 'active' : ''}`}>Sahamas</button>
         <button onClick={() => setSubTab('Finder')} className={`tab ${subTab === 'Finder' ? 'active' : ''}`}>Transit Finder</button>
+        <button onClick={() => setSubTab('YogResult')} className={`tab ${subTab === 'YogResult' ? 'active' : ''}`}>Transit Yog Result</button>
+        <button onClick={() => setSubTab('TaraNDF')} className={`tab ${subTab === 'TaraNDF' ? 'active' : ''}`}>Tara Nirnay NDF</button>
       </div>
 
       {subTab === 'Overview' && transitData && (
@@ -351,7 +363,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman' }: { mainData
                     return (
                       <tr key={p.name}>
                         <td style={{ fontWeight: 'bold' }}>{p.name} {p.retrograde ? '(R)' : ''}</td>
-                        <td>{p.longitude.toFixed(2)}°</td>
+                        <td>{formatDMS(p.longitude)}</td>
                         <td>{p.rasi.name}</td>
                         <td>{p.nakshatra.name}</td>
                         <td style={{ color: 'var(--primary)' }}>{pTara}</td>
@@ -616,7 +628,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman' }: { mainData
                 The {fDirection === 1 ? 'next' : 'previous'} occurrence {fDirection === 1 ? 'happens' : 'happened'} on: <strong>{new Date(fResult.dateUTC).toLocaleString()}</strong>
               </p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                At this exact moment, {fPlanet}'s true longitude is {fResult.longitude.toFixed(2)}°.
+                At this exact moment, {fPlanet}'s true longitude is {formatDMS(fResult.longitude)}.
               </p>
               <button 
                 onClick={() => setSubTab('Overview')} 
@@ -630,6 +642,278 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman' }: { mainData
           ) : fResult === undefined && !fLoading ? (
             <div style={{ color: '#ef4444' }}>No transit found within the next 30 years.</div>
           ) : null}
+        </div>
+      )}
+
+      {subTab === 'YogResult' && transitData && mainData && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--primary)' }}>Transit Yog Results (Yavanajataka)</h2>
+            <p style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              Disclaimer: The results maybe too extreme and depends on various other factors.
+            </p>
+            
+            {/* Transit Sun Results */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>Transiting Sun (Chapter 44)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['Sun', 'Saturn', 'Jupiter', 'Venus', 'Mars', 'Mercury', 'Moon', 'Ascendant'].map(natalPlanet => {
+                  const tSunPos = transitData.positions.find((p: any) => p.name === 'Sun');
+                  let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                  
+                  if (tSunPos && nPlanetPos) {
+                    const tRasi = Math.floor(tSunPos.longitude / 30);
+                    const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                    const house = ((tRasi - nRasi + 12) % 12) + 1;
+                    const result = (yavanajatakaTransitSun as any)[natalPlanet]?.[house.toString()];
+                    
+                    return (
+                      <div key={natalPlanet} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>From Natal {natalPlanet} (House {house})</div>
+                        <div style={{ color: 'var(--foreground)' }}>{result || 'No specific result given.'}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+
+            {/* Transit Moon Results */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>Transiting Moon (Chapter 50)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['Moon', 'Sun', 'Saturn', 'Jupiter', 'Venus', 'Mars', 'Mercury', 'Ascendant'].map(natalPlanet => {
+                  const tMoonPos = transitData.positions.find((p: any) => p.name === 'Moon');
+                  let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                  
+                  if (tMoonPos && nPlanetPos) {
+                    const tRasi = Math.floor(tMoonPos.longitude / 30);
+                    const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                    const house = ((tRasi - nRasi + 12) % 12) + 1;
+                    const result = (yavanajatakaTransitMoon as any)[natalPlanet]?.[house.toString()];
+                    
+                    return (
+                      <div key={natalPlanet} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>From Natal {natalPlanet} (House {house})</div>
+                        <div style={{ color: 'var(--foreground)' }}>{result || 'No specific result given.'}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+
+            {/* Transit Mars Results */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>Transiting Mars (Chapter 48)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['Mars', 'Sun', 'Saturn', 'Jupiter', 'Venus', 'Mercury', 'Moon', 'Ascendant'].map(natalPlanet => {
+                  const tMarsPos = transitData.positions.find((p: any) => p.name === 'Mars');
+                  let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                  
+                  if (tMarsPos && nPlanetPos) {
+                    const tRasi = Math.floor(tMarsPos.longitude / 30);
+                    const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                    const house = ((tRasi - nRasi + 12) % 12) + 1;
+                    const result = (yavanajatakaTransitMars as any)[natalPlanet]?.[house.toString()];
+                    
+                    return (
+                      <div key={natalPlanet} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>From Natal {natalPlanet} (House {house})</div>
+                        <div style={{ color: 'var(--foreground)' }}>{result || 'No specific result given.'}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+
+            {/* Transit Mercury Results */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>Transiting Mercury (Chapter 49)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['Mercury', 'Sun', 'Saturn', 'Jupiter', 'Venus', 'Mars', 'Moon', 'Ascendant'].map(natalPlanet => {
+                  const tMercuryPos = transitData.positions.find((p: any) => p.name === 'Mercury');
+                  let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                  
+                  if (tMercuryPos && nPlanetPos) {
+                    const tRasi = Math.floor(tMercuryPos.longitude / 30);
+                    const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                    const house = ((tRasi - nRasi + 12) % 12) + 1;
+                    const result = (yavanajatakaTransitMercury as any)[natalPlanet]?.[house.toString()];
+                    
+                    return (
+                      <div key={natalPlanet} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>From Natal {natalPlanet} (House {house})</div>
+                        <div style={{ color: 'var(--foreground)' }}>{result || 'No specific result given.'}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+
+            {/* Transit Jupiter Results */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>Transiting Jupiter (Chapter 46)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['Jupiter', 'Sun', 'Saturn', 'Venus', 'Mars', 'Mercury', 'Moon', 'Ascendant'].map(natalPlanet => {
+                  const tJupiterPos = transitData.positions.find((p: any) => p.name === 'Jupiter');
+                  let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                  
+                  if (tJupiterPos && nPlanetPos) {
+                    const tRasi = Math.floor(tJupiterPos.longitude / 30);
+                    const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                    const house = ((tRasi - nRasi + 12) % 12) + 1;
+                    const result = (yavanajatakaTransitJupiter as any)[natalPlanet]?.[house.toString()];
+                    
+                    return (
+                      <div key={natalPlanet} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>From Natal {natalPlanet} (House {house})</div>
+                        <div style={{ color: 'var(--foreground)' }}>{result || 'No specific result given.'}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+
+            {/* Transit Venus Results */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>Transiting Venus (Chapter 47)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['Venus', 'Sun', 'Saturn', 'Jupiter', 'Mars', 'Mercury', 'Moon', 'Ascendant'].map(natalPlanet => {
+                  const tVenusPos = transitData.positions.find((p: any) => p.name === 'Venus');
+                  let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                  
+                  if (tVenusPos && nPlanetPos) {
+                    const tRasi = Math.floor(tVenusPos.longitude / 30);
+                    const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                    const house = ((tRasi - nRasi + 12) % 12) + 1;
+                    const result = (yavanajatakaTransitVenus as any)[natalPlanet]?.[house.toString()];
+                    
+                    return (
+                      <div key={natalPlanet} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>From Natal {natalPlanet} (House {house})</div>
+                        <div style={{ color: 'var(--foreground)' }}>{result || 'No specific result given.'}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+
+            {/* Transit Saturn Results */}
+            <div>
+              <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#eab308' }}>Transiting Saturn (Chapter 45)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {['Saturn', 'Sun', 'Jupiter', 'Venus', 'Mars', 'Mercury', 'Moon', 'Ascendant'].map(natalPlanet => {
+                  const tSaturnPos = transitData.positions.find((p: any) => p.name === 'Saturn');
+                  let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                  
+                  if (tSaturnPos && nPlanetPos) {
+                    const tRasi = Math.floor(tSaturnPos.longitude / 30);
+                    const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                    const house = ((tRasi - nRasi + 12) % 12) + 1;
+                    const result = (yavanajatakaTransitSaturn as any)[natalPlanet]?.[house.toString()];
+                    
+                    return (
+                      <div key={natalPlanet} style={{ background: 'rgba(15, 23, 42, 0.4)', padding: '1rem', borderRadius: '8px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>From Natal {natalPlanet} (House {house})</div>
+                        <div style={{ color: 'var(--foreground)' }}>{result || 'No specific result given.'}</div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {subTab === 'TaraNDF' && transitData && mainData && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--primary)' }}>Tara Nirnay NDF Transit Chart</h2>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+              {['Sun', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus'].map(planet => (
+                <button 
+                  key={planet}
+                  onClick={() => setSelectedNdfPlanet(planet)}
+                  className={`tab ${selectedNdfPlanet === planet ? 'active' : ''}`}
+                >
+                  {planet}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', overflow: 'hidden' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#eab308' }}>
+                    <th style={{ padding: '1rem', border: '1px solid var(--border)' }}>Natal Point</th>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(house => (
+                      <th key={house} style={{ padding: '1rem', border: '1px solid var(--border)' }}>H{house}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {['Sun', 'Moon', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus', 'Ascendant'].map(natalPlanet => {
+                    const rowKey = `from_${natalPlanet}`;
+                    const currentMatrix = weights?.taraNirnayNdfMatrix || taraNirnayData;
+                    const rowData = (currentMatrix as any)[selectedNdfPlanet]?.[rowKey];
+                    if (!rowData) return null;
+
+                    const tPlanetPos = transitData.positions.find((p: any) => p.name === selectedNdfPlanet);
+                    let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                    
+                    let currentTransitHouse = -1;
+                    if (tPlanetPos && nPlanetPos) {
+                      const tRasi = Math.floor(tPlanetPos.longitude / 30);
+                      const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                      currentTransitHouse = ((tRasi - nRasi + 12) % 12) + 1;
+                    }
+
+                    return (
+                      <tr key={natalPlanet} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--primary)', borderRight: '1px solid var(--border)' }}>From {natalPlanet}</td>
+                        {rowData.map((val: number, idx: number) => {
+                          const houseNumber = idx + 1;
+                          const isCurrent = currentTransitHouse === houseNumber;
+                          return (
+                            <td 
+                              key={idx} 
+                              style={{ 
+                                padding: '0.75rem', 
+                                borderRight: '1px solid var(--border)',
+                                background: isCurrent ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+                                color: isCurrent ? '#38bdf8' : 'var(--foreground)',
+                                fontWeight: isCurrent ? 'bold' : 'normal'
+                              }}
+                            >
+                              {val}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                Note: Highlighted cells indicate the current transit house from the respective natal point.
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

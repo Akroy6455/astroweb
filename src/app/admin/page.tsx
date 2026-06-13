@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { auth, db, googleProvider } from '@/lib/firebaseClient';
 import { signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, query, orderBy } from 'firebase/firestore';
-import { ShieldAlert, Users, Activity, LogIn, Clock } from 'lucide-react';
+import { ShieldAlert, Users, Activity, LogIn, Clock, Eye, LayoutDashboard, FileText } from 'lucide-react';
 import { DateTime } from 'luxon';
+import BlogManager from '@/components/admin/BlogManager';
 
 const ADMIN_EMAILS = ['adarsh6455@gmail.com', 'akroy6455@gmail.com'];
 
@@ -15,14 +16,17 @@ interface UserData {
   displayName: string;
   photoURL: string;
   createdAt: string;
-  lastLogin: any; // Firestore Timestamp
+  lastLogin: any;
 }
 
 export default function AdminDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'blogs'>('dashboard');
+
   const [stats, setStats] = useState<any>(null);
+  const [todayVisitors, setTodayVisitors] = useState<number>(0);
   const [usersList, setUsersList] = useState<UserData[]>([]);
   
   useEffect(() => {
@@ -38,12 +42,21 @@ export default function AdminDashboard() {
 
   const fetchAdminData = async () => {
     try {
-      // Fetch Stats
+      // Fetch Global Stats
       const statsDoc = await getDoc(doc(db, 'stats', 'global'));
       if (statsDoc.exists()) {
         setStats(statsDoc.data());
       } else {
         setStats({ chartsGenerated: 0 });
+      }
+
+      // Fetch Today's Visitors
+      const today = DateTime.now().toFormat('yyyy-MM-dd');
+      const visitorsDoc = await getDoc(doc(db, 'stats', `visitors_${today}`));
+      if (visitorsDoc.exists()) {
+        setTodayVisitors(visitorsDoc.data().count || 0);
+      } else {
+        setTodayVisitors(0);
       }
 
       // Fetch Users
@@ -103,7 +116,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // Calculate New Users (joined within last 7 days)
   const oneWeekAgo = DateTime.now().minus({ days: 7 });
   const newUsersCount = usersList.filter(u => {
     if (!u.createdAt) return false;
@@ -113,83 +125,110 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-        <ShieldAlert className="w-8 h-8 text-primary" />
-        <h1 className="text-3xl font-serif text-primary">Admin Dashboard</h1>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Users Card */}
-        <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden">
-          <div className="text-white/60 text-sm font-medium mb-1">Total Users</div>
-          <div className="text-4xl font-serif text-primary">{usersList.length}</div>
-          <Users className="absolute bottom-4 right-4 w-12 h-12 text-primary/10" />
+      <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="flex items-center gap-3">
+          <ShieldAlert className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-serif text-primary">Admin Control</h1>
         </div>
 
-        {/* New Users Card */}
-        <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden border border-emerald-500/20">
-          <div className="text-emerald-400/80 text-sm font-medium mb-1">New Users (7 Days)</div>
-          <div className="text-4xl font-serif text-emerald-400">{newUsersCount}</div>
-          <Clock className="absolute bottom-4 right-4 w-12 h-12 text-emerald-400/10" />
-        </div>
-
-        {/* Charts Generated Card */}
-        <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden">
-          <div className="text-white/60 text-sm font-medium mb-1">Charts Generated</div>
-          <div className="text-4xl font-serif text-primary">{stats?.chartsGenerated || 0}</div>
-          <Activity className="absolute bottom-4 right-4 w-12 h-12 text-primary/10" />
+        {/* Tab Navigation */}
+        <div className="flex bg-black/40 rounded-lg p-1 border border-white/10">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${activeTab === 'dashboard' ? 'bg-primary/20 text-primary' : 'text-white/60 hover:text-white'}`}
+          >
+            <LayoutDashboard className="w-4 h-4" /> Overview
+          </button>
+          <button 
+            onClick={() => setActiveTab('blogs')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${activeTab === 'blogs' ? 'bg-primary/20 text-primary' : 'text-white/60 hover:text-white'}`}
+          >
+            <FileText className="w-4 h-4" /> Blog CMS
+          </button>
         </div>
       </div>
 
-      <div className="glass-panel rounded-xl overflow-hidden mt-8 border border-white/10">
-        <div className="bg-black/40 px-6 py-4 border-b border-white/10">
-          <h2 className="text-lg font-serif text-primary">Registered Users</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-white/70">
-            <thead className="bg-white/5 text-white/90">
-              <tr>
-                <th className="px-6 py-3 font-medium">User</th>
-                <th className="px-6 py-3 font-medium">Email</th>
-                <th className="px-6 py-3 font-medium">Joined</th>
-                <th className="px-6 py-3 font-medium">Last Login</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {usersList.map((u, i) => {
-                const joined = u.createdAt ? DateTime.fromJSDate(new Date(u.createdAt)).toFormat('MMM dd, yyyy') : 'Unknown';
-                const lastLog = (u.lastLogin && typeof u.lastLogin.toDate === 'function') ? DateTime.fromJSDate(u.lastLogin.toDate()).toRelative() : 'Unknown';
-                
-                return (
-                  <tr key={u.uid} className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 flex items-center gap-3">
-                      {u.photoURL ? (
-                        <img src={u.photoURL} alt={u.displayName} className="w-8 h-8 rounded-full border border-white/20" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                          {u.displayName?.charAt(0) || u.email?.charAt(0) || '?'}
-                        </div>
-                      )}
-                      <span className="font-medium text-white">{u.displayName || 'Unknown User'}</span>
-                    </td>
-                    <td className="px-6 py-4">{u.email}</td>
-                    <td className="px-6 py-4">{joined}</td>
-                    <td className="px-6 py-4 text-primary/80">{lastLog}</td>
+      {activeTab === 'dashboard' ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden">
+              <div className="text-white/60 text-sm font-medium mb-1">Total Users</div>
+              <div className="text-4xl font-serif text-primary">{usersList.length}</div>
+              <Users className="absolute bottom-4 right-4 w-12 h-12 text-primary/10" />
+            </div>
+
+            <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden border border-emerald-500/20">
+              <div className="text-emerald-400/80 text-sm font-medium mb-1">New Users (7 Days)</div>
+              <div className="text-4xl font-serif text-emerald-400">{newUsersCount}</div>
+              <Clock className="absolute bottom-4 right-4 w-12 h-12 text-emerald-400/10" />
+            </div>
+
+            <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden">
+              <div className="text-white/60 text-sm font-medium mb-1">Charts Generated</div>
+              <div className="text-4xl font-serif text-primary">{stats?.chartsGenerated || 0}</div>
+              <Activity className="absolute bottom-4 right-4 w-12 h-12 text-primary/10" />
+            </div>
+
+            <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden border border-blue-500/20">
+              <div className="text-blue-400/80 text-sm font-medium mb-1">Today's Visitors</div>
+              <div className="text-4xl font-serif text-blue-400">{todayVisitors}</div>
+              <Eye className="absolute bottom-4 right-4 w-12 h-12 text-blue-400/10" />
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-xl overflow-hidden mt-8 border border-white/10">
+            <div className="bg-black/40 px-6 py-4 border-b border-white/10">
+              <h2 className="text-lg font-serif text-primary">Registered Users</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-white/70">
+                <thead className="bg-white/5 text-white/90">
+                  <tr>
+                    <th className="px-6 py-3 font-medium">User</th>
+                    <th className="px-6 py-3 font-medium">Email</th>
+                    <th className="px-6 py-3 font-medium">Joined</th>
+                    <th className="px-6 py-3 font-medium">Last Login</th>
                   </tr>
-                );
-              })}
-              
-              {usersList.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-white/40">
-                    No users found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {usersList.map((u, i) => {
+                    const joined = u.createdAt ? DateTime.fromJSDate(new Date(u.createdAt)).toFormat('MMM dd, yyyy') : 'Unknown';
+                    const lastLog = (u.lastLogin && typeof u.lastLogin.toDate === 'function') ? DateTime.fromJSDate(u.lastLogin.toDate()).toRelative() : 'Unknown';
+                    
+                    return (
+                      <tr key={u.uid} className="hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 flex items-center gap-3">
+                          {u.photoURL ? (
+                            <img src={u.photoURL} alt={u.displayName} className="w-8 h-8 rounded-full border border-white/20" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                              {u.displayName?.charAt(0) || u.email?.charAt(0) || '?'}
+                            </div>
+                          )}
+                          <span className="font-medium text-white">{u.displayName || 'Unknown User'}</span>
+                        </td>
+                        <td className="px-6 py-4">{u.email}</td>
+                        <td className="px-6 py-4">{joined}</td>
+                        <td className="px-6 py-4 text-primary/80">{lastLog}</td>
+                      </tr>
+                    );
+                  })}
+                  
+                  {usersList.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-white/40">
+                        No users found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        <BlogManager />
+      )}
     </div>
   );
 }

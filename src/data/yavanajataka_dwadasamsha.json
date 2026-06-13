@@ -1,0 +1,110 @@
+{
+  "Aries": {
+    "Sun": "The Sun, which is renowned for its brilliance, if it is in a dvadasamsa of Aries, produces the power of the (native's) father.",
+    "Moon": "The Moon in a dvadasamsa of Aries establishes a disease of his mother by means of changes caused by blood and bile.",
+    "Jupiter": "Jupiter in a dvadasamsa of Aries makes a man having a treasure of gold and goats whose wealth is destroyed by thieves, fire, and foes.",
+    "Venus": "Venus in a dvadasamsa of Aries produces one whose wife is polluted, hostile, or dead.",
+    "Mars": "Mars in a dvadasamsa of Aries makes a clever man with famous wealth.",
+    "Mercury": "Mercury in a dvadasamsa of Aries produces one who speaks much, but in a stumbling way, a fickle person whose friends are ill-behaved and terrible.",
+    "Saturn": "Saturn in a dvadasamsa of Aries makes a vile man whose treasure is gained by the acquisitions of his servants, but a strong and handsome man."
+  },
+  "Taurus": {
+    "Sun": "The Sun in a dvadasamsa of Taurus destroys the beauty of his father.",
+    "Moon": "The Moon in a dvadasamsa of Taurus gives prosperity, happiness, and food of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Taurus bestows firm and extensive wealth.",
+    "Venus": "Venus in a dvadasamsa of Taurus produces a man who has intercourse with lovely women and wives.",
+    "Mars": "Mars in a dvadasamsa of Taurus makes a pauper.",
+    "Mercury": "Mercury in a dvadasamsa of Taurus produces one who is friendly with women and has a firm, loud voice.",
+    "Saturn": "Saturn in a dvadasamsa of Taurus makes a man who is doorkeeper in a harem and whose body is slowly overcome by old age."
+  },
+  "Gemini": {
+    "Sun": "The Sun in a dvadasamsa of Gemini makes his father one who practices such things as sacrifices and is wealthy in family.",
+    "Moon": "The Moon in a dvadasamsa of Gemini, which creates beauty, the respect of good men, and power, causes the happiness of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Gemini makes one whose money is gathered from the fine arts, oratory, and the sacred traditions (sruti).",
+    "Mars": "Mars in a dvadasamsa of Gemini makes a person who is the same to men and women and who has ignoble sons.",
+    "Venus": "Venus in a dvadasamsa of Gemini produces a man with handsome form who is learned in the fine arts, a clever person who takes pleasure in women.",
+    "Mercury": "Mercury in a dvadasamsa of Gemini makes one who is learned in oratory, sacred traditions (sruti), and crafts, whose friends are famous, and who speaks sweetly.",
+    "Saturn": "Saturn in a dvadasamsa of Gemini makes a fickle person who practices mischief and bad craftsmanship, and whose old age is attained with the strength of youth."
+  },
+  "Cancer": {
+    "Sun": "If the Sun is in a dvadasamsa of Cancer, then (the native) obtains (a father) who is afflicted by disease, sickness, and troubles.",
+    "Moon": "If the Moon is in a dvadasamsa of Cancer, he obtains pleasures of his mother caused by health, beauty, and good appearance.",
+    "Jupiter": "Jupiter in a dvadasamsa of Cancer produces the highest, exalted wealth.",
+    "Mars": "Mars in a dvadasamsa of Cancer makes one whose sons are lowly.",
+    "Venus": "Venus in a dvadasamsa of Cancer produces a man abounding in treasures and titles who has a good wife and possesses a family and beauty.",
+    "Mercury": "Because of Mercury in a dvadasamsa of Cancer (the native) obtains powerful friends and the highest joy.",
+    "Saturn": "Because of Saturn in a dvadasamsa of Cancer he will grow old quickly, and is carried off by his servants, his bad wives, and so on."
+  },
+  "Leo": {
+    "Sun": "The Sun in a dvadasamsa of Leo causes victory and nobility of his father.",
+    "Moon": "The Moon in a dvadasamsa of Leo causes fear and disease of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Leo causes the acquisition of wealth consisting mainly of cows which are obtained by labor and by serving his friends and the king.",
+    "Mars": "Mars in a dvadasamsa of Leo makes one whose sons are not born or, if born, die.",
+    "Venus": "Venus in a dvadasamsa of Leo makes a man who does not obtain a wife.",
+    "Mercury": "Mercury in a dvadasamsa of Leo makes a man whose voice is broken and who has bad friends.",
+    "Saturn": "Saturn in a dvadasamsa of Leo makes one overcome by old age who is not submissive to his lord."
+  },
+  "Virgo": {
+    "Sun": "The Sun in a dvadasamsa of Virgo gives poverty of his father.",
+    "Moon": "The Moon in a dvadasamsa of Virgo gives poverty of his mother and makes him gentle and timid.",
+    "Jupiter": "Jupiter in a dvadasamsa of Virgo gives wealth pertaining to maidens.",
+    "Mars": "Mars in a dvadasamsa of Virgo causes the birth of eunuchs.",
+    "Venus": "Venus in a dvadasamsa of Virgo produces one whose wife has a soft and oppressed body.",
+    "Mercury": "Mercury in a dvadasamsa of Virgo makes a man prominent for his oratory and having good friends.",
+    "Saturn": "Saturn in a dvadasamsa of Virgo makes a man who grows old slowly, obeying others and serving women and evil people."
+  },
+  "Libra": {
+    "Sun": "The Sun in a dvadasamsa of Libra produces a father whose wealth is excessive, but who is deprived of health.",
+    "Moon": "The Moon in a dvadasamsa of Libra destroys the beauty and strength of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Libra gives wealth from travels, merchandise, and trade.",
+    "Mars": "Mars in a dvadasamsa of Libra produces a rogue with many sons.",
+    "Venus": "Venus in a dvadasamsa of Libra produces a man with a noble (Arya) wife who knows business, sexual intercourse, and science.",
+    "Mercury": "Mercury in a dvadasamsa of Libra produces a teacher who gives many speeches.",
+    "Saturn": "Saturn in a dvadasamsa of Libra produces a youthful person with many servants."
+  },
+  "Scorpio": {
+    "Sun": "The Sun in a dvadasamsa of Scorpio causes the death of his father.",
+    "Moon": "The Moon in a dvadasamsa of Scorpio causes the death of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Scorpio destroys his wealth.",
+    "Mars": "Mars in a dvadasamsa of Scorpio causes the birth of evil, sick, and timid men.",
+    "Venus": "Venus in a dvadasamsa of Scorpio produces one whose wife is maimed or has died a violent death.",
+    "Mercury": "Mercury in a dvadasamsa of Scorpio produces a man imperfect in speech and having bad friends.",
+    "Saturn": "Saturn in a dvadasamsa of Scorpio produces one who is himself a slave and is born of a man like a slave or one who does the commands of and associates with sinful people."
+  },
+  "Sagittarius": {
+    "Sun": "The Sun in a dvadasamsa of Sagittarius gives beauty, dignity, and honor of his father.",
+    "Moon": "The Moon in a dvadasamsa of Sagittarius gives beauty, dignity, and honor of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Sagittarius gives abundant vehicles, horses, and gold.",
+    "Mars": "Mars in a dvadasamsa of Sagittarius causes the birth of one who is looked upon in a hostile manner by his elders.",
+    "Venus": "Venus in a dvadasamsa of Sagittarius gives a wife who is praised for her good qualities.",
+    "Mercury": "Mercury in a dvadasamsa of Sagittarius gives perfection in speech and friendship and ...",
+    "Saturn": "Saturn in a dvadasamsa of Sagittarius causes the birth of youthful men who have the good fortune of Cupid."
+  },
+  "Capricorn": {
+    "Sun": "The Sun in a dvadasamsa of Capricorn causes the loss of his father.",
+    "Moon": "The Moon in a dvadasamsa of Capricorn causes a wind-disease of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Capricorn destroys the acquisition of good, peacefulness, and memory.",
+    "Mars": "Mars in a dvadasamsa of Capricorn causes the birth of famous sons.",
+    "Venus": "Venus in a dvadasamsa of Capricorn produces a man whose wife has trembling limbs and twitching eye-brows.",
+    "Mercury": "Mercury in a dvadasamsa of Capricorn produces a man defective in speech whose friendship is bad.",
+    "Saturn": "Saturn in a dvadasamsa of Capricorn produces a man who ages quickly and is surrounded by tanks, cows, and servants."
+  },
+  "Aquarius": {
+    "Sun": "The Sun in a dvadasamsa of Aquarius causes disease, sickness, and defects of his father.",
+    "Moon": "The Moon in a dvadasamsa of Aquarius causes disease, sickness, and defects of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Aquarius gives memory and wealth.",
+    "Mars": "Mars in a dvadasamsa of Aquarius gives servants, slaves, and sons.",
+    "Venus": "Venus in a dvadasamsa of Aquarius produces a man who is the husband of a slave-girl or of an old woman.",
+    "Mercury": "Mercury in a dvadasamsa of Aquarius produces one who is robbed of speech and has bad friends.",
+    "Saturn": "Saturn in a dvadasamsa of Aquarius produces a man with good friends who looks like an old man or who is honored by slaves."
+  },
+  "Pisces": {
+    "Sun": "The Sun in a dvadasamsa of Pisces causes joy, honor, and wealth of his father.",
+    "Moon": "The Moon in a dvadasamsa of Pisces causes joy, honor, and wealth of his mother.",
+    "Jupiter": "Jupiter in a dvadasamsa of Pisces makes many heaps of jewels.",
+    "Mars": "Mars in a dvadasamsa of Pisces gives sons who are hostile to his allies.",
+    "Venus": "Venus in a dvadasamsa of Pisces produces one whose wife is opposed by a great arhat.",
+    "Mercury": "Mercury in a dvadasamsa of Pisces produces a man corrupted in speech who has evil friends.",
+    "Saturn": "Saturn in a dvadasamsa of Pisces produces a youthful person who serves men of good qualities."
+  }
+}

@@ -95,6 +95,7 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
 export default function TaraNirnaySettings({ weights, onSave }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [localWeights, setLocalWeights] = useState<NDSWeights>(weights);
+  const [selectedNdfSettingsPlanet, setSelectedNdfSettingsPlanet] = useState('Sun');
 
   useEffect(() => {
     setLocalWeights(weights);
@@ -138,6 +139,16 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
         newMatrix[awasthaIndex][planetIndex] = value;
       }
       return { ...prev, sayanadiAwasthaMatrix: newMatrix };
+    });
+  };
+
+  const handleNdfMatrixChange = (transitingPlanet: string, natalPlanetKey: string, houseIndex: number, value: number) => {
+    setLocalWeights(prev => {
+      const newMatrix = JSON.parse(JSON.stringify(prev.taraNirnayNdfMatrix || DEFAULT_NDS_WEIGHTS.taraNirnayNdfMatrix));
+      if (!newMatrix[transitingPlanet]) newMatrix[transitingPlanet] = {};
+      if (!newMatrix[transitingPlanet][natalPlanetKey]) newMatrix[transitingPlanet][natalPlanetKey] = new Array(12).fill(0);
+      newMatrix[transitingPlanet][natalPlanetKey][houseIndex] = value;
+      return { ...prev, taraNirnayNdfMatrix: newMatrix };
     });
   };
 
@@ -675,6 +686,91 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
           </div>
         </div>
         </div>
+
+        <div style={{ 
+          marginBottom: '2rem',
+          opacity: 1, 
+          transition: 'all 0.3s ease' 
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+            <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>
+              Tara Nirnay NDF Transit Chart Matrix
+            </h4>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            {['Sun', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus'].map(planet => (
+              <button 
+                key={planet}
+                onClick={() => setSelectedNdfSettingsPlanet(planet)}
+                style={{
+                  padding: '0.4rem 1rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  background: selectedNdfSettingsPlanet === planet ? 'var(--primary)' : 'transparent',
+                  color: selectedNdfSettingsPlanet === planet ? '#fff' : 'var(--foreground)',
+                  cursor: 'pointer',
+                  fontWeight: selectedNdfSettingsPlanet === planet ? 600 : 400
+                }}
+              >
+                {planet}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '600px', fontSize: '0.8rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '4px', textAlign: 'left', color: 'var(--text-muted)' }}>Natal Point</th>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(house => (
+                    <th key={house} style={{ padding: '4px', textAlign: 'center', color: 'var(--foreground)' }}>H{house}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {['Sun', 'Moon', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus', 'Ascendent'].map(natalPlanet => {
+                  const rowKey = `from_${natalPlanet}`;
+                  const currentMatrix = localWeights.taraNirnayNdfMatrix || DEFAULT_NDS_WEIGHTS.taraNirnayNdfMatrix;
+                  const rowData = (currentMatrix as any)?.[selectedNdfSettingsPlanet]?.[rowKey] || new Array(12).fill(0);
+
+                  return (
+                    <tr key={natalPlanet}>
+                      <td style={{ padding: '4px', fontWeight: 600, color: 'var(--foreground)' }}>From {natalPlanet}</td>
+                      {rowData.map((val: number, idx: number) => (
+                        <td key={idx} style={{ padding: '2px' }}>
+                          <input
+                            type="number"
+                            value={val}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10);
+                              if (!isNaN(v)) handleNdfMatrixChange(selectedNdfSettingsPlanet, rowKey, idx, v);
+                            }}
+                            style={{
+                              width: '100%',
+                              minWidth: '40px',
+                              padding: '4px 2px',
+                              background: 'var(--bg)',
+                              border: '1px solid var(--border)',
+                              color: 'var(--foreground)',
+                              borderRadius: '4px',
+                              textAlign: 'center',
+                              fontWeight: val !== 0 ? 600 : 400
+                            }}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            This matrix is used to calculate the Tara Nirnay NDF transit scores.
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
         {groups.map((group, idx) => {
           return (

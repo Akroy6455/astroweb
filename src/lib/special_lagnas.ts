@@ -28,23 +28,25 @@ function calculateArudha(baseHouse: number, lagnaSignIndex: number, housesMap: a
   
   const lordSignIndex = lordPos.rasi.index;
   
-  // Count from base to lord (inclusive)
+  // Count from base to lord (inclusive, 0-indexed)
   const dist = (lordSignIndex - baseSignIndex + 12) % 12;
   
-  // Arudha is same distance from lord
-  let arudhaSignIndex = (lordSignIndex + dist) % 12;
-  
-  // Exceptions for Arudha
-  // If Arudha falls in the base house (dist = 0), it jumps to 10th from base house
+  // Exceptions for Arudha calculation based on user request:
+  // 1. If the lord of the house is in itself (dist = 0), count 10 houses from it.
   if (dist === 0) {
-    arudhaSignIndex = (baseSignIndex + 9) % 12; // 10th house is 9 signs away
+    return (baseSignIndex + 9) % 12; // 10th house is 9 signs away
   } 
-  // If Arudha falls in the 7th from base house (dist = 6), it jumps to 4th from base house
+  // 2. If the lord of the house is in 7th from itself (dist = 6), Arudha is 10th from itself which means 4th house from base.
   else if (dist === 6) {
-    arudhaSignIndex = (baseSignIndex + 3) % 12; // 4th house is 3 signs away
+    return (baseSignIndex + 3) % 12; // 4th house is 3 signs away
+  }
+  // 3. If the lord of the house is in the 4th house (dist = 3), Arudha is 4th house itself.
+  else if (dist === 3) {
+    return (baseSignIndex + 3) % 12;
   }
   
-  return arudhaSignIndex;
+  // Default: Arudha is same distance from lord
+  return (lordSignIndex + dist) % 12;
 }
 
 export function calculateSpecialLagnas(jd: number, lat: number, lon: number, positions: any[], lagna: any, housesMap: any[]) {
@@ -124,6 +126,21 @@ export function calculateSpecialLagnas(jd: number, lat: number, lon: number, pos
   const alSignIndex = calculateArudha(1, lagna.rasi.index, housesMap, positions);
   const ulSignIndex = calculateArudha(12, lagna.rasi.index, housesMap, positions);
 
+  // G. Calculate all Arudha Padas A1 to A12
+  const arudhaPadas: { name: string, house: number, rasi: { name: string, index: number } | null }[] = [];
+  const arudhaNames = [
+    "Arudha Lagna", "Dhana Arudha", "Vikrama/Bhratru Arudha", "Matru Arudha", "Mantra/Putra Arudha", "Shatru Arudha",
+    "Dara Arudha", "Mrityu Arudha", "Bhagya Arudha", "Karma/Rajya Arudha", "Labha Arudha", "Vyaya/Upapada Arudha"
+  ];
+  for (let i = 1; i <= 12; i++) {
+    const signIdx = calculateArudha(i, lagna.rasi.index, housesMap, positions);
+    arudhaPadas.push({
+      name: `A${i} (${arudhaNames[i-1]})`,
+      house: i,
+      rasi: signIdx !== null ? { name: SIGNS[signIdx], index: signIdx } : null
+    });
+  }
+
   // Formatting output
   return {
     bhavaLagna: { longitude: blLong, rasi: getRasi(blLong) },
@@ -132,6 +149,7 @@ export function calculateSpecialLagnas(jd: number, lat: number, lon: number, pos
     pranapadaLagna: { longitude: plLong, rasi: getRasi(plLong) },
     induLagna: { rasi: { name: SIGNS[induSignIndex], index: induSignIndex } },
     arudhaLagna: alSignIndex !== null ? { rasi: { name: SIGNS[alSignIndex], index: alSignIndex } } : null,
-    upapadaLagna: ulSignIndex !== null ? { rasi: { name: SIGNS[ulSignIndex], index: ulSignIndex } } : null
+    upapadaLagna: ulSignIndex !== null ? { rasi: { name: SIGNS[ulSignIndex], index: ulSignIndex } } : null,
+    arudhaPadas
   };
 }

@@ -25,7 +25,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
   const [hoveredPoint, setHoveredPoint] = useState<DashaTimePoint | null>(null);
   const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
   const [isExpanded, setIsExpanded] = useState(false);
-  const [viewRange, setViewRange] = useState({ start: 0, end: 0.5 }); // 50% default zoom
+  const [zoom, setZoom] = useState(2); // 200% default zoom
 
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -56,17 +56,19 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
     if (!canvas || !container) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = container.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
+    const baseW = container.parentElement ? container.parentElement.getBoundingClientRect().width : 800;
+    const W = Math.max(800, baseW * zoom);
+    
+    canvas.width = W * dpr;
     canvas.height = 420 * dpr;
-    canvas.style.width = `${rect.width}px`;
+    canvas.style.width = `${W}px`;
     canvas.style.height = '420px';
+    container.style.width = `${W}px`;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.scale(dpr, dpr);
 
-    const W = rect.width;
     const H = 420;
     const padding = { top: 30, right: 20, bottom: 60, left: 55 };
     const chartW = W - padding.left - padding.right;
@@ -82,19 +84,16 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // Visible time range
-    const visStart = minTime + totalSpan * viewRange.start;
-    const visEnd = minTime + totalSpan * viewRange.end;
+    // Visible time range (Native scroll shows everything)
+    const visStart = minTime;
+    const visEnd = maxTime;
     const visSpan = visEnd - visStart || 1;
 
     const toX = (t: number) => padding.left + ((t - visStart) / visSpan) * chartW;
     const toY = (pct: number) => padding.top + chartH / 2 - (pct / 100) * (chartH / 2);
 
-    // Filter visible data points
-    const visible = data.filter(d => {
-      const t = new Date(d.date).getTime();
-      return t >= visStart && t <= visEnd;
-    });
+    // All points are visible natively
+    const visible = data;
 
     // Y-axis grid lines and labels
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
@@ -292,7 +291,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
         }
       }
     }
-  }, [data, viewRange, minTime, totalSpan, hoveredPoint]);
+  }, [data, zoom, minTime, maxTime, totalSpan, hoveredPoint]);
 
   useEffect(() => {
     drawChart();
@@ -317,8 +316,8 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
     const chartW = rect.width - padding.left - padding.right;
     const fraction = (x - padding.left) / chartW;
     
-    const visStart = minTime + totalSpan * viewRange.start;
-    const visEnd = minTime + totalSpan * viewRange.end;
+    const visStart = minTime;
+    const visEnd = maxTime;
     const hoverTime = visStart + fraction * (visEnd - visStart);
 
     // Find the current AD period based on step logic
@@ -409,43 +408,32 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
             </p>
           </div>
           
-          {/* Custom Scrollbar/Minimap */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Zoom:</span>
-            <input 
-              type="range" min="10" max="100" defaultValue="50" 
-              onChange={e => {
-                const range = parseInt(e.target.value) / 100;
-                // Center the zoom
-                const center = viewRange.start + (viewRange.end - viewRange.start) / 2;
-                let start = center - range / 2;
-                let end = center + range / 2;
-                if (start < 0) { start = 0; end = range; }
-                if (end > 1) { end = 1; start = 1 - range; }
-                setViewRange({ start, end });
-              }}
-              style={{ width: '100px', accentColor: 'var(--primary)' }}
-            />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '1rem' }}>Pan:</span>
-            <input 
-              type="range" min="0" max="1000" defaultValue="0"
-              onChange={e => {
-                const currentSpan = viewRange.end - viewRange.start;
-                const offset = (parseInt(e.target.value) / 1000) * (1 - currentSpan);
-                setViewRange({ start: offset, end: offset + currentSpan });
-              }}
-              style={{ width: '100px', accentColor: 'var(--primary)' }}
-            />
+          {/* Custom Scrollbar/Minimap Replacement */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Zoom:</span>
+            <select 
+              value={zoom} 
+              onChange={e => setZoom(parseFloat(e.target.value))}
+              style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'var(--bg)', color: 'var(--foreground)', border: '1px solid var(--border)', fontSize: '0.8rem' }}
+            >
+              <option value={1}>Fit Screen</option>
+              <option value={2}>200% Zoom</option>
+              <option value={4}>400% Zoom</option>
+              <option value={8}>800% Zoom</option>
+              <option value={15}>1500% Zoom</option>
+            </select>
           </div>
         </div>
 
-        <div 
-          ref={containerRef} 
-          className="dasha-chart-container"
-          style={{ position: 'relative', width: '100%', height: '420px', cursor: 'crosshair', userSelect: 'none' }}
-          onClick={handleClick}
-        >
-          <canvas ref={canvasRef} style={{ display: 'block' }} />
+        <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '1rem' }}>
+          <div 
+            ref={containerRef} 
+            className="dasha-chart-container"
+            style={{ position: 'relative', minWidth: '800px', height: '420px', cursor: 'crosshair', userSelect: 'none' }}
+            onClick={handleClick}
+          >
+            <canvas ref={canvasRef} style={{ display: 'block' }} />
+          </div>
         </div>
       </div>
 

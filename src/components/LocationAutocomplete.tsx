@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { searchCities } from '@/app/actions';
 import { MapPin, Navigation, Search, X } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import tzlookup from 'tz-lookup';
 
 interface City {
@@ -20,6 +21,7 @@ interface LocationProps {
 }
 
 export default function LocationAutocomplete({ onSelect, defaultLabel = '' }: LocationProps) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState(defaultLabel);
   const [results, setResults] = useState<City[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function LocationAutocomplete({ onSelect, defaultLabel = '' }: Lo
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative', flex: '1 1 250px' }}>
-      <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 600 }}>Birth Location</label>
+      <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 600 }}>{t('form.location')}</label>
       <div style={{ position: 'relative', display: 'flex' }}>
         <div style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-muted)' }}>
           <Search size={18} />
@@ -117,7 +119,7 @@ export default function LocationAutocomplete({ onSelect, defaultLabel = '' }: Lo
           onFocus={() => {
             if (query.length >= 2) setIsOpen(true);
           }}
-          placeholder="e.g. Mumbai, New York"
+          placeholder={t('placeholders.searchLocation')}
           style={{ width: '100%', padding: '0.5rem 2.2rem 0.5rem 2.2rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)' }}
         />
         {query && (
@@ -141,7 +143,7 @@ export default function LocationAutocomplete({ onSelect, defaultLabel = '' }: Lo
       
       {isOpen && (query.length >= 2) && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px', marginTop: '4px', maxHeight: '250px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-          {loading && <div style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>Searching...</div>}
+          {loading && <div style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>{t('placeholders.searching')}</div>}
           {!loading && results.length === 0 && <div style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>No cities found.</div>}
           {!loading && results.map((city, i) => (
             <div 

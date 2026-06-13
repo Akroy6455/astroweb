@@ -4,7 +4,9 @@ import "./globals.css";
 import CursorGlow from "@/components/CursorGlow";
 import BackgroundChakra from "@/components/BackgroundChakra";
 import CookieConsent from "@/components/CookieConsent";
+import VisitorTracker from "@/components/VisitorTracker";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +26,7 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   title: "Tara Nirnay",
-  description: "सबसे उन्नत एल्गोरिदम आधारित फालित ज्योतिष वेब एप्लिकेशन में से एक",
+  description: "Advanced astrology calculations, panchang, dasha tracking, and transit mapping.",
 };
 
 export default function RootLayout({
@@ -37,14 +39,18 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} h-full antialiased`}
     >
+      <head>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1047224705899121" crossOrigin="anonymous"></script>
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-
-        <BackgroundChakra />
-        <CursorGlow />
-        {children}
-        <CookieConsent />
-      
+          <LanguageProvider>
+            <BackgroundChakra />
+            <CursorGlow />
+            <VisitorTracker />
+            {children}
+            <CookieConsent />
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -50,7 +50,7 @@ const MOOLATRIKONA: Record<string, number> = {
   Sun: 4, Moon: 1, Mars: 0, Mercury: 5, Jupiter: 8, Venus: 6, Saturn: 10
 };
 
-function isAspecting(aspector: string, aspectorSign: number, aspectedSign: number): boolean {
+export function isAspecting(aspector: string, aspectorSign: number, aspectedSign: number): boolean {
   if (aspectorSign === aspectedSign) return false;
   const dist = (aspectedSign - aspectorSign + 12) % 12 + 1;
   if (dist === 7) return true;

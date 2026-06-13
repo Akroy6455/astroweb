@@ -11,6 +11,7 @@ import VimshopakTable from '@/components/VimshopakTable';
 import TransitTab from '@/components/TransitTab';
 import AwasthasTable from '@/components/AwasthasTable';
 import SpecialLagnasTable from '@/components/SpecialLagnasTable';
+import YogTab from '@/components/YogTab';
 import DashaChart from '@/components/DashaChart';
 import TransitChart from '@/components/TransitChart';
 import TaraNirnaySettings from '@/components/TaraNirnaySettings';
@@ -21,7 +22,10 @@ import { getVargaDevta, getDivisionalSign, getDivPart, getDivSignName, getDivSig
 import { Settings, Save, LayoutTemplate, Aperture, Grid3X3, BarChart, Clock, Moon, Sparkles, Database, TrendingUp, List } from 'lucide-react';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import ThemeSwitcher from '@/components/ThemeSwitcher';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 import ExportTimeline from '@/components/ExportTimeline';
+import { formatDMS } from '@/lib/utils';
 
 // Firebase Client Imports
 import { auth, db, googleProvider } from '@/lib/firebaseClient';
@@ -52,10 +56,11 @@ const DIVISIONAL_CHARTS_INFO = [
 ];
 
 export default function Home() {
+  const { t } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'D1' | 'Panchang' | 'Divisional' | 'Chakra' | 'Ashtakavarga' | 'Strength' | 'Transit' | 'Awasthas' | 'Dasha' | 'TaraNirnay' | 'JsonData'>('D1');
+  const [activeTab, setActiveTab] = useState<'D1' | 'Panchang' | 'Divisional' | 'Chakra' | 'Ashtakavarga' | 'Strength' | 'Transit' | 'Awasthas' | 'Dasha' | 'TaraNirnay' | 'Uttar' | 'Yog' | 'JsonData'>('D1');
   const [isPrinting, setIsPrinting] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -399,10 +404,26 @@ export default function Home() {
     <main className="app-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1400px' }}>
       <header className="header" style={{ borderBottom: 'none', paddingBottom: '0', marginBottom: '0' }}>
         <div className="header-brand">
-          <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}><ThemeSwitcher /></div>
-          <div style={{ fontSize: '80px', fontWeight: 900, lineHeight: 1, color: 'var(--primary)', letterSpacing: '-0.05em' }}>0</div>
-          <h1>Tara Nirnay</h1>
-          <p style={{ color: 'var(--text-muted)' }}>सबसे उन्नत एल्गोरिदम आधारित फालित ज्योतिष वेब एप्लिकेशन में से एक</p>
+          <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex' }}>
+            <ThemeSwitcher />
+            <LanguageSwitcher />
+          </div>
+          <div style={{
+            fontSize: '64px', 
+            fontWeight: 800, 
+            lineHeight: 1.4,
+            padding: '10px 0', 
+            fontFamily: 'var(--font-cormorant), serif', 
+            background: 'linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            filter: 'drop-shadow(2px 4px 4px rgba(0,0,0,0.3))',
+            marginBottom: '0.5rem',
+            letterSpacing: '1px'
+          }}>
+            Tara Nirnay
+          </div>
+          <p style={{ color: 'var(--text-muted)' }}>{t('header.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
           {/* Ayanamsha Toggle */}
@@ -475,16 +496,16 @@ export default function Home() {
       {/* Top Bar Form */}
       <div className="glass-card" style={{ padding: '1.5rem' }}>
         <form ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: '1 1 150px', marginBottom: 0 }}>
-            <label htmlFor="name">Person's Name</label>
-            <input type="text" id="name" name="name" required placeholder="e.g. John Doe" style={{ padding: '0.5rem' }} />
+          <div className="form-group" style={{ flex: '1 1 200px', marginBottom: 0 }}>
+            <label htmlFor="name">{t('form.name')}</label>
+            <input type="text" id="name" name="name" required placeholder={t('placeholders.namePlaceholder')} style={{ padding: '0.5rem' }} />
           </div>
           <div className="form-group" style={{ flex: '1 1 130px', marginBottom: 0 }}>
-            <label htmlFor="date">Date of Birth</label>
+            <label htmlFor="date">{t('form.date')}</label>
             <input type="date" id="date" name="date" required defaultValue="2000-01-01" style={{ padding: '0.5rem' }} />
           </div>
           <div className="form-group" style={{ flex: '1 1 100px', marginBottom: 0 }}>
-            <label htmlFor="time">Time</label>
+            <label htmlFor="time">{t('form.time')}</label>
             <input type="time" id="time" name="time" step="1" required defaultValue="12:00:00" style={{ padding: '0.5rem' }} />
           </div>
 
@@ -499,7 +520,7 @@ export default function Home() {
           />
           <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 200px' }}>
             <button type="submit" className="submit-btn" disabled={loading} style={{ padding: '0.6rem 1rem', flex: 2 }}>
-              {loading ? 'Calculating...' : 'Generate'}
+              {loading ? t('form.generating') : t('form.generate')}
             </button>
             <button type="button" className="submit-btn save-btn" onClick={handleSaveProfileClick} style={{ padding: '0.6rem 1rem', flex: 1, backgroundColor: 'var(--border)', color: 'var(--foreground)' }} title="Save Profile">
               <Save size={18} />
@@ -574,17 +595,19 @@ export default function Home() {
         {/* Sidebar Tabs */}
         {data && (
           <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', height: 'fit-content' }}>
-            <button className={activeTab === 'D1' ? 'tab active' : 'tab'} onClick={() => setActiveTab('D1')}><LayoutTemplate size={18} /> D-1 Chart</button>
-            <button className={activeTab === 'Panchang' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Panchang')}><Clock size={18} /> Panchang</button>
-            <button className={activeTab === 'Divisional' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Divisional')}><Grid3X3 size={18} /> Divisional Charts</button>
-            <button className={activeTab === 'Chakra' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Chakra')}><Aperture size={18} /> Chakra</button>
-            <button className={activeTab === 'Ashtakavarga' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Ashtakavarga')}><Grid3X3 size={18} /> Ashtakavarga</button>
-            <button className={activeTab === 'Strength' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Strength')}><BarChart size={18} /> Strength</button>
-            <button className={activeTab === 'Transit' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Transit')}><Clock size={18} /> Transit</button>
-            <button className={activeTab === 'Awasthas' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Awasthas')}><Sparkles size={18} /> Awasthas</button>
-            <button className={activeTab === 'Dasha' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Dasha')}><Moon size={18} /> Dasha</button>
-            <button className={activeTab === 'TaraNirnay' ? 'tab active' : 'tab'} onClick={() => setActiveTab('TaraNirnay')}><TrendingUp size={18} /> Tara Nirnay</button>
-            <button className={activeTab === 'JsonData' ? 'tab active' : 'tab'} onClick={() => setActiveTab('JsonData')}><Database size={18} /> Json Data</button>
+            <button className={activeTab === 'D1' ? 'tab active' : 'tab'} onClick={() => setActiveTab('D1')}><LayoutTemplate size={18} /> {t('tabs.d1')}</button>
+            <button className={activeTab === 'Panchang' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Panchang')}><Clock size={18} /> {t('tabs.panchang')}</button>
+            <button className={activeTab === 'Divisional' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Divisional')}><Grid3X3 size={18} /> {t('tabs.divisional')}</button>
+            <button className={activeTab === 'Chakra' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Chakra')}><Aperture size={18} /> {t('tabs.chakra')}</button>
+            <button className={activeTab === 'Ashtakavarga' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Ashtakavarga')}><Grid3X3 size={18} /> {t('tabs.ashtakavarga')}</button>
+            <button className={activeTab === 'Strength' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Strength')}><BarChart size={18} /> {t('tabs.strength')}</button>
+            <button className={activeTab === 'Transit' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Transit')}><Clock size={18} /> {t('tabs.transit')}</button>
+            <button className={activeTab === 'Awasthas' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Awasthas')}><Sparkles size={18} /> {t('tabs.awasthas')}</button>
+            <button className={activeTab === 'Dasha' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Dasha')}><Moon size={18} /> {t('tabs.dasha')}</button>
+            <button className={activeTab === 'TaraNirnay' ? 'tab active' : 'tab'} onClick={() => setActiveTab('TaraNirnay')}><TrendingUp size={18} /> {t('tabs.taraNirnay')}</button>
+            <button className={activeTab === 'Uttar' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Uttar')}><LayoutTemplate size={18} /> {t('tabs.uttar')}</button>
+            <button className={activeTab === 'Yog' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Yog')}><Sparkles size={18} /> {t('tabs.yog')}</button>
+            <button className={activeTab === 'JsonData' ? 'tab active' : 'tab'} onClick={() => setActiveTab('JsonData')}><Database size={18} /> {t('tabs.jsonData')}</button>
             
             <button onClick={handlePrint} className="submit-btn" style={{ marginTop: 'auto', padding: '0.75rem', background: 'var(--text-muted)' }}>
               {isPrinting ? 'Preparing PDF...' : 'Print Report'}
@@ -617,25 +640,28 @@ export default function Home() {
                         {data.lagna && (
                           <tr style={{ background: 'rgba(232, 220, 203, 0.5)' }}>
                             <td><strong>Lagna</strong></td>
-                            <td>{data.lagna.longitude.toFixed(2)}°</td>
+                            <td>{formatDMS(data.lagna.longitude)}</td>
                             <td>-</td>
-                            <td>{data.lagna.rasi.name} ({data.lagna.rasi.degreesInSign.toFixed(2)}°)</td>
+                            <td>{data.lagna.rasi.name} ({formatDMS(data.lagna.rasi.degreesInSign)})</td>
                             <td>{data.lagna.nakshatra.name}</td>
                             <td>{data.lagna.nakshatra.pada}</td>
                             <td>{data.lagna.navamsha.name}</td>
                           </tr>
                         )}
-                        {data.positions.map((p: any, i: number) => (
-                          <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)' }}>
-                            <td><strong>{p.name}</strong> {p.retrograde ? <span style={{ color: '#cc0000' }}>(R)</span> : ''}</td>
-                            <td>{p.longitude.toFixed(2)}°</td>
-                            <td>{(p.speed > 0 ? '+' : '')}{p.speed.toFixed(3)}°/d</td>
-                            <td>{p.rasi.name} ({p.rasi.degreesInSign.toFixed(2)}°)</td>
-                            <td>{p.nakshatra.name}</td>
-                            <td>{p.nakshatra.pada}</td>
-                            <td>{p.navamsha.name}</td>
-                          </tr>
-                        ))}
+                        {data.positions.map((p: any, i: number) => {
+                          const isSpecial = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'].includes(p.name);
+                          return (
+                            <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)' }}>
+                              <td style={isSpecial ? { color: '#3b82f6', fontSize: '0.85em' } : {}}><strong>{p.name}</strong> {p.retrograde ? <span style={{ color: '#cc0000' }}>(R)</span> : ''}</td>
+                              <td>{formatDMS(p.longitude)}</td>
+                              <td>{(p.speed > 0 ? '+' : '')}{p.speed.toFixed(3)}°/d</td>
+                              <td>{p.rasi.name} ({formatDMS(p.rasi.degreesInSign)})</td>
+                              <td>{p.nakshatra.name}</td>
+                              <td>{p.nakshatra.pada}</td>
+                              <td>{p.navamsha.name}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -742,11 +768,12 @@ export default function Home() {
                               const divSign = getDivisionalSign(sIdx, deg, div);
                               const part = getDivPart(deg, div, isOdd);
                               const devta = getVargaDevta(sIdx, deg, div);
+                              const isSpecial = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'].includes(p.name);
                               return (
                                 <tr key={p.name} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)' }}>
-                                  <td><strong>{p.name}</strong>{p.retrograde ? <span style={{ color: '#cc0000', marginLeft: 4 }}>(R)</span> : null}</td>
+                                  <td style={isSpecial ? { color: '#3b82f6', fontSize: '0.85em' } : {}}><strong>{p.name}</strong>{p.retrograde ? <span style={{ color: '#cc0000', marginLeft: 4 }}>(R)</span> : null}</td>
                                   <td>{p.rasi.name}</td>
-                                  <td>{deg.toFixed(2)}°</td>
+                                  <td>{formatDMS(deg)}</td>
                                   <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getDivSignName(divSign)}</td>
                                   <td>{part + 1}/{div}</td>
                                   <td style={{ color: devta === '—' ? 'var(--text-muted)' : '#C9A86A', fontWeight: devta !== '—' ? 600 : 400 }}>{devta}</td>
@@ -783,7 +810,7 @@ export default function Home() {
               )}
               <div style={{ display: (activeTab === 'Transit' || isPrinting) ? 'block' : 'none' }} className={isPrinting ? 'print-section' : ''}>
                 {isPrinting && <h2 className="print-only-heading">Transit</h2>}
-                <TransitTab mainData={data} ayanamsha={ayanamsha} />
+                <TransitTab mainData={data} ayanamsha={ayanamsha} weights={ndsWeights} />
               </div>
               {(activeTab === 'Awasthas' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>
@@ -799,8 +826,15 @@ export default function Home() {
               )}
               {(activeTab === 'TaraNirnay' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>
-                  {isPrinting && <h2 className="print-only-heading">Tara Nirnay</h2>}
+                  {isPrinting && <h2 className="print-only-heading">Tara Dasha Nirnay</h2>}
                   <div style={{ animation: 'fadeIn 0.3s ease' }}>
+                    {data?.transitTimeSeries && (
+                      <ExportTimeline 
+                        dashaData={activeDashaTimeSeries} 
+                        transitData={data.transitTimeSeries} 
+                        weights={ndsWeights} 
+                      />
+                    )}
                     {data?.transitTimeSeries && data.transitTimeSeries.length > 0 && (
                       <TransitChart data={data.transitTimeSeries} weights={ndsWeights} />
                     )}
@@ -810,13 +844,6 @@ export default function Home() {
                         onSave={handleSaveNdsWeights}
                       />
                     </DashaChart>
-                    {data?.transitTimeSeries && (
-                      <ExportTimeline 
-                        dashaData={activeDashaTimeSeries} 
-                        transitData={data.transitTimeSeries} 
-                        weights={ndsWeights} 
-                      />
-                    )}
                   </div>
                 </div>
               )}
@@ -843,15 +870,82 @@ export default function Home() {
                   </pre>
                 </div>
               )}
+              {(activeTab === 'Uttar') && (
+                <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--foreground)' }}>{t('tabs.uttar')}</h3>
+                  <p>Coming soon...</p>
+                </div>
+              )}
+              {(activeTab === 'Yog') && (
+                <YogTab data={data} />
+              )}
             </div>
           ) : (
-            <div className="kundli-placeholder">Enter birth details above to generate charts</div>
+            <div className="kundli-placeholder">{t('placeholders.enterDetails')}</div>
           )}
         </div>
       </div>
+
+      <footer style={{ marginTop: '4rem', padding: '3rem 2rem', background: '#2E3131', color: '#cbd5e1', textAlign: 'center', borderTop: '1px solid #3f3f46' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+          <div>
+            <h4 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Contact Us</h4>
+            <p style={{ margin: 0 }}>
+              <a href="mailto:sales@solutionandnetwork.com" style={{ color: '#C9A86A', textDecoration: 'none', fontWeight: 500 }}>
+                sales@solutionandnetwork.com
+              </a>
+            </p>
+          </div>
+
+          <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <h4 style={{ color: '#fff', margin: 0, fontSize: '1.1rem' }}>Join our Telegram Community</h4>
+            <a 
+              href="https://t.me/+lFPEq5KV0vA1NzI9" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ display: 'inline-block', transition: 'transform 0.2s' }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              <img 
+                src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://t.me/+lFPEq5KV0vA1NzI9" 
+                alt="Telegram Group QR Code" 
+                style={{ borderRadius: '8px', border: '2px solid #C9A86A', padding: '4px', background: '#fff' }}
+              />
+            </a>
+            <a 
+              href="https://t.me/+lFPEq5KV0vA1NzI9"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: '#0088cc',
+                color: '#fff',
+                padding: '0.6rem 1.2rem',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 4px 12px rgba(0, 136, 204, 0.3)'
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.888-.662 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+              </svg>
+              Join Telegram Group
+            </a>
+          </div>
+
+          <div style={{ marginTop: '2rem', fontStyle: 'italic', fontSize: '0.9rem', color: '#64748b' }}>
+            expanding the list...
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
+
 
 
 

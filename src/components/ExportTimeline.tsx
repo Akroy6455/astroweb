@@ -237,7 +237,7 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
   };
 
   return (
-    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', justifyContent: 'center' }}>
+    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', justifyContent: 'center' }}>
       <button 
         onClick={exportCSV}
         style={{

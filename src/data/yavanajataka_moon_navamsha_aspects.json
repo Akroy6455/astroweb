@@ -1,0 +1,58 @@
+{
+  "Mars": {
+    "Mars": "If (the Moon) is in a navamsa of Mars and if it is aspected by Mars, (the native) is a fierce thief who takes pleasure in murder and killing.",
+    "Venus": "If aspected by Venus, one who is rich in drink, wealth, and women.",
+    "Mercury": "If aspected by Mercury, a thief who keeps changing his residence.",
+    "Sun": "If aspected by the Sun, a guardian who kills Dasyus.",
+    "Jupiter": "If aspected by Jupiter, an intelligent king rich in good qualities.",
+    "Saturn": "If aspected by Saturn, an angry man attached to strife who is dragged down by many fears."
+  },
+  "Venus": {
+    "Venus": "The Moon in a navamsa of Venus, if it is aspected by Venus, produces a happy man rich in grain, wealth, and women.",
+    "Mercury": "If aspected by Mercury, one who knows such things as singing and speaking.",
+    "Jupiter": "If aspected by Jupiter, a poet of famous intellect.",
+    "Mars": "If aspected by Mars, a lover of other men's wives.",
+    "Sun": "If aspected by the Sun, one who has abundant food and drink, but little intelligence.",
+    "Saturn": "If aspected by Saturn, a hero delighting (women) by sexual intercourse or an expert in sexual intercourse."
+  },
+  "Mercury": {
+    "Mercury": "The Moon in a navamsa of Mercury, if it is aspected by Mercury, produces an eloquent man who knows such things as the meaning of the sciences and the crafts.",
+    "Venus": "If aspected by Venus, an expert in singing, story-telling, and sexual intercourse.",
+    "Jupiter": "If aspected by Jupiter, the counsellor (saciva) of a king, one who understands politics.",
+    "Mars": "If aspected by Mars, an intelligent and prominent thief.",
+    "Sun": "If aspected by the Sun, an actor who knows the rules.",
+    "Saturn": "If aspected by Saturn, an intelligent man learned in the rules of the crafts."
+  },
+  "Moon": {
+    "Sun": "The Moon in its own navamsa, if it is aspected by the Sun, produces a man whose wallet and body are both thin and who experiences much sorrow from riots.",
+    "Mars": "If aspected by Mars, a greedy person who delights in taking money.",
+    "Jupiter": "If aspected by Jupiter, a wise man of noble firmness.",
+    "Venus": "If aspected by Venus, one addicted to the posture and acts of women.",
+    "Mercury": "If aspected by Mercury, an ascetic who restrains himself.",
+    "Saturn": "If aspected by Saturn, a clever person who is wise in his activities, but is afflicted by sorrow arising from bondage and wandering."
+  },
+  "Sun": {
+    "Sun": "The Moon in a navamsa of the Sun, if it is aspected by the Sun, produces a very angry man, a drunkard who is not to be assailed.",
+    "Mars": "If aspected by Mars, a cruel man who is wealthy and honored by the king.",
+    "Saturn": "If aspected by Saturn, a destroyer of life.",
+    "Venus": "If aspected by Venus, a wealthy man who is afflicted by grief caused by his wife and sons.",
+    "Mercury": "If aspected by Mercury, one who delights in slander.",
+    "Jupiter": "If aspected by Jupiter, a rich, fat man."
+  },
+  "Jupiter": {
+    "Jupiter": "The Moon in a navamsa of Jupiter, if it is aspected by Jupiter, produces a man of pure character who possesses intelligence and courage.",
+    "Venus": "If aspected by Venus, a firm man attached to the objects of the senses.",
+    "Mercury": "If aspected by Mercury, one who is learned in poetry and in the sacred traditions (sruti).",
+    "Mars": "If aspected by Mars, a fierce man clever with swords and weapons.",
+    "Sun": "If aspected by the Sun, a strong, but infamous man.",
+    "Saturn": "If aspected by Saturn, a wise man who looks like an elder and has a bad king."
+  },
+  "Saturn": {
+    "Saturn": "The Moon in a navamsa of Saturn, if it is aspected by Saturn, produces a pitiable pauper racked by disease.",
+    "Mars": "If aspected by Mars, a wealthy man with many sorrows.",
+    "Sun": "If aspected by the Sun, a cruel person whose property has vanished.",
+    "Venus": "If aspected by Venus, one who possesses old women, widows, and women of bad character.",
+    "Mercury": "If aspected by Mercury, a man who enjoys suffering.",
+    "Jupiter": "If aspected by Jupiter, a well behaved and distinguished person who is intent on good conduct and on giving pleasure."
+  }
+}

@@ -24,12 +24,21 @@ export default function KundliChart({ data }: { data: KundliData | null }) {
     12: { x: 75, y: 10 },
   };
 
+  const specialNames = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'];
+
   const renderPlanets = (planets: Planet[], x: number, y: number) => {
     if (!planets || planets.length === 0) return null;
-    const str = planets.map(p => p.short + (p.retrograde ? '(R)' : '')).join(', ');
     return (
       <text x={`${x}%`} y={`${y}%`} className="planet-text" textAnchor="middle" dominantBaseline="middle">
-        {str}
+        {planets.map((p, index) => {
+          const isSpecial = specialNames.includes(p.name);
+          const textStr = p.short + (p.retrograde ? '(R)' : '') + (index < planets.length - 1 ? ', ' : '');
+          return (
+            <tspan key={p.name} fill={isSpecial ? '#3b82f6' : 'currentColor'} style={isSpecial ? { fontSize: '0.65em' } : {}}>
+              {textStr}
+            </tspan>
+          );
+        })}
       </text>
     );
   };

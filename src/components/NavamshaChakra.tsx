@@ -108,14 +108,18 @@ export default function NavamshaChakra({ data }: ChakraProps) {
     allPos.push({ name: 'Ascendant', short: 'ASD', longitude: data.lagna.longitude });
   }
 
+  const specialNames = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'];
+
   allPos.forEach((p, idx) => {
     const angle = p.longitude;
+    const isSpecial = specialNames.includes(p.name);
     // Arrow pointing to the edge
     planetMarkers.push(
       <g key={`p-${idx}`} transform={`rotate(${-angle}, ${cx}, ${cy})`}>
         <line x1={cx} y1={cy - rEdge - 10} x2={cx} y2={cy - rEdge - 40} stroke="var(--primary)" strokeWidth="2" />
         <polygon points={`${cx},${cy - rEdge - 5} ${cx - 5},${cy - rEdge - 15} ${cx + 5},${cy - rEdge - 15}`} fill="var(--primary)" />
         <text x={cx} y={cy - rEdge - 50} className="chakra-planet-text" dominantBaseline="middle" textAnchor="middle"
+              fill={isSpecial ? '#3b82f6' : 'currentColor'} style={isSpecial ? { fontSize: '0.65em' } : {}}
               transform={`rotate(90, ${cx}, ${cy - rEdge - 50})`}>
           {p.name}
         </text>

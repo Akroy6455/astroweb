@@ -45,7 +45,14 @@ const PLANETS = [
   { id: sweph.constants.SE_NEPTUNE, name: 'Neptune', short: 'Ne' },
   { id: sweph.constants.SE_PLUTO, name: 'Pluto', short: 'Pl' },
   { id: sweph.constants.SE_MEAN_NODE, name: 'Rahu', short: 'Ra' },
-  { id: 'KETU', name: 'Ketu', short: 'Ke' } // Ketu is always 180 deg from Rahu
+  { id: 'KETU', name: 'Ketu', short: 'Ke' }, // Ketu is always 180 deg from Rahu
+  { id: 'MANDI', name: 'Mandi', short: 'Md' },
+  { id: 'GULIKA', name: 'Gulika', short: 'Gl' },
+  { id: 'DHOOMA', name: 'Dhooma', short: 'Dh' },
+  { id: 'VYATIPATA', name: 'Vyatipata', short: 'Vy' },
+  { id: 'PARIVESHA', name: 'Parivesha', short: 'Pa' },
+  { id: 'INDRACHAPA', name: 'Indrachapa', short: 'In' },
+  { id: 'UPAKETU', name: 'Upaketu', short: 'Uk' }
 ];
 
 const NAKSHATRAS = [
@@ -243,26 +250,109 @@ export function calculateChart(year: number, month: number, day: number, hour: n
   
   const flag = sweph.constants.SEFLG_SIDEREAL | sweph.constants.SEFLG_SPEED;
 
+  // Pre-calculate Mandi and Gulika JDs
+  const rsmiRise = sweph.constants.SE_CALC_RISE | sweph.constants.SE_BIT_DISC_CENTER | sweph.constants.SE_BIT_NO_REFRACTION;
+  const rsmiSet = sweph.constants.SE_CALC_SET | sweph.constants.SE_BIT_DISC_CENTER | sweph.constants.SE_BIT_NO_REFRACTION;
+  
+  const midnightJd = Math.floor(jd - 0.5) + 0.5;
+  const resRise = sweph.rise_trans(midnightJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiRise, [lon, lat, 0], 0, 0);
+  const sunriseJd = resRise.data;
+  const resSet = sweph.rise_trans(sunriseJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiSet, [lon, lat, 0], 0, 0);
+  const sunsetJd = resSet.data;
+  
+  let isDayTime = false;
+  let segmentDuration = 0;
+  let startJd = 0;
+
+  if (jd >= sunriseJd && jd < sunsetJd) {
+     isDayTime = true;
+     segmentDuration = (sunsetJd - sunriseJd) / 8;
+     startJd = sunriseJd;
+  } else {
+     isDayTime = false;
+     let nightStartJd, nightEndJd;
+     if (jd < sunriseJd) {
+         const prevMidJd = midnightJd - 1;
+         const resPrevSet = sweph.rise_trans(prevMidJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiSet, [lon, lat, 0], 0, 0);
+         nightStartJd = resPrevSet.data;
+         nightEndJd = sunriseJd;
+     } else {
+         nightStartJd = sunsetJd;
+         const nextMidJd = midnightJd + 1;
+         const resNextRise = sweph.rise_trans(nextMidJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiRise, [lon, lat, 0], 0, 0);
+         nightEndJd = resNextRise.data;
+     }
+     segmentDuration = (nightEndJd - nightStartJd) / 8;
+     startJd = nightStartJd;
+  }
+
+  const gulikaDayIndex = [6, 5, 4, 3, 2, 1, 0];
+  const gulikaNightIndex = [2, 1, 0, 6, 5, 4, 3];
+  const mandiDayIndex = [5, 4, 3, 2, 1, 0, 6];
+  const mandiNightIndex = [1, 0, 6, 5, 4, 3, 2];
+
+  const gIndex = isDayTime ? gulikaDayIndex[localDayOfWeek] : gulikaNightIndex[localDayOfWeek];
+  const mIndex = isDayTime ? mandiDayIndex[localDayOfWeek] : mandiNightIndex[localDayOfWeek];
+
+  const gulikaJd = startJd + (gIndex * segmentDuration);
+  const mandiJd = startJd + (mIndex * segmentDuration);
+
+  const housesGulika = sweph.houses_ex(gulikaJd, flag, lat, lon, 'P');
+  const gulikaLong = (housesGulika as any).points ? (housesGulika as any).points[0] : (housesGulika as any).data?.points[0] || 0;
+
+  const housesMandi = sweph.houses_ex(mandiJd, flag, lat, lon, 'P');
+  const mandiLong = (housesMandi as any).points ? (housesMandi as any).points[0] : (housesMandi as any).data?.points[0] || 0;
+
   const positions: any[] = [];
 
   for (const p of PLANETS) {
-    if (p.id === 'KETU') {
-      const rahu = positions.find(pos => pos.name === 'Rahu');
-      if (rahu) {
-        let ketuLong = (rahu.longitude + 180) % 360;
-        const rasi = getRasi(ketuLong);
-        const nakshatra = getNakshatra(ketuLong);
-        const navamsha = getNavamsha(rasi.index, rasi.degreesInSign);
-        positions.push({
-          ...p,
-          longitude: ketuLong,
-          speed: rahu.speed,
-          retrograde: rahu.retrograde,
-          rasi,
-          nakshatra,
-          navamsha
-        });
+    if (['KETU', 'MANDI', 'GULIKA', 'DHOOMA', 'VYATIPATA', 'PARIVESHA', 'INDRACHAPA', 'UPAKETU'].includes(p.id as string)) {
+      let calcLong = 0;
+      let speed = 0;
+      let retrograde = false;
+
+      if (p.id === 'KETU') {
+        const rahu = positions.find(pos => pos.name === 'Rahu');
+        if (rahu) {
+          calcLong = (rahu.longitude + 180) % 360;
+          speed = rahu.speed;
+          retrograde = rahu.retrograde;
+        }
+      } else if (p.id === 'MANDI') {
+        calcLong = mandiLong;
+      } else if (p.id === 'GULIKA') {
+        calcLong = gulikaLong;
+      } else {
+        const sun = positions.find(pos => pos.name === 'Sun');
+        if (sun) {
+          const dhooma = (sun.longitude + 133.333333) % 360;
+          const vyatipata = (360 - dhooma) % 360;
+          const parivesha = (vyatipata + 180) % 360;
+          const indrachapa = (360 - parivesha) % 360;
+          
+          if (p.id === 'DHOOMA') calcLong = dhooma;
+          if (p.id === 'VYATIPATA') calcLong = vyatipata;
+          if (p.id === 'PARIVESHA') calcLong = parivesha;
+          if (p.id === 'INDRACHAPA') calcLong = indrachapa;
+          if (p.id === 'UPAKETU') calcLong = (indrachapa + 16.666666) % 360;
+          
+          speed = sun.speed;
+          retrograde = sun.retrograde;
+        }
       }
+
+      const rasi = getRasi(calcLong);
+      const nakshatra = getNakshatra(calcLong);
+      const navamsha = getNavamsha(rasi.index, rasi.degreesInSign);
+      positions.push({
+        ...p,
+        longitude: calcLong,
+        speed,
+        retrograde,
+        rasi,
+        nakshatra,
+        navamsha
+      });
       continue;
     }
 

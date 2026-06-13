@@ -1,12 +1,24 @@
 import React from 'react';
 
+import { formatDMS } from '@/lib/utils';
+
+function isAspecting(aspector: string, aspectorSign: number, aspectedSign: number): boolean {
+  if (aspectorSign === aspectedSign) return false;
+  const dist = (aspectedSign - aspectorSign + 12) % 12 + 1;
+  if (dist === 7) return true;
+  if (aspector === 'Mars' && (dist === 4 || dist === 8)) return true;
+  if ((aspector === 'Jupiter' || aspector === 'Rahu' || aspector === 'Ketu') && (dist === 5 || dist === 9)) return true;
+  if (aspector === 'Saturn' && (dist === 3 || dist === 10)) return true;
+  return false;
+}
+
 export default function SpecialLagnasTable({ data }: { data: any }) {
   if (!data || !data.specialLagnas) return null;
 
   const { specialLagnas } = data;
 
   const formatDeg = (longitude: number) => {
-    return `${(longitude % 30).toFixed(2)}°`;
+    return formatDMS(longitude % 30);
   };
 
   const lagnas = [
@@ -40,6 +52,28 @@ export default function SpecialLagnasTable({ data }: { data: any }) {
           ) : null)}
         </tbody>
       </table>
+
+      {specialLagnas.arudhaPadas && specialLagnas.arudhaPadas.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '1rem', color: 'var(--primary)', textAlign: 'center' }}>Arudha Padas (A1-A12)</h3>
+          <table className="details-table" style={{ width: '100%', fontSize: '0.85rem' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left' }}>Pada</th>
+                <th>Sign (Rasi)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {specialLagnas.arudhaPadas.map((ap: any) => ap.rasi ? (
+                <tr key={ap.name}>
+                  <td style={{ fontWeight: 'bold' }}>{ap.name}</td>
+                  <td style={{ textAlign: 'center' }}>{ap.rasi.name}</td>
+                </tr>
+              ) : null)}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
