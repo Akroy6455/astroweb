@@ -332,6 +332,21 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
                 />
               </label>
             </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable Dasavarga Points</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Automatically add points based on Dasavarga classification (e.g., Parijata=20, Uttama=30).</p>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={localWeights.enableDasavargaPoints ?? true} 
+                  onChange={(e) => setLocalWeights(prev => ({ ...prev, enableDasavargaPoints: e.target.checked }))}
+                  style={{ accentColor: 'var(--primary)', transform: 'scale(1.2)' }}
+                />
+              </label>
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <div>

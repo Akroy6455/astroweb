@@ -111,6 +111,9 @@ export interface NDSWeights {
   mudita: number;
   kshobita: number;           
 
+  // Module 5B: Dasavarga
+  enableDasavargaPoints?: boolean;
+
   // Module 6: Dasha Pravesh
   praveshHouse1: number;
   praveshHouse2: number;
@@ -163,14 +166,15 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   enableMdAdTransitMultiplier: true,
   enableNavtaraTransit: true,
   enableNavtaraMdAd: true,
-  enableBaseNdsInTransit: false,
-  enableAdvancedTransitMultiplier: true,
-  advancedMaleficAsc: 0.6,
-  advancedMaleficMoon: 0.8,
-  advancedBeneficAsc: 1.4,
-  advancedBeneficMoon: 1.2,
-  disabledParams: {},
-  lordHouse1: 90,
+    enableBaseNdsInTransit: false,
+    enableAdvancedTransitMultiplier: true,
+    advancedMaleficAsc: 0.6,
+    advancedMaleficMoon: 0.8,
+    advancedBeneficAsc: 1.4,
+    advancedBeneficMoon: 1.2,
+    enableDasavargaPoints: true,
+    disabledParams: {},
+    lordHouse1: 90,
   lordHouse2: -15,
   lordHouse3: -40,
   lordHouse4: 60,
@@ -865,6 +869,15 @@ export function getAwasthaModifiers(planet: Planet, awasthasData: any, w: NDSWei
         score += s;
         conditions.push({ key, name: `${name} Awastha${multiplier > 1 ? ' (x' + multiplier + ')' : ''}`, value: s });
       }
+    }
+  }
+
+  if (w.enableDasavargaPoints !== false && awasthasData && awasthasData[planet] && awasthasData[planet].dasavarga) {
+    const dasaScore = awasthasData[planet].dasavarga.score;
+    if (dasaScore >= 2) {
+      const points = dasaScore * 10;
+      score += points;
+      conditions.push({ key: 'enableDasavargaPoints', name: `Dasavarga (${awasthasData[planet].dasavarga.name})`, value: points });
     }
   }
 
