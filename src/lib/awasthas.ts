@@ -219,7 +219,6 @@ export function calculateDasavarga(
   const targetArudhaSigns = new Set<number>();
   anglesFromAL.forEach(angleSign => {
     const lord = SIGN_RULERS[angleSign];
-    // Find all signs owned by this lord
     for (let i = 0; i < 12; i++) {
       if (SIGN_RULERS[i] === lord) {
         targetArudhaSigns.add(i);
@@ -229,38 +228,30 @@ export function calculateDasavarga(
 
   const truePlanets = ['Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   
+  // Pre-calculate which planets are "bad" (combust/weak/defeated/bad awastha)
+  // and which are in Prakash/Sabha.
+  const badSignLords = new Set<string>();
+  const prakashSabhaLords = new Set<string>();
+
   for (const pos of positions) {
     if (!P_STATUS[pos.name as PlanetName]) continue;
     const pName = pos.name as PlanetName;
 
-    let isExcluded = false;
-    let exclusionReason = '';
+    let isBad = false;
 
-    // Combust check
-    if (pos.isCombust) {
-      isExcluded = true;
-      exclusionReason = 'Combust';
-    }
+    if (pos.isCombust) isBad = true;
+    if (!isBad && shadbala[pName] && shadbala[pName].totalRupas < shadbala[pName].requiredRupas) isBad = true;
 
-    // Weak check
-    if (!isExcluded && shadbala[pName] && shadbala[pName].totalRupas < shadbala[pName].requiredRupas) {
-      isExcluded = true;
-      exclusionReason = 'Weak (Low Shadbala)';
-    }
-
-    // Defeated check (Graha Yuddha)
-    if (!isExcluded && truePlanets.includes(pName)) {
+    if (!isBad && truePlanets.includes(pName)) {
       for (const other of positions) {
         if (other.name !== pName && truePlanets.includes(other.name)) {
           let diff = Math.abs(pos.longitude - other.longitude);
           if (diff > 180) diff = 360 - diff;
           if (diff <= 1.0) {
-            // In planetary war. Check who has lower Shadbala
             const mySb = shadbala[pName]?.totalRupas || 0;
             const otherSb = shadbala[other.name]?.totalRupas || 0;
             if (mySb < otherSb) {
-              isExcluded = true;
-              exclusionReason = 'Defeated in Planetary War';
+              isBad = true;
               break;
             }
           }
@@ -268,17 +259,23 @@ export function calculateDasavarga(
       }
     }
 
-    // Bad Awastha check
     const myAwastha = awasthas[pName]?.sayanadi;
-    if (!isExcluded && (myAwastha === 'Nidra' || myAwastha === 'Gaman' || myAwastha === 'Sayana')) {
-      isExcluded = true;
-      exclusionReason = `Bad Awastha (${myAwastha})`;
+    if (!isBad && (myAwastha === 'Nidra' || myAwastha === 'Gaman' || myAwastha === 'Sayana')) {
+      isBad = true;
     }
 
-    if (isExcluded) {
-      result[pName] = { score: 0, name: 'Shunyavarga', details: [`Excluded: ${exclusionReason}`] };
-      continue;
+    if (isBad) {
+      badSignLords.add(pName);
     }
+
+    if (myAwastha === 'Prakash' || myAwastha === 'Sabha') {
+      prakashSabhaLords.add(pName);
+    }
+  }
+
+  for (const pos of positions) {
+    if (!P_STATUS[pos.name as PlanetName]) continue;
+    const pName = pos.name as PlanetName;
 
     let score = 0;
     const details: string[] = [];
@@ -296,42 +293,47 @@ export function calculateDasavarga(
         }
       }
 
-      if (vSignIndex === -1) {
-        // Fallback if not found, but it should be found
-        continue;
-      }
-      
+      if (vSignIndex === -1) continue;
+
+      const lord = SIGN_RULERS[vSignIndex];
       let gotPoint = false;
+      let reason = '';
 
       if (div === 2) {
         if (['Sun', 'Mars', 'Jupiter'].includes(pName) && vSignIndex === 4) {
           gotPoint = true;
-          details.push(`D2: Leo Hora`);
+          reason = `D2: Leo Hora`;
         } else if (['Moon', 'Venus', 'Saturn', 'Rahu', 'Ketu'].includes(pName) && vSignIndex === 3) {
           gotPoint = true;
-          details.push(`D2: Cancer Hora`);
+          reason = `D2: Cancer Hora`;
         } else if (pName === 'Mercury') {
           gotPoint = true;
-          details.push(`D2: Mercury gets point in both`);
+          reason = `D2: Mercury gets point in both`;
         }
       } else {
-        if (myAwastha === 'Prakash' || myAwastha === 'Sabha') {
+        if (MOOLATRIKONA[pName] === vSignIndex) {
           gotPoint = true;
-          details.push(`D${div}: Awastha (${myAwastha})`);
-        } else if (MOOLATRIKONA[pName] === vSignIndex) {
+          reason = `D${div}: Moolatrikona`;
+        } else if (lord === pName) {
           gotPoint = true;
-          details.push(`D${div}: Moolatrikona`);
-        } else if (SIGN_RULERS[vSignIndex] === pName) {
-          gotPoint = true;
-          details.push(`D${div}: Own Sign`);
+          reason = `D${div}: Own Sign`;
         } else if (targetArudhaSigns.has(vSignIndex)) {
           gotPoint = true;
-          details.push(`D${div}: AL Angle Lord Sign`);
+          reason = `D${div}: AL Angle Lord Sign`;
+        } else if (prakashSabhaLords.has(lord)) {
+          gotPoint = true;
+          reason = `D${div}: Lord in Prakash/Sabha`;
         }
+      }
+
+      // Exclusion: "divisions of a combust/weak/defeated planet are not counted"
+      if (gotPoint && badSignLords.has(lord)) {
+        gotPoint = false;
       }
 
       if (gotPoint) {
         score++;
+        details.push(reason);
       }
     }
 
