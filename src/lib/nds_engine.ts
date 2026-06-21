@@ -1089,21 +1089,26 @@ export function generateDashaTimeSeries(
         const pdPlanet = pd.planet as Planet;
         const pdMatrixScore = getPdAuspiciousness(adPlanet, pdPlanet);
         
-        // Add PD Matrix Score (1-100) to the NDF points. 
-        // We will scale it from -100 to 100 so it can push negative periods positive and vice versa, 
-        // or just add it directly? 
-        // "matrix values which will be added to Total NDF points"
-        // Let's add it directly and clamp to -100, 100 or maybe the combined total can exceed 100?
-        // Let's let the total go naturally to showcase the boost (or clamp it to 100).
-        // Since standard NDS is max 100, we can clamp to 100.
-        const pdBoostedPercentage = clamp(Math.round(blendedAdPercentage + pdMatrixScore), -200, 200);
+        // Convert PD Matrix Score (1-100) to NDF scale (-100 to 100)
+        // 50 becomes 0, 100 becomes +100, 0 becomes -100
+        const pdPercentage = (pdMatrixScore - 50) * 2;
+
+        // Apply weights: PD gets 20% of the total pie. MD and AD share the remaining 80%.
+        const pdW = 0.20;
+        const remainingW = 0.80;
+        
+        const blendedPdPercentage = clamp(
+          Math.round((mdResult.percentage * mdW * remainingW) + (adResult.percentage * adW * remainingW) + (pdPercentage * pdW)),
+          -100,
+          100
+        );
 
         points.push({
           date: pd.start,
           mdPlanet,
           adPlanet,
           pdPlanet,
-          percentage: pdBoostedPercentage,
+          percentage: blendedPdPercentage,
           mdPercentage: mdResult.percentage,
           adPercentage: adResult.percentage,
           mdResult,
