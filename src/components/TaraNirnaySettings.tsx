@@ -286,11 +286,15 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
         <div style={{ marginBottom: '2.5rem', padding: '1.25rem', background: 'rgba(201, 168, 106, 0.05)', borderRadius: '12px', border: '1px solid rgba(201, 168, 106, 0.2)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
-              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>MD / AD Weight Ratio</h4>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Adjust the percentage weight of Maha Dasha vs Antar Dasha in the final score.</p>
+              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>Dasha Weight Ratios</h4>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Adjust the balance of Maha Dasha vs Antar Dasha. Pratyantar Dasha is fixed at 20% of the total score.</p>
             </div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>
-              {localWeights.mdWeightPercentage ?? 50}% / {100 - (localWeights.mdWeightPercentage ?? 50)}%
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', textAlign: 'right' }}>
+              <span title="Maha Dasha">{Math.round((localWeights.mdWeightPercentage ?? 50) * 0.8)}%</span> <span style={{opacity:0.5}}>MD</span>
+              <span style={{ margin: '0 4px', opacity: 0.3 }}>/</span>
+              <span title="Antar Dasha">{Math.round((100 - (localWeights.mdWeightPercentage ?? 50)) * 0.8)}%</span> <span style={{opacity:0.5}}>AD</span>
+              <span style={{ margin: '0 4px', opacity: 0.3 }}>/</span>
+              <span title="Pratyantar Dasha">20%</span> <span style={{opacity:0.5}}>PD</span>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
