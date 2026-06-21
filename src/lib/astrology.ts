@@ -845,7 +845,7 @@ const signLords: Record<string, string> = {
       advancedTriggers
     });
 
-    currentDateTs += 30 * 24 * 60 * 60 * 1000;
+    currentDateTs += 15 * 24 * 60 * 60 * 1000;
   }
 
   return points;
