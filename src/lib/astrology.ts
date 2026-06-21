@@ -543,23 +543,8 @@ export function calculateChart(year: number, month: number, day: number, hour: n
     }
   }
 
-  // NDS time series — one data point per Antardasha boundary
-  const alSignIndex = specialLagnas?.arudhaLagna?.rasi?.index ?? 0;
-  let dashaTimeSeries: any[] = [];
-  try {
-    dashaTimeSeries = generateDashaTimeSeries(dasha, yogaState, positions, alSignIndex, awasthas, DEFAULT_NDS_WEIGHTS);
-  } catch (e) {
-    console.warn('NDS time series generation failed:', e);
-  }
-
-  let transitTimeSeries: any[] = [];
-  try {
-    if (dashaTimeSeries.length > 0 && ashtakavarga?.bav) {
-      transitTimeSeries = generateMonthlyTransitTimeSeries(dashaTimeSeries, ashtakavarga, panchang);
-    }
-  } catch (e) {
-    console.warn('Transit time series generation failed:', e);
-  }
+  // NDS and Transit time series are now computed on-demand via calculateTaraNirnayData()
+  // to avoid expensive computation on initial chart generation.
 
   return {
     jd,
@@ -577,10 +562,35 @@ export function calculateChart(year: number, month: number, day: number, hour: n
     mlData,
     yogaState,
     divisionalCharts,
-    specialLagnas,
-    dashaTimeSeries,
-    transitTimeSeries
+    specialLagnas
   };
+}
+
+/**
+ * Computes Tara Nirnay data (NDS + Transit time series) on demand.
+ * This is expensive and should only be called when the user explicitly requests it.
+ */
+export function calculateTaraNirnayData(chartData: any) {
+  const { dasha, yogaState, positions, specialLagnas, awasthas, ashtakavarga, panchang, lagna } = chartData;
+  const alSignIndex = specialLagnas?.arudhaLagna?.rasi?.index ?? 0;
+
+  let dashaTimeSeries: any[] = [];
+  try {
+    dashaTimeSeries = generateDashaTimeSeries(dasha, yogaState, positions, alSignIndex, awasthas, DEFAULT_NDS_WEIGHTS);
+  } catch (e) {
+    console.warn('NDS time series generation failed:', e);
+  }
+
+  let transitTimeSeries: any[] = [];
+  try {
+    if (dashaTimeSeries.length > 0 && ashtakavarga?.bav) {
+      transitTimeSeries = generateMonthlyTransitTimeSeries(dashaTimeSeries, ashtakavarga, panchang, positions, lagna);
+    }
+  } catch (e) {
+    console.warn('Transit time series generation failed:', e);
+  }
+
+  return { dashaTimeSeries, transitTimeSeries };
 }
 
 export function generateMonthlyTransitTimeSeries(

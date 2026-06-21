@@ -1,6 +1,6 @@
 'use server';
 
-import { calculateChart } from '@/lib/astrology';
+import { calculateChart, calculateTaraNirnayData } from '@/lib/astrology';
 import { DateTime } from 'luxon';
 import fs from 'fs';
 import path from 'path';
@@ -83,6 +83,10 @@ export async function getKundliData(formData: FormData) {
   );
 
   return res;
+}
+
+export async function getTaraNirnayData(chartData: any) {
+  return calculateTaraNirnayData(chartData);
 }
 
 export async function saveMLData(mlData: any) {

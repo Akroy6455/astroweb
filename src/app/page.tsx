@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { getKundliData, saveMLData } from './actions';
+import { getKundliData, saveMLData, getTaraNirnayData } from './actions';
 import KundliChart from '@/components/KundliChart';
 import NavamshaChakra from '@/components/NavamshaChakra';
 import AshtakavargaChart from '@/components/AshtakavargaChart';
@@ -76,12 +76,14 @@ export default function Home() {
   const [formLocation, setFormLocation] = useState({ lat: 25.78, lon: 87.48, ianaTz: 'Asia/Kolkata', label: 'Purnia, BR, IN' });
   const [ayanamsha, setAyanamsha] = useState<'Raman' | 'Lahiri'>('Raman');
   const [ndsWeights, setNdsWeights] = useState<NDSWeights>(DEFAULT_NDS_WEIGHTS);
+  const [taraNirnayData, setTaraNirnayData] = useState<{ dashaTimeSeries: any[], transitTimeSeries: any[] } | null>(null);
+  const [taraNirnayLoading, setTaraNirnayLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const activeDashaTimeSeries = useMemo(() => {
-    if (!data) return [];
+    if (!taraNirnayData?.dashaTimeSeries) return [];
     try {
-      const alSignIndex = data.specialLagnas?.arudhaLagna?.rasi?.index ?? 0;
+      const alSignIndex = data?.specialLagnas?.arudhaLagna?.rasi?.index ?? 0;
       return generateDashaTimeSeries(
         data.dasha, 
         data.yogaState, 
@@ -92,9 +94,23 @@ export default function Home() {
       );
     } catch (e) {
       console.error('Failed to regenerate NDS series:', e);
-      return data.dashaTimeSeries || [];
+      return taraNirnayData?.dashaTimeSeries || [];
     }
-  }, [data, ndsWeights]);
+  }, [data, ndsWeights, taraNirnayData]);
+
+  const handleGenerateTaraNirnay = async () => {
+    if (!data) return;
+    setTaraNirnayLoading(true);
+    try {
+      const result = await getTaraNirnayData(data);
+      setTaraNirnayData(result);
+    } catch (e: any) {
+      console.error('Tara Nirnay generation failed:', e);
+      alert('Failed to generate Tara Nirnay data: ' + (e.message || 'Unknown error'));
+    } finally {
+      setTaraNirnayLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Automatically set current date and time on initial load
@@ -348,6 +364,7 @@ export default function Home() {
       const formData = new FormData(e.currentTarget);
       const res = await getKundliData(formData);
       setData(res);
+      setTaraNirnayData(null); // Clear cached TaraNirnay data for new chart
       
       // Increment global stats
       try {
@@ -828,22 +845,86 @@ export default function Home() {
                 <div className={isPrinting ? 'print-section' : ''}>
                   {isPrinting && <h2 className="print-only-heading">Tara Dasha Nirnay</h2>}
                   <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                    {data?.transitTimeSeries && (
-                      <ExportTimeline 
-                        dashaData={activeDashaTimeSeries} 
-                        transitData={data.transitTimeSeries} 
-                        weights={ndsWeights} 
-                      />
+                    {!taraNirnayData && !taraNirnayLoading && (
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        padding: '3rem 1rem',
+                        gap: '1.5rem'
+                      }}>
+                        <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+                          <TrendingUp size={48} style={{ color: 'var(--primary)', marginBottom: '1rem' }} />
+                          <h3 style={{ color: 'var(--foreground)', marginBottom: '0.5rem', fontSize: '1.3rem' }}>Tara Dasha Nirnay</h3>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                            This computation analyzes NDS scores across all Mahadasha-Antardasha periods and generates monthly transit multipliers. 
+                            It is compute-intensive and may take a few seconds.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={handleGenerateTaraNirnay}
+                          className="submit-btn"
+                          style={{ 
+                            padding: '0.75rem 2rem', 
+                            borderRadius: '12px', 
+                            background: 'var(--primary)', 
+                            color: '#fff', 
+                            border: 'none', 
+                            cursor: 'pointer', 
+                            fontSize: '1rem', 
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            boxShadow: '0 4px 12px rgba(201, 168, 106, 0.3)',
+                            transition: 'all 0.3s ease'
+                          }}
+                        >
+                          <TrendingUp size={18} /> Generate Tara Nirnay
+                        </button>
+                      </div>
                     )}
-                    {data?.transitTimeSeries && data.transitTimeSeries.length > 0 && (
-                      <TransitChart data={data.transitTimeSeries} weights={ndsWeights} />
+                    {taraNirnayLoading && (
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        padding: '3rem 1rem',
+                        gap: '1rem'
+                      }}>
+                        <div style={{ 
+                          width: '48px', 
+                          height: '48px', 
+                          border: '3px solid var(--border)', 
+                          borderTop: '3px solid var(--primary)', 
+                          borderRadius: '50%', 
+                          animation: 'spin 1s linear infinite' 
+                        }} />
+                        <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Generating Tara Nirnay data...</p>
+                      </div>
                     )}
-                    <DashaChart data={activeDashaTimeSeries}>
-                      <TaraNirnaySettings 
-                        weights={ndsWeights} 
-                        onSave={handleSaveNdsWeights}
-                      />
-                    </DashaChart>
+                    {taraNirnayData && (
+                      <>
+                        {taraNirnayData.transitTimeSeries && (
+                          <ExportTimeline 
+                            dashaData={activeDashaTimeSeries} 
+                            transitData={taraNirnayData.transitTimeSeries} 
+                            weights={ndsWeights} 
+                          />
+                        )}
+                        {taraNirnayData.transitTimeSeries && taraNirnayData.transitTimeSeries.length > 0 && (
+                          <TransitChart data={taraNirnayData.transitTimeSeries} weights={ndsWeights} />
+                        )}
+                        <DashaChart data={activeDashaTimeSeries}>
+                          <TaraNirnaySettings 
+                            weights={ndsWeights} 
+                            onSave={handleSaveNdsWeights}
+                          />
+                        </DashaChart>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
