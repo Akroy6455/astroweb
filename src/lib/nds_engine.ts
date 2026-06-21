@@ -133,6 +133,8 @@ export interface NDSWeights {
 
   // Global settings
   mdWeightPercentage?: number;
+  adWeightPercentage?: number;
+  pdWeightPercentage?: number;
   enableTransitMultiplier?: boolean;
   enableMdAdTransitMultiplier?: boolean;
   enableNavtaraTransit?: boolean;
@@ -163,6 +165,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   navamshaMalefic: -50,
   version: 4,
   mdWeightPercentage: 50,
+  adWeightPercentage: 40,
+  pdWeightPercentage: 10,
   enableTransitMultiplier: true,
   enableMdAdTransitMultiplier: true,
   enableNavtaraTransit: true,
@@ -1063,8 +1067,17 @@ export function generateDashaTimeSeries(
       const adPlanet = ad.planet as Planet;
       const adResult = calculateNDS(adPlanet, yogaState, positions, alSignIndex, awasthasData, weights, mdPlanet, ad.pravesh);
 
-      const mdW = (weights.mdWeightPercentage ?? 50) / 100;
-      const adW = 1 - mdW;
+      // Fallback weights if missing
+      const rawMdW = weights.mdWeightPercentage ?? 50;
+      const rawAdW = weights.adWeightPercentage ?? 40;
+      const rawPdW = weights.pdWeightPercentage ?? 10;
+      
+      // Normalize to ensure they sum to exactly 1.0 (in case of manual config drift)
+      const totalW = rawMdW + rawAdW + rawPdW;
+      const mdW = rawMdW / totalW;
+      const adW = rawAdW / totalW;
+      const pdW = rawPdW / totalW;
+      
       const blendedAdPercentage = mdResult.percentage * mdW + adResult.percentage * adW;
 
       const pdPeriods = ad.subPeriods ?? [];
@@ -1076,6 +1089,7 @@ export function generateDashaTimeSeries(
           mdPlanet,
           adPlanet,
           pdPlanet: '',
+          // Assuming pdMatrixScore would be 50 (neutral) -> 0 * pdW = 0
           percentage: clamp(Math.round(blendedAdPercentage), -100, 100),
           mdPercentage: mdResult.percentage,
           adPercentage: adResult.percentage,
@@ -1092,13 +1106,9 @@ export function generateDashaTimeSeries(
         // Convert PD Matrix Score (1-100) to NDF scale (-100 to 100)
         // 50 becomes 0, 100 becomes +100, 0 becomes -100
         const pdPercentage = (pdMatrixScore - 50) * 2;
-
-        // Apply weights: PD gets 20% of the total pie. MD and AD share the remaining 80%.
-        const pdW = 0.20;
-        const remainingW = 0.80;
         
         const blendedPdPercentage = clamp(
-          Math.round((mdResult.percentage * mdW * remainingW) + (adResult.percentage * adW * remainingW) + (pdPercentage * pdW)),
+          Math.round(blendedAdPercentage + (pdPercentage * pdW)),
           -100,
           100
         );

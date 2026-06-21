@@ -287,26 +287,61 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
               <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>Dasha Weight Ratios</h4>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Adjust the balance of Maha Dasha vs Antar Dasha. Pratyantar Dasha is fixed at 20% of the total score.</p>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Adjust the relative importance of Maha, Antar, and Pratyantar Dashas.</p>
             </div>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', textAlign: 'right' }}>
-              <span title="Maha Dasha">{Math.round((localWeights.mdWeightPercentage ?? 50) * 0.8)}%</span> <span style={{opacity:0.5}}>MD</span>
-              <span style={{ margin: '0 4px', opacity: 0.3 }}>/</span>
-              <span title="Antar Dasha">{Math.round((100 - (localWeights.mdWeightPercentage ?? 50)) * 0.8)}%</span> <span style={{opacity:0.5}}>AD</span>
-              <span style={{ margin: '0 4px', opacity: 0.3 }}>/</span>
-              <span title="Pratyantar Dasha">20%</span> <span style={{opacity:0.5}}>PD</span>
+              {(() => {
+                const md = localWeights.mdWeightPercentage ?? 50;
+                const ad = localWeights.adWeightPercentage ?? 40;
+                const pd = localWeights.pdWeightPercentage ?? 10;
+                const total = md + ad + pd;
+                return (
+                  <>
+                    <span title="Maha Dasha">{Math.round((md / total) * 100)}%</span> <span style={{opacity:0.5}}>MD</span>
+                    <span style={{ margin: '0 4px', opacity: 0.3 }}>/</span>
+                    <span title="Antar Dasha">{Math.round((ad / total) * 100)}%</span> <span style={{opacity:0.5}}>AD</span>
+                    <span style={{ margin: '0 4px', opacity: 0.3 }}>/</span>
+                    <span title="Pratyantar Dasha">{Math.round((pd / total) * 100)}%</span> <span style={{opacity:0.5}}>PD</span>
+                  </>
+                );
+              })()}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          
+          {/* MD Slider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px', textAlign: 'right' }}>MD</span>
             <input 
-              type="range" 
-              min="0" max="100" 
+              type="range" min="0" max="100" 
               value={localWeights.mdWeightPercentage ?? 50} 
               onChange={(e) => setLocalWeights(prev => ({ ...prev, mdWeightPercentage: parseInt(e.target.value, 10) }))}
               style={{ flex: 1, accentColor: 'var(--primary)' }}
             />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>AD</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>{localWeights.mdWeightPercentage ?? 50}</span>
+          </div>
+
+          {/* AD Slider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px', textAlign: 'right' }}>AD</span>
+            <input 
+              type="range" min="0" max="100" 
+              value={localWeights.adWeightPercentage ?? 40} 
+              onChange={(e) => setLocalWeights(prev => ({ ...prev, adWeightPercentage: parseInt(e.target.value, 10) }))}
+              style={{ flex: 1, accentColor: 'var(--primary)' }}
+            />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>{localWeights.adWeightPercentage ?? 40}</span>
+          </div>
+
+          {/* PD Slider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px', textAlign: 'right' }}>PD</span>
+            <input 
+              type="range" min="0" max="100" 
+              value={localWeights.pdWeightPercentage ?? 10} 
+              onChange={(e) => setLocalWeights(prev => ({ ...prev, pdWeightPercentage: parseInt(e.target.value, 10) }))}
+              style={{ flex: 1, accentColor: 'var(--primary)' }}
+            />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>{localWeights.pdWeightPercentage ?? 10}</span>
           </div>
 
           <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(201, 168, 106, 0.2)', paddingTop: '1rem' }}>
