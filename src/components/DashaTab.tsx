@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+import { getPdAuspiciousness, getPdAuspiciousnessCategory } from '@/lib/pd_matrix';
 
 interface DashaPeriod {
   planet: string;
@@ -112,6 +114,32 @@ export function DashaTab({ dashas }: DashaTabProps) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{md.planet} - {ad.planet} - <span style={{ color: pdStyle.color, fontWeight: '500' }}>{pd.planet}</span></span>
                               <span style={{ fontSize: '0.6rem', padding: '0.1rem 0.3rem', background: pdStyle.border, color: pdStyle.color, borderRadius: '3px', textTransform: 'uppercase' }}>Pratyantar</span>
+                              
+                              {/* Display PD Auspiciousness Matrix Score */}
+                              {(() => {
+                                const pdScore = getPdAuspiciousness(ad.planet, pd.planet);
+                                const pdCat = getPdAuspiciousnessCategory(pdScore);
+                                return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.5rem' }}>
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      padding: '0.1rem 0.4rem',
+                                      background: `${pdCat.color}20`,
+                                      color: pdCat.color,
+                                      borderRadius: '10px',
+                                      fontWeight: 600,
+                                      border: `1px solid ${pdCat.color}40`,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.2rem'
+                                    }}>
+                                      <span style={{ opacity: 0.8 }}>Score:</span> {pdScore} 
+                                      <span style={{ margin: '0 2px', opacity: 0.4 }}>|</span> {pdCat.label}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+
                             </div>
                             <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
                               {formatDate(pd.start)} <span style={{ margin: '0 0.5rem', opacity: 0.5 }}>-</span> {formatDate(pd.end)}

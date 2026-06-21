@@ -1038,6 +1038,8 @@ export function calculateNDS(
   };
 }
 
+import { getPdAuspiciousness } from './pd_matrix';
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIME-SERIES GENERATOR
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1063,20 +1065,51 @@ export function generateDashaTimeSeries(
 
       const mdW = (weights.mdWeightPercentage ?? 50) / 100;
       const adW = 1 - mdW;
-      const blendedPercentage = clamp(Math.round(mdResult.percentage * mdW + adResult.percentage * adW), -100, 100);
-      const pdPlanet = ad.subPeriods?.[0]?.planet ?? '';
+      const blendedAdPercentage = mdResult.percentage * mdW + adResult.percentage * adW;
 
-      points.push({
-        date: ad.start,
-        mdPlanet,
-        adPlanet,
-        pdPlanet,
-        percentage: blendedPercentage,
-        mdPercentage: mdResult.percentage,
-        adPercentage: adResult.percentage,
-        mdResult,
-        adResult
-      });
+      const pdPeriods = ad.subPeriods ?? [];
+      
+      // If there are no PDs (should not happen normally), fallback to AD
+      if (pdPeriods.length === 0) {
+        points.push({
+          date: ad.start,
+          mdPlanet,
+          adPlanet,
+          pdPlanet: '',
+          percentage: clamp(Math.round(blendedAdPercentage), -100, 100),
+          mdPercentage: mdResult.percentage,
+          adPercentage: adResult.percentage,
+          mdResult,
+          adResult
+        });
+        continue;
+      }
+
+      for (const pd of pdPeriods) {
+        const pdPlanet = pd.planet as Planet;
+        const pdMatrixScore = getPdAuspiciousness(adPlanet, pdPlanet);
+        
+        // Add PD Matrix Score (1-100) to the NDF points. 
+        // We will scale it from -100 to 100 so it can push negative periods positive and vice versa, 
+        // or just add it directly? 
+        // "matrix values which will be added to Total NDF points"
+        // Let's add it directly and clamp to -100, 100 or maybe the combined total can exceed 100?
+        // Let's let the total go naturally to showcase the boost (or clamp it to 100).
+        // Since standard NDS is max 100, we can clamp to 100.
+        const pdBoostedPercentage = clamp(Math.round(blendedAdPercentage + pdMatrixScore), -200, 200);
+
+        points.push({
+          date: pd.start,
+          mdPlanet,
+          adPlanet,
+          pdPlanet,
+          percentage: pdBoostedPercentage,
+          mdPercentage: mdResult.percentage,
+          adPercentage: adResult.percentage,
+          mdResult,
+          adResult
+        });
+      }
     }
   }
 
