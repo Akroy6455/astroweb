@@ -252,7 +252,6 @@ export function calculateVargaClassifications(
   const truePlanets = ['Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   
   const badSignLords = new Set<string>();
-  const prakashSabhaLords = new Set<string>();
 
   for (const pos of positions) {
     if (!P_STATUS[pos.name as PlanetName]) continue;
@@ -286,7 +285,6 @@ export function calculateVargaClassifications(
     }
 
     if (isBad) badSignLords.add(pName);
-    if (myAwastha === 'Prakash' || myAwastha === 'Sabha') prakashSabhaLords.add(pName);
   }
 
   for (const pos of positions) {
@@ -339,8 +337,6 @@ export function calculateVargaClassifications(
           gotPoint = true; reason = `D${div}: Own Sign`;
         } else if (targetArudhaSigns.has(vSignIndex)) {
           gotPoint = true; reason = `D${div}: AL Angle Lord Sign`;
-        } else if (prakashSabhaLords.has(lord)) {
-          gotPoint = true; reason = `D${div}: Lord in Prakash/Sabha`;
         }
       }
 

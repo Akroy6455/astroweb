@@ -841,79 +841,84 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: {
 
       {subTab === 'TaraNDF' && transitData && mainData && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--primary)' }}>Tara Nirnay NDF Transit Chart</h2>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-              {['Sun', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus'].map(planet => (
-                <button 
-                  key={planet}
-                  onClick={() => setSelectedNdfPlanet(planet)}
-                  className={`tab ${selectedNdfPlanet === planet ? 'active' : ''}`}
-                >
-                  {planet}
-                </button>
-              ))}
-            </div>
+          {weights?.enableTaraNirnayMatrix !== false ? (
+            <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--primary)' }}>Tara Nirnay NDF Transit Chart</h2>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+                {['Sun', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus'].map(planet => (
+                  <button 
+                    key={planet}
+                    onClick={() => setSelectedNdfPlanet(planet)}
+                    className={`tab ${selectedNdfPlanet === planet ? 'active' : ''}`}
+                  >
+                    {planet}
+                  </button>
+                ))}
+              </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', overflow: 'hidden' }}>
-                <thead>
-                  <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#eab308' }}>
-                    <th style={{ padding: '1rem', border: '1px solid var(--border)' }}>Natal Point</th>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(house => (
-                      <th key={house} style={{ padding: '1rem', border: '1px solid var(--border)' }}>H{house}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {['Sun', 'Moon', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus', 'Ascendant'].map(natalPlanet => {
-                    const rowKey = `from_${natalPlanet}`;
-                    const currentMatrix = weights?.taraNirnayNdfMatrix || taraNirnayData;
-                    const rowData = (currentMatrix as any)[selectedNdfPlanet]?.[rowKey];
-                    if (!rowData) return null;
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#eab308' }}>
+                      <th style={{ padding: '1rem', border: '1px solid var(--border)' }}>Natal Point</th>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(house => (
+                        <th key={house} style={{ padding: '1rem', border: '1px solid var(--border)' }}>H{house}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['Sun', 'Moon', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus', 'Ascendant'].map(natalPlanet => {
+                      const rowKey = `from_${natalPlanet}`;
+                      const currentMatrix = weights?.taraNirnayNdfMatrix || taraNirnayData;
+                      const rowData = (currentMatrix as any)[selectedNdfPlanet]?.[rowKey];
+                      if (!rowData) return null;
 
-                    const tPlanetPos = transitData.positions.find((p: any) => p.name === selectedNdfPlanet);
-                    let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
-                    
-                    let currentTransitHouse = -1;
-                    if (tPlanetPos && nPlanetPos) {
-                      const tRasi = Math.floor(tPlanetPos.longitude / 30);
-                      const nRasi = Math.floor(nPlanetPos.longitude / 30);
-                      currentTransitHouse = ((tRasi - nRasi + 12) % 12) + 1;
-                    }
+                      const tPlanetPos = transitData.positions.find((p: any) => p.name === selectedNdfPlanet);
+                      let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                      
+                      let currentTransitHouse = -1;
+                      if (tPlanetPos && nPlanetPos) {
+                        const tRasi = Math.floor(tPlanetPos.longitude / 30);
+                        const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                        currentTransitHouse = ((tRasi - nRasi + 12) % 12) + 1;
+                      }
 
-                    return (
-                      <tr key={natalPlanet} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--primary)', borderRight: '1px solid var(--border)' }}>From {natalPlanet}</td>
-                        {rowData.map((val: number, idx: number) => {
-                          const houseNumber = idx + 1;
-                          const isCurrent = currentTransitHouse === houseNumber;
-                          return (
-                            <td 
-                              key={idx} 
-                              style={{ 
-                                padding: '0.75rem', 
-                                borderRight: '1px solid var(--border)',
-                                background: isCurrent ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
-                                color: isCurrent ? '#38bdf8' : 'var(--foreground)',
-                                fontWeight: isCurrent ? 'bold' : 'normal'
-                              }}
-                            >
-                              {val}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                Note: Highlighted cells indicate the current transit house from the respective natal point.
+                      return (
+                        <tr key={natalPlanet} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--primary)', borderRight: '1px solid var(--border)' }}>From {natalPlanet}</td>
+                          {rowData.map((val: number, idx: number) => {
+                            const houseNumber = idx + 1;
+                            const isCurrent = currentTransitHouse === houseNumber;
+                            return (
+                              <td 
+                                key={idx} 
+                                style={{ 
+                                  padding: '0.75rem', 
+                                  borderRight: '1px solid var(--border)',
+                                  background: isCurrent ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+                                  color: isCurrent ? '#38bdf8' : 'var(--foreground)',
+                                  fontWeight: isCurrent ? 'bold' : 'normal'
+                                }}
+                              >
+                                {val}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  Note: Highlighted cells indicate the current transit house from the respective natal point.
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Tara Nirnay NDF Transit Chart Matrix is currently disabled in the settings.
+            </div>
+          )}
         </div>
       )}
     </div>

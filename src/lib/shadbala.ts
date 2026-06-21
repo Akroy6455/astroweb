@@ -1,3 +1,5 @@
+import sweph from 'sweph';
+
 // Parashari Shadbala Engine - Exact Implementation
 
 export type PlanetName = 'Sun' | 'Moon' | 'Mars' | 'Mercury' | 'Jupiter' | 'Venus' | 'Saturn';
@@ -45,7 +47,7 @@ const NATURAL_ENEMIES: Record<PlanetName, PlanetName[]> = {
 
 function norm(a: number) { return ((a % 360) + 360) % 360; }
 
-export function calculateShadbala(positions: any[], lagna: any, jd: number) {
+export function calculateShadbala(positions: any[], lagna: any, jd: number, lat: number, lon: number) {
   const result: Record<string, any> = {};
 
   const sun = positions.find(p => p.name === 'Sun');
@@ -123,20 +125,46 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number) {
 
   const WEEKDAY_LORDS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   const HORA_SEQ = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon'];
-  const wd = Math.floor(jd + 1.5) % 7;
-  const dayLord = WEEKDAY_LORDS[wd];
   
-  // Approximate Sunrise = 6 AM local time.
-  const hoursSinceSunrise = (localHour - 6 + 24) % 24;
-  const horaNum = Math.floor(hoursSinceSunrise);
-  const dayLordHoraIdx = HORA_SEQ.indexOf(dayLord);
-  const horaLord = HORA_SEQ[(dayLordHoraIdx + horaNum) % 7];
+  // Exact Sunrise Calculation using Swiss Ephemeris
+  const geopos: [number, number, number] = [lon, lat, 0];
+  let s1 = sweph.rise_trans(jd - 1.5, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data;
+  let s2 = sweph.rise_trans(s1 + 0.1, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data;
+  
+  const final_sunrise_jd = (s2 < jd) ? s2 : s1;
+  const next_sunrise_jd = (s2 < jd) ? sweph.rise_trans(s2 + 0.1, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data : s2;
 
-  const sunLong = sun ? sun.longitude : 0;
-  const ariesIngressJD = jd - (sunLong / 0.9856);
-  const abdaLord = WEEKDAY_LORDS[Math.floor(ariesIngressJD + 1.5) % 7];
-  const signIngressJD = jd - ((sunLong % 30) / 0.9856);
-  const masaLord = WEEKDAY_LORDS[Math.floor(signIngressJD + 1.5) % 7];
+  let ss1 = sweph.rise_trans(final_sunrise_jd, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_SET, geopos, 0, 0).data;
+  const final_sunset_jd = (ss1 > final_sunrise_jd && ss1 < next_sunrise_jd) ? ss1 : sweph.rise_trans(final_sunrise_jd + 0.5, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_SET, geopos, 0, 0).data;
+
+  // Exact Vedic Day Lord
+  const localSunriseJD = final_sunrise_jd + (lon / 360);
+  const wd = Math.floor(localSunriseJD + 1.5) % 7;
+  const dayLord = WEEKDAY_LORDS[wd];
+
+  // Exact Hora Lord
+  const ahoratra = next_sunrise_jd - final_sunrise_jd;
+  const horaFraction = (jd - final_sunrise_jd) / ahoratra; // 0 to 1
+  const horaNum = Math.floor(horaFraction * 24); // 0 to 23
+  const dayLordHoraIdx = HORA_SEQ.indexOf(dayLord);
+  const horaLord = HORA_SEQ[(dayLordHoraIdx + horaNum) % 7]; 
+
+  // Exact Savana Ahargana for Abda and Masa Lords (from Kali Epoch: 588465.5)
+  const ahargana = Math.floor(localSunriseJD - 588465.5);
+  const years = Math.floor(ahargana / 360);
+  
+  // JHora default "Use 360-day savana year (from creation)"
+  // Srishti epoch solar years = 1955885114
+  const srishtiYears = 1955885114 + years;
+  const abdaWd = srishtiYears % 7;
+  
+  // Masa Lord in JHora uses Srishti Epoch months
+  // Srishti epoch months = Srishti epoch years * 12
+  const srishtiMonths = 1955885114 * 12 + Math.floor(ahargana / 30);
+  const masaWd = srishtiMonths % 7;
+  
+  const abdaLord = WEEKDAY_LORDS[abdaWd];
+  const masaLord = WEEKDAY_LORDS[masaWd];
 
   for (const pos of positions) {
     if (!['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'].includes(pos.name)) continue;
@@ -221,26 +249,53 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number) {
     // 3.2 Paksha
     let pakshaBala = 0;
     if (sun && moon) {
-      let ang = norm(moon.longitude - sun.longitude);
-      if (ang > 180) ang = 360 - ang;
-      const benef = ang / 3;
+      const moonLong = moon.longitude;
+      let phaseAngle = moonLong - sunLongGlobal;
+      if (phaseAngle < 0) phaseAngle += 360;
+      if (phaseAngle > 180) phaseAngle = 360 - phaseAngle;
+
+      const benef = phaseAngle / 3;
       const mal = 60 - benef;
-      const isBenefic = ['Jupiter', 'Venus', 'Moon', 'Mercury'].includes(name);
+      
+      const isMercuryMalefic = () => {
+        if (name !== 'Mercury') return false;
+        let dist = Math.abs(pos.longitude - sunLongGlobal);
+        if (dist > 180) dist = 360 - dist;
+        if (dist <= 14) return true; // Combust
+        
+        const mercSign = Math.floor(pos.longitude / 30);
+        for (const p of positions) {
+          if (['Sun', 'Mars', 'Saturn', 'Rahu', 'Ketu'].includes(p.name)) {
+            if (Math.floor(p.longitude / 30) === mercSign) return true;
+          }
+        }
+        return false;
+      };
+      
+      const isBenefic = ['Jupiter', 'Venus', 'Moon'].includes(name) || (name === 'Mercury' && !isMercuryMalefic());
       pakshaBala = isBenefic ? benef : mal;
-      if (name === 'Moon') pakshaBala = Math.min(60, pakshaBala * 2);
+      if (name === 'Moon') pakshaBala *= 2; // Max 120, do not cap at 60
     }
 
     // 3.3 Tribhaga
     let tribhagaBala = 0;
     if (name === 'Jupiter') tribhagaBala = 60;
     else {
-      const h = (localHour + 24) % 24;
-      if (h >= 6 && h < 10 && name === 'Mercury') tribhagaBala = 60;
-      else if (h >= 10 && h < 14 && name === 'Sun') tribhagaBala = 60;
-      else if (h >= 14 && h < 18 && name === 'Saturn') tribhagaBala = 60;
-      else if (h >= 18 && h < 22 && name === 'Moon') tribhagaBala = 60;
-      else if ((h >= 22 || h < 2) && name === 'Venus') tribhagaBala = 60;
-      else if (h >= 2 && h < 6 && name === 'Mars') tribhagaBala = 60;
+      if (jd < final_sunset_jd) {
+        // Day time
+        const dayDuration = final_sunset_jd - final_sunrise_jd;
+        const partOfDay = (jd - final_sunrise_jd) / dayDuration;
+        if (partOfDay < 1/3 && name === 'Mercury') tribhagaBala = 60;
+        else if (partOfDay >= 1/3 && partOfDay < 2/3 && name === 'Sun') tribhagaBala = 60;
+        else if (partOfDay >= 2/3 && name === 'Saturn') tribhagaBala = 60;
+      } else {
+        // Night time
+        const nightDuration = next_sunrise_jd - final_sunset_jd;
+        const partOfNight = (jd - final_sunset_jd) / nightDuration;
+        if (partOfNight < 1/3 && name === 'Moon') tribhagaBala = 60;
+        else if (partOfNight >= 1/3 && partOfNight < 2/3 && name === 'Venus') tribhagaBala = 60;
+        else if (partOfNight >= 2/3 && name === 'Mars') tribhagaBala = 60;
+      }
     }
 
     const varaBala = dayLord === name ? 45 : 0;
@@ -249,47 +304,47 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number) {
     const abdaBala = abdaLord === name ? 15 : 0;
 
     // 3.5 Ayana
-    const tropLong = norm(long + 23.5);
-    let bhuja = tropLong % 180;
-    if (bhuja > 90) bhuja = 180 - bhuja;
-    let ayanaBala = 0;
-    if (bhuja <= 30) ayanaBala = (bhuja / 30) * 45;
-    else if (bhuja <= 60) ayanaBala = 45 + ((bhuja - 30) / 30) * 33;
-    else ayanaBala = 78 + ((bhuja - 60) / 30) * 12;
-    ayanaBala = (ayanaBala / 90) * 60; // Max 60
-    const isNorth = tropLong < 180;
-    if (['Moon', 'Saturn'].includes(name) && isNorth) ayanaBala = 60 - ayanaBala;
-    else if (['Sun', 'Mars', 'Jupiter', 'Venus'].includes(name) && !isNorth) ayanaBala = 60 - ayanaBala;
-    if (name === 'Sun') ayanaBala = Math.min(60, ayanaBala * 2);
+    // Lahiri ayanamsa approximation: roughly 24 deg
+    const tropLong = norm(long + 24);
+    const kranti = Math.asin(Math.sin(tropLong * Math.PI / 180) * Math.sin(23.45 * Math.PI / 180)) * 180 / Math.PI;
+    
+    let ayanaVal = 0;
+    if (['Moon', 'Saturn'].includes(name)) {
+      ayanaVal = 60 * (24 - kranti) / 48;
+    } else if (['Sun', 'Mars', 'Jupiter', 'Venus'].includes(name)) {
+      ayanaVal = 60 * (24 + kranti) / 48;
+    } else if (name === 'Mercury') {
+      ayanaVal = 60 * (24 + Math.abs(kranti)) / 48;
+    }
+    
+    let ayanaBala = Math.max(0, Math.min(60, ayanaVal));
+    if (name === 'Sun') ayanaBala *= 2; // Double for Sun, max 120
+
 
     const kalaBala = nathonathaBala + pakshaBala + tribhagaBala + varaBala + horaBala + masaBala + abdaBala + ayanaBala;
 
     // --- IV. CHESTA BALA ---
     let chestaBala = 0;
     let chestaPhalaVal = 0;
-    if (name === 'Sun') {
-      chestaBala = 0; // Sun has 0 Chesta per text
-      chestaPhalaVal = ayanaBala; 
-    } else if (name === 'Moon') {
-      chestaBala = 0; // Moon has 0 Chesta per text
-      chestaPhalaVal = pakshaBala;
-    } else if (['Mars', 'Jupiter', 'Saturn'].includes(name)) {
-      // Outer planets: Ck = Seeghrochcha(Sun) - True Longitude
-      let ck = norm(sunLongGlobal - long);
+    if (name === 'Sun' || name === 'Moon') {
+      chestaBala = 0; // Sun and Moon do not have Chesta Bala
+      chestaPhalaVal = 60; // Usually assumed full or calculated differently for phalas, but setting 60 to avoid Kashta Phala penalty, or could be 0. Let's use 0 for now to match.
+      chestaPhalaVal = 0;
+    } else {
+      let seeghrochcha = 0;
+      if (['Mars', 'Jupiter', 'Saturn'].includes(name)) {
+        seeghrochcha = sunLongGlobal; // True Sun
+      } else {
+        // Inner planets (Mercury, Venus): Seeghrochcha is their Heliocentric Longitude
+        const id = name === 'Mercury' ? sweph.constants.SE_MERCURY : sweph.constants.SE_VENUS;
+        const flags = sweph.constants.SEFLG_SWIEPH | sweph.constants.SEFLG_HELCTR | sweph.constants.SEFLG_SIDEREAL;
+        const res = sweph.calc_ut(jd, id, flags);
+        seeghrochcha = res.data[0];
+      }
+      
+      let ck = norm(seeghrochcha - long);
       if (ck > 180) ck = 360 - ck;
       chestaBala = ck / 3;
-      chestaPhalaVal = chestaBala;
-    } else {
-      // Inner planets: Speed Table mapping
-      if (pos.retrograde) chestaBala = 60;
-      else {
-        const speed = Math.abs(pos.speed);
-        const avg = AVG_SPEED[name];
-        if (speed < 0.01) chestaBala = 15;
-        else if (speed < avg * 0.9) chestaBala = 30;
-        else if (speed > avg * 1.1) chestaBala = 45;
-        else chestaBala = 7.5;
-      }
       chestaPhalaVal = chestaBala;
     }
 
@@ -303,56 +358,63 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number) {
       if (other.name === name || !['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'].includes(other.name)) continue;
       
       const aspectingName = other.name as PlanetName;
-      // Angle 'a' between aspecting and aspected
+      // Angle 'a' between aspecting and aspected. User formula: Aspected - Aspector
       let a = norm(long - other.longitude);
       
       let val = 0;
-      if (a >= 0 && a < 30) {
-        val = 0;
-      } else if (a >= 30 && a < 60) {
+      if (a >= 30 && a < 60) {
         val = (a - 30) / 2;
-        if (aspectingName === 'Saturn') val = (a - 30) * 2;
       } else if (a >= 60 && a < 90) {
-        val = a - 45;
-        if (aspectingName === 'Saturn') val = 45 + (90 - a) / 2;
+        val = (a - 60) + 15;
       } else if (a >= 90 && a < 120) {
-        val = 30 + (120 - a) / 2;
-        if (aspectingName === 'Mars') val = 45 + (a - 90) / 2;
-        else if (aspectingName === 'Jupiter') val = 45 + (a - 90) / 2;
+        val = (120 - a) / 2 + 30;
       } else if (a >= 120 && a < 150) {
         val = 150 - a;
-        if (aspectingName === 'Mars') val = 2 * (150 - a);
-        else if (aspectingName === 'Jupiter') val = 2 * (150 - a);
       } else if (a >= 150 && a < 180) {
-        val = 2 * (150 - a);
-      } else if (a >= 180 && a < 210) {
+        val = (a - 150) * 2;
+      } else if (a >= 180 && a < 300) {
         val = (300 - a) / 2;
-        if (aspectingName === 'Mars') val = 60;
-      } else if (a >= 210 && a < 240) {
-        val = (300 - a) / 2;
-        if (aspectingName === 'Mars') val = 270 - a;
-        else if (aspectingName === 'Jupiter') val = 45 + (a - 210) / 2;
-      } else if (a >= 240 && a < 270) {
-        val = (300 - a) / 2;
-        if (aspectingName === 'Jupiter') val = 15 + 2 * (270 - a) / 3;
-        else if (aspectingName === 'Saturn') val = a - 210;
-      } else if (a >= 270 && a < 300) {
-        val = (300 - a) / 2;
-        if (aspectingName === 'Saturn') val = 2 * (300 - a);
       }
+
+      // Vishesha Drishti Exceptions (Continuous PVR Logic)
+      if (aspectingName === 'Mars') {
+        if (a >= 90 && a < 120) val = 45 + (a - 90) / 2;
+        else if (a >= 120 && a < 150) val = 2 * (150 - a);
+        else if (a >= 210 && a < 240) val = 270 - a;
+      } else if (aspectingName === 'Jupiter') {
+        if (a >= 90 && a < 120) val = 45 + (a - 90) / 2;
+        else if (a >= 120 && a < 150) val = 2 * (150 - a);
+        else if (a >= 210 && a < 240) val = 45 + (a - 210) / 2;
+      } else if (aspectingName === 'Saturn') {
+        if (a >= 30 && a < 60) val = 2 * (a - 30);
+        else if (a >= 60 && a < 90) val = 45 + (90 - a) / 2;
+        else if (a >= 270 && a < 300) val = 2 * (300 - a);
+      }
+
+      // Cap at 60 Virupas
+      val = Math.min(60, val);
       
       // Absolute value to handle any naturally negative outcomes (like 150-180 bracket)
       val = Math.abs(val);
       
-      // Benefic aspects add, Malefic aspects subtract
-      const isBeneficAspect = ['Jupiter', 'Venus', 'Moon', 'Mercury'].includes(aspectingName);
-      
       let aspectMod = val;
-      if (!['Jupiter', 'Mercury'].includes(aspectingName)) {
+      // User rule: Jupiter and Mercury 100%, others divided by 4
+      if (['Venus', 'Moon', 'Sun', 'Mars', 'Saturn'].includes(aspectingName)) {
         aspectMod = val / 4;
       }
       
-      // Added TO the aspected planet (name)
+      let isBeneficAspect = ['Jupiter', 'Venus', 'Mercury'].includes(aspectingName);
+      if (aspectingName === 'Moon') {
+         // Waxing moon is benefic, waning is malefic
+         const moonLong = positions.find(p => p.name === 'Moon')?.longitude || 0;
+         const sunLong = positions.find(p => p.name === 'Sun')?.longitude || 0;
+         const diff = norm(moonLong - sunLong);
+         if (diff < 180) {
+           isBeneficAspect = true; // Waxing
+         }
+      }
+      
+      // Benefic aspects add, Malefic aspects subtract
       if (isBeneficAspect) {
         drikBala += aspectMod;
       } else {

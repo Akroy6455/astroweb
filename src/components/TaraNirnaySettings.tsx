@@ -704,14 +704,25 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
 
         <div style={{ 
           marginBottom: '2rem',
-          opacity: 1, 
+          opacity: localWeights.enableTaraNirnayMatrix !== false ? 1 : 0.45, 
           transition: 'all 0.3s ease' 
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
             <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>
               Tara Nirnay NDF Transit Chart Matrix
             </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: localWeights.enableTaraNirnayMatrix !== false ? 'var(--primary)' : 'var(--text-muted)' }}>Enable</span>
+              <div 
+                onClick={() => setLocalWeights(prev => ({ ...prev, enableTaraNirnayMatrix: prev.enableTaraNirnayMatrix === false ? true : false }))}
+                style={{ width: '42px', height: '22px', background: localWeights.enableTaraNirnayMatrix !== false ? 'var(--primary)' : 'rgba(46, 49, 49, 0.2)', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease', pointerEvents: 'auto' }}
+              >
+                <div style={{ position: 'absolute', top: '2px', left: localWeights.enableTaraNirnayMatrix !== false ? '22px' : '2px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', transition: 'left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+            </div>
           </div>
+          
+          <div style={{ pointerEvents: localWeights.enableTaraNirnayMatrix !== false ? 'auto' : 'none', filter: localWeights.enableTaraNirnayMatrix !== false ? 'none' : 'blur(0.5px)' }}>
           
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
             {['Sun', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus'].map(planet => (
@@ -783,6 +794,7 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             This matrix is used to calculate the Tara Nirnay NDF transit scores.
+          </div>
           </div>
         </div>
 

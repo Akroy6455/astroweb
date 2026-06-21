@@ -30,6 +30,7 @@ interface Props {
 }
 
 export default function YogTab({ data }: Props) {
+  const [selectedFilter, setSelectedFilter] = React.useState('All');
   if (!data || !data.positions) return null;
 
   // Find the Ascendant sign name
@@ -254,6 +255,56 @@ export default function YogTab({ data }: Props) {
     }
   }
 
+  // Gemstones Suggestion Logic
+  const gemstoneSuggestions: string[] = [];
+  const GEMSTONES: Record<string, string> = {
+    Sun: "Ruby", Moon: "Pearl", Mars: "Red Coral", Mercury: "Emerald",
+    Jupiter: "Yellow Sapphire", Venus: "Diamond", Saturn: "Blue Sapphire",
+    Rahu: "Hessonite", Ketu: "Cat's Eye"
+  };
+
+  if (data.lagna && data.positions) {
+    const PARASHARA_YOGAKARAKAS: Record<string, string[]> = {
+      Aries: ['Sun', 'Moon'], Taurus: ['Saturn'], Gemini: ['Venus', 'Mercury'],
+      Cancer: ['Mars'], Leo: ['Mars'], Virgo: ['Venus', 'Mercury'],
+      Libra: ['Saturn'], Scorpio: ['Sun', 'Moon'], Sagittarius: ['Sun', 'Mercury'],
+      Capricorn: ['Venus'], Aquarius: ['Venus'], Pisces: ['Mars', 'Jupiter']
+    };
+
+    const lagnaSignName = data.lagna.rasi.name;
+    const ykList = PARASHARA_YOGAKARAKAS[lagnaSignName] || [];
+    ykList.forEach(yk => {
+      gemstoneSuggestions.push(`As per Parasara, ${yk} is Yogkaraka for ${lagnaSignName} Lagna. Suggested Gemstone: ${GEMSTONES[yk]}.`);
+    });
+
+    if (data.divisionalCharts && data.divisionalCharts['D9']) {
+      const d9Houses = data.divisionalCharts['D9'].houses;
+      if (d9Houses && d9Houses.length > 0) {
+        const navamsaLagnaSignIndex = d9Houses[0].signIndex;
+        const localSignsToPlanets = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
+        const localSIGNS = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+        const d9LagnaLord = localSignsToPlanets[navamsaLagnaSignIndex];
+        const lagnaRasiIndex = data.lagna.rasi.index;
+        
+        // 6th and 8th lords in D1
+        const lordOf6th = localSignsToPlanets[(lagnaRasiIndex + 5) % 12];
+        const lordOf8th = localSignsToPlanets[(lagnaRasiIndex + 7) % 12];
+
+        if (d9LagnaLord !== lordOf6th && d9LagnaLord !== lordOf8th) {
+          gemstoneSuggestions.push(`Lord of Navamsa Lagna (${localSIGNS[navamsaLagnaSignIndex]}) is ${d9LagnaLord}. It does not own the 6th or 8th house in D1. Suggested Gemstone: ${GEMSTONES[d9LagnaLord]}.`);
+        } else {
+          const d9LordPos = data.positions.find((p: any) => p.name === d9LagnaLord);
+          if (d9LordPos) {
+            const isOwnHouse = localSignsToPlanets[d9LordPos.rasi.index] === d9LagnaLord;
+            if (isOwnHouse) {
+              gemstoneSuggestions.push(`Lord of Navamsa Lagna (${localSIGNS[navamsaLagnaSignIndex]}) is ${d9LagnaLord}. Although it owns a Dusthana (6th/8th) in D1, it is placed in its own house. Suggested Gemstone: ${GEMSTONES[d9LagnaLord]}.`);
+            }
+          }
+        }
+      }
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Disclaimer */}
@@ -263,8 +314,50 @@ export default function YogTab({ data }: Props) {
         </p>
       </div>
 
+      {/* Filter Dropdown */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+        <select 
+          value={selectedFilter} 
+          onChange={(e) => setSelectedFilter(e.target.value)}
+          style={{ 
+            padding: '0.75rem 1.5rem', 
+            borderRadius: '8px', 
+            background: 'var(--card-bg)', 
+            color: 'var(--foreground)', 
+            border: '1px solid var(--border)',
+            fontSize: '1rem',
+            outline: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+          }}
+        >
+          <option value="All">All Results</option>
+          <option value="Gemstones">Gemstones</option>
+          <option value="Yavanajataka">Yavanajataka</option>
+          <option value="BPHS Lordship">BPHS Lordship</option>
+          <option value="BPHS Wealth Yogas">BPHS Wealth Yogas</option>
+          <option value="Awastha Results">Awastha Results</option>
+        </select>
+      </div>
+
+      {/* Gemstones Suggestion */}
+      {(selectedFilter === 'All' || selectedFilter === 'Gemstones') && gemstoneSuggestions.length > 0 && (
+        <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+            Gemstones Suggestion
+          </h3>
+          <ul style={{ listStyleType: 'disc', paddingLeft: '1.5rem', margin: 0, color: 'var(--foreground)' }}>
+            {gemstoneSuggestions.map((suggestion, i) => (
+              <li key={i} style={{ fontSize: '1rem', lineHeight: 1.6, marginBottom: '0.5rem' }}>
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Yavanajataka Ascendant Results */}
-      {ascendantSignName && yavanajatakaResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && ascendantSignName && yavanajatakaResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Ascendant Results ({ascendantSignName} Lagna)
@@ -279,7 +372,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Ascendant Drekkana Results */}
-      {ascendantSignName && yavanajatakaDrekkanaResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && ascendantSignName && yavanajatakaDrekkanaResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Ascendant Drekkana Results ({ascendantSignName} Lagna, Drekkana {ascendantDrekkanaPart})
@@ -294,7 +387,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Sun in Sign Results */}
-      {sunSignName && yavanajatakaSunResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && sunSignName && yavanajatakaSunResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Sun in {sunSignName}
@@ -309,7 +402,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Mercury in Sign Results */}
-      {mercurySignName && yavanajatakaMercuryResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && mercurySignName && yavanajatakaMercuryResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Mercury in {mercurySignName}
@@ -324,7 +417,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Venus in Sign Results */}
-      {venusSignName && yavanajatakaVenusResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && venusSignName && yavanajatakaVenusResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Venus in {venusSignName}
@@ -339,7 +432,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Mars in Sign Results */}
-      {marsSignName && yavanajatakaMarsResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && marsSignName && yavanajatakaMarsResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Mars in {marsSignName}
@@ -354,7 +447,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Jupiter in Sign Results */}
-      {jupiterSignName && yavanajatakaJupiterResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && jupiterSignName && yavanajatakaJupiterResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Jupiter in {jupiterSignName}
@@ -369,7 +462,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Saturn in Sign Results */}
-      {saturnSignName && yavanajatakaSaturnResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && saturnSignName && yavanajatakaSaturnResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Saturn in {saturnSignName}
@@ -384,7 +477,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Ascendant Saptamsa Results */}
-      {ascendantSignName && yavanajatakaAscendantSaptamsaResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && ascendantSignName && yavanajatakaAscendantSaptamsaResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Ascendant Saptamsa Results ({ascendantSignName} Lagna, Saptamsa {ascendantSaptamsaPart})
@@ -399,7 +492,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Moon Navamsha Results */}
-      {moonSignName && moonNavamshaPart && yavanajatakaMoonResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && moonSignName && moonNavamshaPart && yavanajatakaMoonResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Moon Navamsha Results (Moon in {moonSignName}, Navamsha {moonNavamshaPart})
@@ -414,7 +507,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Moon Saptamsa Results */}
-      {moonSignName && yavanajatakaMoonSaptamsaResult && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && moonSignName && yavanajatakaMoonSaptamsaResult && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Moon Saptamsa Results (Moon in {moonSignName}, Saptamsa {moonSaptamsaPart})
@@ -429,7 +522,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Moon Navamsha Aspect Results */}
-      {aspectingResults.length > 0 && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && aspectingResults.length > 0 && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Moon Navamsha Aspects (Moon in {moonNavamshaLord}'s Navamsha)
@@ -448,7 +541,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Yavanajataka Dwadasamsha (D12) Results */}
-      {d12Results.length > 0 && (
+      {(selectedFilter === 'All' || selectedFilter === 'Yavanajataka') && d12Results.length > 0 && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             Yavanajataka Dwadasamsha (D12) Results
@@ -467,7 +560,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* BPHS Lords in Houses Results */}
-      {bphsResults.length > 0 && (
+      {(selectedFilter === 'All' || selectedFilter === 'BPHS Lordship') && bphsResults.length > 0 && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             BPHS Results: Lords in Various Houses
@@ -487,7 +580,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Arudha Lagna BPHS Wealth Yoga */}
-      {(arudhaInflowYogas || arudhaOutflowYogas) && (
+      {(selectedFilter === 'All' || selectedFilter === 'BPHS Wealth Yogas') && (arudhaInflowYogas || arudhaOutflowYogas) && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             BPHS Yoga: Wealth from Arudha Lagna
@@ -521,7 +614,7 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Karakamsa Lagna BPHS Wealth Yoga */}
-      {(karakamsaInflowYogas || karakamsaOutflowYogas) && (
+      {(selectedFilter === 'All' || selectedFilter === 'BPHS Wealth Yogas') && (karakamsaInflowYogas || karakamsaOutflowYogas) && (
         <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--card-bg)' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
             BPHS Yoga: Wealth from Karakamsa Lagna
@@ -555,7 +648,10 @@ export default function YogTab({ data }: Props) {
       )}
 
       {/* Awastha Results */}
-      <AwasthaResults data={data} />
+      {/* Awastha Results */}
+      {(selectedFilter === 'All' || selectedFilter === 'Awastha Results') && (
+        <AwasthaResults data={data} />
+      )}
     </div>
   );
 }

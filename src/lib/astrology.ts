@@ -455,7 +455,7 @@ export function calculateChart(year: number, month: number, day: number, hour: n
 
   const ashtakavarga = calculateAshtakavarga(avPosMap);
 
-  const shadbala = calculateShadbala(positions, lagna, jd);
+  const shadbala = calculateShadbala(positions, lagna, jd, lat, lon);
   const awasthas = calculateAwasthas(positions, lagna, jd, lat, lon);
   
   // Calculate Dasha
