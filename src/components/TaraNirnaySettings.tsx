@@ -59,8 +59,8 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   arudha12thMalefic: "Additional penalty applied if a natural Malefic is placed in the 12th house from AL.",
   arudha3rdMalefic: "Applied if a natural Malefic is placed in the 3rd house from AL.",
   arudha6thMalefic: "Applied if a natural Malefic is placed in the 6th house from AL.",
-  papaKartari: "Applied if the planet's sign is hemmed between Malefics on both sides (Papa Kartari Yoga).",
-  shubhaKartari: "Applied if the planet's sign is hemmed between Benefics on both sides (Shubha Kartari Yoga).",
+  papaKartari: "Applied if the planet is hemmed between Malefics on both sides within 30°, OR conjunct Saturn within 5° (Papa Kartari Yoga).",
+  shubhaKartari: "Applied if the planet is hemmed between Benefics on both sides within 30°, OR conjunct Jupiter within 5° (Shubha Kartari Yoga).",
 
   combustionBadLord: "Applied to combusted planets if Sun rules houses 2, 3, 6, 7, 8, or 12.",
   combustionGoodLord: "Applied to combusted planets if Sun rules houses 1, 4, 5, 9, 10, or 11.",
