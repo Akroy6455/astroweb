@@ -8,8 +8,6 @@ export const metadata: Metadata = {
   description: 'Learn about advanced astrology calculations, Dasha tracking, and Planetary Transits.',
 };
 
-export const revalidate = 60; // Revalidate every minute
-
 async function getPosts() {
   try {
     const q = query(collection(db, 'blogs'), orderBy('date', 'desc'));

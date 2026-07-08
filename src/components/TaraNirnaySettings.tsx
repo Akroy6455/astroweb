@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NDSWeights, DEFAULT_NDS_WEIGHTS } from '@/lib/nds_engine';
+import { Settings } from 'lucide-react';
 
 interface Props {
   weights: NDSWeights;
@@ -37,7 +38,6 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   debilitation: "Percentage modifier applied if the planet is Debilitated.",
   vargottama: "Added to the dignity percentage if the planet is in the same sign in D1 (Rasi) and D9 (Navamsha).",
   combustion: "Percentage modifier applied if the planet is Combust (too close to the Sun). Overrides base dignity.",
-  sushupti: "Percentage modifier applied if the planet is in Sushupti Avastha (deep sleep). Overrides base dignity.",
   neechaBhanga: "Replaces debilitation percentage if Neecha Bhanga Raja Yoga conditions are met (cancellation of debilitation).",
 
   mutualDistance1: "Applied to Antardasha if the AD lord is conjunct the MD lord (1st house from MD).",
@@ -56,9 +56,6 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   arudha11thAny: "Applied if the planet is placed in the 11th house from Arudha Lagna (AL).",
   arudha11thBenefic: "Additional bonus applied if a natural Benefic is placed in the 11th house from AL.",
   arudha12thAny: "Applied if the planet is placed in the 12th house from Arudha Lagna (AL).",
-  arudha12thMalefic: "Additional penalty applied if a natural Malefic is placed in the 12th house from AL.",
-  arudha3rdMalefic: "Applied if a natural Malefic is placed in the 3rd house from AL.",
-  arudha6thMalefic: "Applied if a natural Malefic is placed in the 6th house from AL.",
   papaKartari: "Applied if the planet is hemmed between Malefics on both sides within 30°, OR conjunct Saturn within 5° (Papa Kartari Yoga).",
   shubhaKartari: "Applied if the planet is hemmed between Benefics on both sides within 30°, OR conjunct Jupiter within 5° (Shubha Kartari Yoga).",
 
@@ -86,8 +83,10 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   praveshExalted: "Applied if the planet is Exalted in the Dasha Pravesh chart.",
   praveshOwnSign: "Applied if the planet is in its Own Sign in the Dasha Pravesh chart.",
   praveshDebilitated: "Applied if the planet is Debilitated in the Dasha Pravesh chart.",
-  navamshaStrong: "Applied if the planet is Exalted, in Own Sign, same sign as AL, or placed 5th/9th from its Rasi sign in the Navamsha.",
-  navamshaWeak: "Applied if the planet is Debilitated, or placed 6th/8th/12th from its Rasi sign in the Navamsha.",
+  navamshaExaltedOwnAL: "Applied if the planet is Exalted, in Own Sign, same sign as AL.",
+  navamsha5th9th: "Applied if the planet is placed 5th/9th from its D1 Rasi sign in the Navamsha.",
+  navamshaDebilitated: "Applied if the planet is Debilitated unless with the sign lord.",
+  navamsha6th8th12th: "Applied if the planet is placed 6th/8th/12th from its D1 Rasi sign in the Navamsha.",
   navamshaBenefic: "Bonus applied if the Navamsha sign lord is a natural Benefic.",
   navamshaMalefic: "Penalty applied if the Navamsha sign lord is a natural Malefic.",
 };
@@ -96,6 +95,7 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [localWeights, setLocalWeights] = useState<NDSWeights>(weights);
   const [selectedNdfSettingsPlanet, setSelectedNdfSettingsPlanet] = useState('Sun');
+  const [selectedNdfNatalSettingsPlanet, setSelectedNdfNatalSettingsPlanet] = useState('Sun');
 
   useEffect(() => {
     setLocalWeights(weights);
@@ -142,6 +142,16 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
     });
   };
 
+  const handleNdfNatalMatrixChange = (natalPlanet: string, fromPlanetKey: string, houseIndex: number, value: number) => {
+    setLocalWeights(prev => {
+      const newMatrix = JSON.parse(JSON.stringify(prev.taraNirnayNdfNatalMatrix || DEFAULT_NDS_WEIGHTS.taraNirnayNdfNatalMatrix || {}));
+      if (!newMatrix[natalPlanet]) newMatrix[natalPlanet] = {};
+      if (!newMatrix[natalPlanet][fromPlanetKey]) newMatrix[natalPlanet][fromPlanetKey] = new Array(12).fill(0);
+      newMatrix[natalPlanet][fromPlanetKey][houseIndex] = value;
+      return { ...prev, taraNirnayNdfNatalMatrix: newMatrix };
+    });
+  };
+
   const handleNdfMatrixChange = (transitingPlanet: string, natalPlanetKey: string, houseIndex: number, value: number) => {
     setLocalWeights(prev => {
       const newMatrix = JSON.parse(JSON.stringify(prev.taraNirnayNdfMatrix || DEFAULT_NDS_WEIGHTS.taraNirnayNdfMatrix));
@@ -165,7 +175,7 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
       title: 'Module 2: Dignity (-100% to +100%)',
       keys: [
         'exaltation', 'ownSign', 'friendlySign', 'neutralSign', 'enemySign', 'debilitation', 
-        'vargottama', 'combustionBadLord', 'combustionGoodLord', 'sushupti', 'neechaBhanga'
+        'vargottama', 'combustionBadLord', 'combustionGoodLord', 'neechaBhanga'
       ]
     },
     {
@@ -179,8 +189,7 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
     {
       title: 'Module 4: Arudha Overlay (-100 to +100)',
       keys: [
-        'arudha11thAny', 'arudha11thBenefic', 'arudha12thAny', 'arudha12thMalefic', 
-        'arudha3rdMalefic', 'arudha6thMalefic', 'papaKartari', 'shubhaKartari'
+        'arudha11thAny', 'arudha11thBenefic', 'arudha12thAny', 'papaKartari', 'shubhaKartari'
       ]
     },
     {
@@ -200,7 +209,13 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
     {
       title: 'Module 7: Navamsha Modifiers (-100 to +100)',
       keys: [
-        'navamshaStrong', 'navamshaWeak', 'navamshaBenefic', 'navamshaMalefic'
+        'navamshaExaltedOwnAL', 'navamsha5th9th', 'navamshaDebilitated', 'navamsha6th8th12th', 'navamshaBenefic', 'navamshaMalefic'
+      ]
+    },
+    {
+      title: 'Module 9: Advanced Rules',
+      keys: [
+        'rahuKetuMoonConjunct'
       ]
     }
   ];
@@ -292,8 +307,8 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
             <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)', textAlign: 'right' }}>
               {(() => {
                 const md = localWeights.mdWeightPercentage ?? 50;
-                const ad = localWeights.adWeightPercentage ?? 40;
-                const pd = localWeights.pdWeightPercentage ?? 10;
+                const ad = localWeights.adWeightPercentage ?? 45;
+                const pd = localWeights.pdWeightPercentage ?? 5;
                 const total = md + ad + pd;
                 return (
                   <>
@@ -325,11 +340,11 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px', textAlign: 'right' }}>AD</span>
             <input 
               type="range" min="0" max="100" 
-              value={localWeights.adWeightPercentage ?? 40} 
+              value={localWeights.adWeightPercentage ?? 45} 
               onChange={(e) => setLocalWeights(prev => ({ ...prev, adWeightPercentage: parseInt(e.target.value, 10) }))}
               style={{ flex: 1, accentColor: 'var(--primary)' }}
             />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>{localWeights.adWeightPercentage ?? 40}</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>{localWeights.adWeightPercentage ?? 45}</span>
           </div>
 
           {/* PD Slider */}
@@ -337,11 +352,11 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px', textAlign: 'right' }}>PD</span>
             <input 
               type="range" min="0" max="100" 
-              value={localWeights.pdWeightPercentage ?? 10} 
+              value={localWeights.pdWeightPercentage ?? 5} 
               onChange={(e) => setLocalWeights(prev => ({ ...prev, pdWeightPercentage: parseInt(e.target.value, 10) }))}
               style={{ flex: 1, accentColor: 'var(--primary)' }}
             />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>{localWeights.pdWeightPercentage ?? 10}</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', width: '30px' }}>{localWeights.pdWeightPercentage ?? 5}</span>
           </div>
 
           <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(201, 168, 106, 0.2)', paddingTop: '1rem' }}>
@@ -911,8 +926,13 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
           </div>
           );
         })}
+
+
         </div>
       </div>
     </div>
   );
 }
+
+
+

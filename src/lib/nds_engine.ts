@@ -17,6 +17,7 @@ import {
   Sign
 } from './yoga_engine/constants';
 import { YogaState } from './yoga_engine/types';
+import { TimingOptions } from './timing_engine';
 
 function isExalted(planet: Planet, sign: Sign): boolean {
   if (planet === 'Rahu' && (sign === 'Taurus' || sign === 'Gemini')) return true;
@@ -38,12 +39,15 @@ import type { DashaPeriod } from './dasha';
 // ─── Exported Result Types ────────────────────────────────────────────────────
 
 export interface NDSWeights {
-  navamshaStrong: number;
-  navamshaWeak: number;
+  navamshaExaltedOwnAL: number;
+  navamsha5th9th: number;
+  navamshaDebilitated: number;
+  navamsha6th8th12th: number;
   navamshaBenefic: number;
   navamshaMalefic: number;
   sayanadiAwasthaMatrix?: number[][];
   version?: number;
+  timingOptions?: TimingOptions;
   // Module 1: Lordship
   lordHouse1: number;
   lordHouse2: number;
@@ -76,7 +80,6 @@ export interface NDSWeights {
   combustionBadLord?: number;
   combustionGoodLord?: number;
   enableCombustionTradeoff?: boolean;         
-  sushupti: number;           
   neechaBhanga: number;       
 
   // Module 3: Mutual Placement Distance
@@ -97,9 +100,6 @@ export interface NDSWeights {
   arudha11thAny: number;
   arudha11thBenefic: number;
   arudha12thAny: number;
-  arudha12thMalefic: number;
-  arudha3rdMalefic: number;
-  arudha6thMalefic: number;
   papaKartari: number;        
   shubhaKartari: number;
 
@@ -147,7 +147,10 @@ export interface NDSWeights {
   advancedBeneficMoon?: number;
 
   enableTaraNirnayMatrix?: boolean;
+  enableTaraNirnayNatalMatrix?: boolean;
+  taraNirnayNdfNatalMatrix?: Record<string, Record<string, number[]>>;
   taraNirnayNdfMatrix?: Record<string, Record<string, number[]>>;
+  rahuKetuMoonConjunct?: number;
 
   // Toggles — one per module
   disabledParams?: Record<string, boolean>;
@@ -159,14 +162,57 @@ export function getW(w: NDSWeights, key: keyof NDSWeights): number {
 }
 
 export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
-  navamshaStrong: 100,
-  navamshaWeak: -100,
+  navamshaExaltedOwnAL: 80,
+  navamsha5th9th: 50,
+  navamshaDebilitated: -80,
+  navamsha6th8th12th: -50,
   navamshaBenefic: 50,
   navamshaMalefic: -50,
+  rahuKetuMoonConjunct: -50,
   version: 4,
+  timingOptions: {
+    job: {
+      enabled: true,
+      lord6_10_multiplier: 1.5,
+      lord2_7_11_multiplier: 1.2,
+      karmaNakshatra_multiplier: 1.5,
+      latta_multiplier: 0.5,
+      vedha_benefic_multiplier: 1.2,
+      vedha_malefic_multiplier: 0.8,
+      exalted_own_multiplier: 1.2,
+      sahama_multiplier: 1.2,
+      amk_karma_multiplier: 1.5
+    },
+    wealth: {
+      enabled: true,
+      lord2_11_multiplier: 1.5,
+      lord9_4_5_multiplier: 1.2,
+      nakshatra_2_19_multiplier: 1.5,
+      latta_aadhana_multiplier: 0.5,
+      vedha_aadhana_benefic_multiplier: 1.2,
+      vedha_aadhana_malefic_multiplier: 0.8,
+      exalted_own_2_11_multiplier: 1.2,
+      sahama_artha_labha_multiplier: 1.2
+    },
+    goodTime: {
+      enabled: true,
+      transit_karma_multiplier: 1.2,
+      transit_aadhana_multiplier: 1.2,
+      transit_abhisheka_multiplier: 1.5,
+      latta_karma_multiplier: 0.8,
+      latta_aadhana_multiplier: 0.8,
+      latta_abhisheka_multiplier: 0.6,
+      transit_naidhana_multiplier: 0.8,
+      transit_vainasika_multiplier: 0.6,
+      latta_naidhana_multiplier: 1.2,
+      latta_vainasika_multiplier: 1.5,
+      vedha_benefic_multiplier: 1.2,
+      vedha_malefic_multiplier: 0.8
+    }
+  },
   mdWeightPercentage: 50,
-  adWeightPercentage: 40,
-  pdWeightPercentage: 10,
+  adWeightPercentage: 45,
+  pdWeightPercentage: 5,
   enableTransitMultiplier: true,
   enableMdAdTransitMultiplier: true,
   enableNavtaraTransit: true,
@@ -233,8 +279,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   ],
   yogaKaraka: 100,
   rahuKetuYogKaraka: 75,
-  functionalBenefic: 80,
-  functionalMalefic: -80,
+  functionalBenefic: 60,
+  functionalMalefic: -60,
   exaltation: 100,
   ownSign: 80,
   friendlySign: 40,
@@ -246,7 +292,6 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   combustionBadLord: -80,
   combustionGoodLord: -40,
   enableCombustionTradeoff: false,
-  sushupti: -90,
   neechaBhanga: 60,
   mutualDistance1: 50,
   mutualDistance2: 20,
@@ -263,32 +308,29 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   arudha11thAny: 60,
   arudha11thBenefic: 90,
   arudha12thAny: -50,
-  arudha12thMalefic: -90,
-  arudha3rdMalefic: 70,
-  arudha6thMalefic: 80,
   papaKartari: -70,
   shubhaKartari: 70,
-  lajita: -60,
-  garvita: 90,
-  kshudita: -80,
-  trushita: -70,
-  mudita: 70,
-  kshobita: -90,
-  praveshHouse1: 20,
-  praveshHouse2: 30,
-  praveshHouse3: 60,
-  praveshHouse4: 40,
-  praveshHouse5: 70,
-  praveshHouse6: 50,
-  praveshHouse7: 30,
-  praveshHouse8: -80,
-  praveshHouse9: 80,
-  praveshHouse10: 70,
-  praveshHouse11: 90,
-  praveshHouse12: -60,
-  praveshExalted: 80,
-  praveshOwnSign: 60,
-  praveshDebilitated: -80,
+  lajita: -30,
+  garvita: 45,
+  kshudita: -40,
+  trushita: -35,
+  mudita: 35,
+  kshobita: -45,
+  praveshHouse1: 10,
+  praveshHouse2: 15,
+  praveshHouse3: 30,
+  praveshHouse4: 20,
+  praveshHouse5: 35,
+  praveshHouse6: 25,
+  praveshHouse7: 15,
+  praveshHouse8: -40,
+  praveshHouse9: 40,
+  praveshHouse10: 35,
+  praveshHouse11: 45,
+  praveshHouse12: -30,
+  praveshExalted: 40,
+  praveshOwnSign: 30,
+  praveshDebilitated: -40,
   taraNirnayNdfMatrix: {
     "Sun": {
       "from_Sun": [16, 18, 8, 16, 2, 5, 18, 17, 4, 18, 19, 3],
@@ -372,6 +414,7 @@ export interface NDSResult {
     navamshaModifiers: number;
     awasthaModifiers: number;
     praveshOffset: number;
+    advancedRules?: number;
   };
 }
 
@@ -670,13 +713,6 @@ export function getDignityScore(planet: Planet, yogaState: YogaState, _positions
     conditions.push({ key: 'combustion', name: `Combust (Sun is Lord of ${sunLordOfHouse})`, value: combustionVal });
   }
 
-  const signIdx = info.position.rasi.index;
-  const deg = info.position.rasi.degreesInSign;
-  if ((signIdx % 2 === 1 && deg < 6) || (signIdx % 2 === 0 && deg > 24)) {
-    score += w.sushupti;
-    conditions.push({ key: 'sushupti', name: 'Sushupti Avastha (Deep Sleep)', value: w.sushupti });
-  }
-
   return { score, conditions };
 }
 
@@ -790,13 +826,10 @@ export function getArudhaModifiers(planet: Planet, yogaState: YogaState, alSignI
   }
 
   // 12th from AL
-  if ((planetSignIndex - alSignIndex + 12) % 12 === 11) {
+  const al12 = (alSignIndex + 11) % 12;
+  if (al12 === planetSignIndex) {
     score += w.arudha12thAny;
     conditions.push({ key: 'arudha12thAny', name: 'Placed 12th from Arudha Lagna', value: w.arudha12thAny });
-    if (isMalefic) {
-      score += w.arudha12thMalefic;
-      conditions.push({ key: 'arudha12thMalefic', name: 'Malefic in 12th from AL', value: w.arudha12thMalefic });
-    }
   }
 
   const signOccupants: Map<number, Planet[]> = new Map();
@@ -812,14 +845,7 @@ export function getArudhaModifiers(planet: Planet, yogaState: YogaState, alSignI
   const maleficsIn3rd = (signOccupants.get(sign3rd) ?? []).filter(isNaturalMalefic);
   const maleficsIn6th = (signOccupants.get(sign6th) ?? []).filter(isNaturalMalefic);
 
-  if (maleficsIn3rd.length > 0) {
-    score += w.arudha3rdMalefic;
-    conditions.push({ key: 'arudha3rdMalefic', name: 'Malefics in 3rd from AL', value: w.arudha3rdMalefic });
-  }
-  if (maleficsIn6th.length > 0) {
-    score += w.arudha6thMalefic;
-    conditions.push({ key: 'arudha6thMalefic', name: 'Malefics in 6th from AL', value: w.arudha6thMalefic });
-  }
+  // Removed arudha3rdMalefic and arudha6thMalefic
 
   // Kartari Yoga (Degree based)
   const currentLon = yogaState.planets[planet].position.longitude;
@@ -967,6 +993,31 @@ export function getPraveshOffset(planet: Planet, praveshData: any, w: NDSWeights
   return { score, conditions };
 }
 
+export function getAdvancedModifiers(planet: Planet, positions: any[], w: NDSWeights): { score: number, conditions: AppliedCondition[] } {
+  if (w.disabledParams?.advancedRules) return { score: 0, conditions: [] };
+  let score = 0;
+  const conditions: AppliedCondition[] = [];
+
+  // 1. Rahu/Ketu Moon Conjunct
+  const moonPos = positions.find(p => p.planet === 'Moon');
+  const rahuPos = positions.find(p => p.planet === 'Rahu');
+  const ketuPos = positions.find(p => p.planet === 'Ketu');
+  
+  if (planet === 'Moon' || planet === 'Rahu' || planet === 'Ketu') {
+      if (moonPos && (rahuPos || ketuPos)) {
+          if ((rahuPos && moonPos.sign === rahuPos.sign) || (ketuPos && moonPos.sign === ketuPos.sign)) {
+              // Wait, penalty applies to what planet? To Moon, Rahu, Ketu?
+              // The rule says penalty when Rahu/Ketu is conjunct Moon.
+              const penalty = w.rahuKetuMoonConjunct || 0;
+              score += penalty;
+              conditions.push({ key: 'rahuKetuMoonConjunct', name: 'Moon conjunct Node (Rahu/Ketu)', value: penalty });
+          }
+      }
+  }
+
+  return { score, conditions };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MASTER — calculateNDS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -983,26 +1034,45 @@ export function getNavamshaModifiers(planet: Planet, yogaState: YogaState, alSig
   const rasiSignIndex = info.position.rasi.index;
   const navamshaLord = SIGN_LORDS[navamshaSignName];
 
-  // 1. navamshaStrong: Exalted, Own Sign, Same as AL, or 5/9 from Rasi sign
+  // 1. navamshaExaltedOwnAL: Exalted, Own Sign, Same as AL
   const isNavExalted = isExalted(planet, navamshaSignName);
   const isNavOwn = navamshaLord === planet;
   const isSameAsAL = navamshaSignIndex === alSignIndex;
   
+  if (isNavExalted || isNavOwn || isSameAsAL) {
+    score += w.navamshaExaltedOwnAL;
+    conditions.push({ key: 'navamshaExaltedOwnAL', name: 'Navamsha Exalted/Own/AL', value: w.navamshaExaltedOwnAL });
+  }
+
+  // 2. navamsha5th9th: 5/9 from Rasi sign
   const distRasiToNav = (navamshaSignIndex - rasiSignIndex + 12) % 12 + 1;
   const is5or9 = distRasiToNav === 5 || distRasiToNav === 9;
 
-  if (isNavExalted || isNavOwn || isSameAsAL || is5or9) {
-    score += w.navamshaStrong;
-    conditions.push({ key: 'navamshaStrong', name: 'Navamsha Exalted/Own/AL/Trikona', value: w.navamshaStrong });
+  if (is5or9) {
+    score += w.navamsha5th9th;
+    conditions.push({ key: 'navamsha5th9th', name: 'Navamsha 5th/9th from Rasi', value: w.navamsha5th9th });
   }
 
-  // 2. navamshaWeak: Debilitated, or 6/8/12 from Rasi sign
+  // 3. navamshaDebilitated: Debilitated unless with sign lord
   const isNavDebilitated = isDebilitated(planet, navamshaSignName);
+  let isWithSignLord = false;
+  if (isNavDebilitated && navamshaLord && yogaState.planets[navamshaLord]) {
+    if (yogaState.planets[navamshaLord].position.navamsha.name === navamshaSignName) {
+      isWithSignLord = true;
+    }
+  }
+
+  if (isNavDebilitated && !isWithSignLord) {
+    score += w.navamshaDebilitated;
+    conditions.push({ key: 'navamshaDebilitated', name: 'Navamsha Debilitated', value: w.navamshaDebilitated });
+  }
+
+  // 4. navamsha6th8th12th: 6/8/12 from Rasi sign
   const is6812 = distRasiToNav === 6 || distRasiToNav === 8 || distRasiToNav === 12;
 
-  if (isNavDebilitated || is6812) {
-    score += w.navamshaWeak;
-    conditions.push({ key: 'navamshaWeak', name: 'Navamsha Debilitated/Dusthana', value: w.navamshaWeak });
+  if (is6812) {
+    score += w.navamsha6th8th12th;
+    conditions.push({ key: 'navamsha6th8th12th', name: 'Navamsha 6th/8th/12th from Rasi', value: w.navamsha6th8th12th });
   }
 
   // 3. Benefic / Malefic Navamsha
@@ -1035,6 +1105,7 @@ export function calculateNDS(
   const navamsha = getNavamshaModifiers(planet, yogaState, alSignIndex, weights);
   const awastha = getAwasthaModifiers(planet, awasthasData, weights);
   const pravesh = getPraveshOffset(planet, praveshData, weights);
+  const advanced = getAdvancedModifiers(planet, positions, weights);
 
   const allConditions = [
     ...base.conditions,
@@ -1043,10 +1114,11 @@ export function calculateNDS(
     ...arudha.conditions,
     ...navamsha.conditions,
     ...awastha.conditions,
-    ...pravesh.conditions
+    ...pravesh.conditions,
+    ...advanced.conditions
   ].filter(c => c.value !== 0);
 
-  const netScore = base.score + dignity.score + mutual.score + arudha.score + awastha.score + pravesh.score;
+  const netScore = base.score + dignity.score + mutual.score + arudha.score + navamsha.score + awastha.score + pravesh.score + advanced.score;
   const maxPossible = allConditions.reduce((sum, c) => sum + Math.abs(c.value), 0);
   
   let percentage = 0;
@@ -1064,9 +1136,10 @@ export function calculateNDS(
       dignityScore: dignity.score,
       mutualPlacement: mutual.score,
       arudhaModifiers: arudha.score,
-    navamshaModifiers: navamsha.score,
+      navamshaModifiers: navamsha.score,
       awasthaModifiers: awastha.score,
       praveshOffset: pravesh.score,
+      advancedRules: advanced.score,
     },
   };
 }
@@ -1098,8 +1171,8 @@ export function generateDashaTimeSeries(
 
       // Fallback weights if missing
       const rawMdW = weights.mdWeightPercentage ?? 50;
-      const rawAdW = weights.adWeightPercentage ?? 40;
-      const rawPdW = weights.pdWeightPercentage ?? 10;
+      const rawAdW = weights.adWeightPercentage ?? 45;
+      const rawPdW = weights.pdWeightPercentage ?? 5;
       
       // Normalize to ensure they sum to exactly 1.0 (in case of manual config drift)
       const totalW = rawMdW + rawAdW + rawPdW;
@@ -1158,6 +1231,18 @@ export function generateDashaTimeSeries(
   }
 
   return points;
+}
+
+export function applyAsymptoticCap(score: number): number {
+  if (Math.abs(score) <= 50) return score;
+  const sign = Math.sign(score);
+  const excess = Math.abs(score) - 50;
+  // Soft scale: 50 + 50 * (1 - e^(-excess/50))
+  // e.g. 50 -> 50
+  // 100 -> 50 + 50*(1 - 0.367) = 81.6
+  // 150 -> 50 + 50*(1 - 0.135) = 93.2
+  const scaled = 50 + 50 * (1 - Math.exp(-excess / 50));
+  return sign * scaled;
 }
 
 

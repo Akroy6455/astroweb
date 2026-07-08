@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { applyAsymptoticCap } from '@/lib/nds_engine';
 import type { DashaTimePoint, NDSWeights } from '@/lib/nds_engine';
 import { Download, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
 
@@ -41,6 +42,7 @@ function getNdsColor(pct: number): string {
 }
 
 export default function ExportTimeline({ dashaData, transitData, weights }: ExportTimelineProps) {
+  const [enableSoftCap, setEnableSoftCap] = useState(true);
 
   const processTransitData = () => {
     
@@ -83,6 +85,13 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
       } else {
         finalScore = M * 100;
       }
+
+      if (enableSoftCap) {
+        finalScore = applyAsymptoticCap(finalScore);
+      } else {
+        finalScore = Math.max(-100, Math.min(100, finalScore));
+      }
+
       return { ...d, finalScore };
     });
   
@@ -237,7 +246,16 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
   };
 
   return (
-    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', justifyContent: 'center' }}>
+    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', justifyContent: 'center', alignItems: 'center' }}>
+      <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', marginRight: '1rem' }}>
+        <input 
+          type="checkbox" 
+          checked={enableSoftCap} 
+          onChange={e => setEnableSoftCap(e.target.checked)} 
+          style={{ cursor: 'pointer' }}
+        />
+        Enable Soft Cap
+      </label>
       <button 
         onClick={exportCSV}
         style={{

@@ -85,35 +85,10 @@ export async function getKundliData(formData: FormData) {
   return res;
 }
 
-export async function getTaraNirnayData(chartData: any) {
-  return calculateTaraNirnayData(chartData);
+export async function getTaraNirnayData(chartData: any, customWeights?: any) {
+  return calculateTaraNirnayData(chartData, customWeights);
 }
 
-export async function saveMLData(mlData: any) {
-  const filePath = path.join(process.cwd(), 'ml_dataset.json');
-  let data = [];
-  try {
-    if (fs.existsSync(filePath)) {
-      const fileContent = fs.readFileSync(filePath, 'utf8');
-      if (fileContent) {
-        data = JSON.parse(fileContent);
-      }
-    }
-  } catch (e) {
-    console.error('Failed to read ml_dataset.json', e);
-  }
-  
-  // Prevent duplicate insertion if already exists with same timestamp_id
-  const exists = data.find((d: any) => d.timestamp_id === mlData.timestamp_id);
-  if (!exists) {
-    data.push(mlData);
-    try {
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    } catch (err) {
-      console.warn("Could not write ML data (read-only filesystem on Vercel):", err);
-    }
-  }
-}
 
 import { findNextTransit } from '@/lib/transit_finder';
 import sweph from 'sweph';

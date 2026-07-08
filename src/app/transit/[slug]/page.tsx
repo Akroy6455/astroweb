@@ -1,6 +1,8 @@
 import seoData from '@/data/seo-combinations.json';
 import Link from 'next/link';
 
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   return seoData.map((item) => ({
     slug: item.slug,

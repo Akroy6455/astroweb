@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { toPng } from 'html-to-image';
+import { Download } from 'lucide-react';
+import { applyAsymptoticCap } from '@/lib/nds_engine';
 import type { NDSWeights } from '@/lib/nds_engine';
 
 interface TransitDataPoint {
@@ -15,6 +18,8 @@ interface TransitDataPoint {
   mdPlanet?: string;
   adPlanet?: string;
   advancedTriggers?: Record<string, { mAsc: boolean, mMoon: boolean, bAsc: boolean, bMoon: boolean }>;
+  timingMultiplier?: number;
+  timingBreakdown?: { key: string, name: string, value: number }[];
 }
 
 interface TransitChartProps {
@@ -24,19 +29,55 @@ interface TransitChartProps {
 
 export default function TransitChart({ data, weights }: TransitChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<(TransitDataPoint & { finalScore: number, x: number, y: number }) | null>(null);
+  const [enableSoftCap, setEnableSoftCap] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(3);
+  const downloadRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(5);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!downloadRef.current) return;
+    setIsDownloading(true);
+    try {
+      // Temporarily clear hover to avoid capturing tooltip
+      setHoveredPoint(null);
+      // Wait for React to re-render without tooltip
+      await new Promise(res => setTimeout(res, 50));
+      
+      const dataUrl = await toPng(downloadRef.current, {
+        backgroundColor: document.documentElement.style.getPropertyValue('--surface') || '#ffffff',
+        pixelRatio: 2,
+      });
+      const link = document.createElement('a');
+      link.download = `timing-chart-${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to download chart', err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    
-    return data.map(d => {
-      const avgM = weights.enableTransitMultiplier ? d.avgMultiplier : 1.0;
-      const mdAdM = weights.enableMdAdTransitMultiplier ? (d.mdLordMultiplier * d.adLordMultiplier) : 1.0;
+    const mapped = data.map(d => {
+      let mBonus = 0;
+
+      if (weights.enableTransitMultiplier) mBonus += (d.avgMultiplier - 1.0);
+      if (weights.enableMdAdTransitMultiplier) {
+        mBonus += (d.mdLordMultiplier - 1.0);
+        mBonus += (d.adLordMultiplier - 1.0);
+      }
       
-      const navtaraAvgM = weights.enableNavtaraTransit && d.avgNavtaraMultiplier ? d.avgNavtaraMultiplier : 1.0;
-      const navtaraMdAdM = weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier ? (d.mdLordNavtaraMultiplier * d.adLordNavtaraMultiplier) : 1.0;
+      if (weights.enableNavtaraTransit && d.avgNavtaraMultiplier) {
+        mBonus += (d.avgNavtaraMultiplier - 1.0);
+      }
+      if (weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier) {
+        mBonus += (d.mdLordNavtaraMultiplier - 1.0);
+        mBonus += (d.adLordNavtaraMultiplier - 1.0);
+      }
 
       const calcAdvM = (planet?: string) => {
         if (!d.advancedTriggers || !planet || !d.advancedTriggers[planet]) return 1.0;
@@ -56,10 +97,17 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
         const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
         advAvgM = planets.reduce((acc, p) => acc + calcAdvM(p), 0) / 7;
         advMdAdM = calcAdvM(d.mdPlanet) * calcAdvM(d.adPlanet);
+        
+        mBonus += (advAvgM - 1.0);
+        mBonus += (calcAdvM(d.mdPlanet) - 1.0);
+        mBonus += (calcAdvM(d.adPlanet) - 1.0);
       }
+      
+      const tMultiplier = d.timingMultiplier || 1.0;
+      mBonus += (tMultiplier - 1.0);
 
-      const M = avgM * mdAdM * navtaraAvgM * navtaraMdAdM * advAvgM * advMdAdM;
       let finalScore = 0;
+      const M = Math.max(0.1, 1.0 + mBonus);
       const includeBase = weights.enableBaseNdsInTransit ?? true;
       if (includeBase) {
         if (d.baseNds >= 0) {
@@ -70,10 +118,42 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
       } else {
         finalScore = M * 100;
       }
+      
+      if (enableSoftCap) {
+        finalScore = applyAsymptoticCap(finalScore);
+      } else {
+        finalScore = Math.max(-100, Math.min(100, finalScore));
+      }
       return { ...d, finalScore, advAvgM, advMdAdM, M };
     });
-  
-  }, [data, weights]);
+    
+    let currentHigh = -Infinity;
+    let highDate = 0;
+    let accumulator = 0;
+
+    for (let i = 0; i < mapped.length; i++) {
+      const pt = mapped[i];
+      const ptTime = new Date(pt.date).getTime();
+
+      if (pt.finalScore > currentHigh) {
+        if (currentHigh !== -Infinity) {
+          const daysSinceHigh = (ptTime - highDate) / (1000 * 60 * 60 * 24);
+          if (daysSinceHigh > 90) {
+            accumulator += pt.finalScore;
+            (pt as any).isAggregatedBreakout = true;
+            (pt as any).aggregatedScore = accumulator;
+          }
+        }
+        currentHigh = pt.finalScore;
+        highDate = ptTime;
+        accumulator = pt.finalScore;
+      } else {
+        accumulator += pt.finalScore;
+      }
+    }
+
+    return mapped;
+  }, [data, weights, enableSoftCap]);
 
   if (!processedData || processedData.length === 0) return null;
 
@@ -160,9 +240,35 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
 
   return (
     <div style={{ marginBottom: '1.5rem', background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--foreground)' }}>Transit weighted NDF flow</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--foreground)' }}>Transit weighted NDF flow</h3>
+          <button 
+            onClick={handleDownload}
+            disabled={isDownloading}
+            title="Download Chart as PNG"
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.5rem', 
+              padding: '0.3rem 0.75rem', borderRadius: '6px', 
+              background: 'var(--primary)', color: 'var(--primary-foreground)', 
+              border: 'none', cursor: isDownloading ? 'not-allowed' : 'pointer',
+              fontSize: '0.85rem', fontWeight: 600, opacity: isDownloading ? 0.7 : 1
+            }}
+          >
+            <Download size={16} />
+            {isDownloading ? 'Downloading...' : 'Download'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={enableSoftCap} 
+              onChange={e => setEnableSoftCap(e.target.checked)} 
+              style={{ cursor: 'pointer' }}
+            />
+            Enable Soft Cap
+          </label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Zoom:</span>
             <select 
@@ -172,8 +278,8 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
             >
               <option value={1}>100% Compressed</option>
               <option value={2}>200% Zoom</option>
-              <option value={3}>300% Default</option>
-              <option value={5}>500% Spread</option>
+              <option value={3}>300% Zoom</option>
+              <option value={5}>500% Default</option>
               <option value={10}>1000% Wide Spread</option>
             </select>
           </div>
@@ -184,8 +290,9 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
       </div>
 
       <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '1rem' }}>
-        <div 
-          ref={containerRef}
+        <div ref={downloadRef} style={{ width: `${chartWidth}px`, position: 'relative', background: 'var(--surface)', padding: '1rem 0' }}>
+          <div 
+            ref={containerRef}
           style={{ width: `${chartWidth}px`, height: `${height}px`, position: 'relative', cursor: 'crosshair', overflow: 'hidden' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredPoint(null)}
@@ -208,6 +315,25 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
 
             {/* Line Stroke */}
             <path d={lineD} fill="none" stroke="var(--primary)" strokeWidth="2" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }} />
+
+            {/* Aggregated Breakout Dots */}
+            {visibleData.map((d: any, i) => {
+              if (d.isAggregatedBreakout) {
+                return (
+                  <circle 
+                    key={`brk-${i}`}
+                    cx={mapX(i)} 
+                    cy={mapY(d.finalScore)} 
+                    r="5" 
+                    fill="#22c55e" 
+                    stroke="var(--background)" 
+                    strokeWidth="2" 
+                    style={{ filter: 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.8))' }}
+                  />
+                );
+              }
+              return null;
+            })}
 
             {/* Hover Indicator */}
             {hoveredPoint && (
@@ -288,6 +414,31 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
                 </div>
               )}
               
+              {hoveredPoint.timingBreakdown && hoveredPoint.timingBreakdown.length > 0 && (
+                <div style={{ borderTop: '1px solid var(--border)', margin: '0.5rem 0', paddingTop: '0.5rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700, marginBottom: '0.25rem' }}>Timing Factors:</div>
+                  {hoveredPoint.timingBreakdown.map(tb => (
+                    <div key={tb.key} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.8rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>{tb.name}:</span>
+                      <span style={{ fontWeight: 600 }}>x{tb.value.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                    <span>Timing Multiplier:</span>
+                    <span style={{ fontWeight: 700, color: 'var(--primary)' }}>x{(hoveredPoint.timingMultiplier || 1.0).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+              
+              {(hoveredPoint as any).isAggregatedBreakout && (
+                <div style={{ borderTop: '1px solid var(--border)', margin: '0.5rem 0', paddingTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#22c55e', fontWeight: 700 }}>
+                    <span>Breakout (3m+) Aggregate:</span>
+                    <span>{((hoveredPoint as any).aggregatedScore)?.toFixed(1)}</span>
+                  </div>
+                </div>
+              )}
+              
               <div style={{ borderTop: '1px dashed var(--border)', margin: '0.5rem 0', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span>Total Multiplier:</span>
                 <span style={{ fontWeight: 700 }}>
@@ -313,6 +464,7 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
               {tick.label}
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>

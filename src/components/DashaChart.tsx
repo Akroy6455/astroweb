@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { DashaTimePoint, AppliedCondition } from '@/lib/nds_engine';
 
 const PLANET_COLORS: Record<string, string> = {
@@ -25,7 +25,47 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
   const [hoveredPoint, setHoveredPoint] = useState<DashaTimePoint | null>(null);
   const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
   const [isExpanded, setIsExpanded] = useState(false);
-  const [zoom, setZoom] = useState(2); // 200% default zoom
+  const [zoom, setZoom] = useState(5);
+
+  const itemsPerPage = 24;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+    const currentYear = new Date().getFullYear();
+    const index = data.findIndex(d => new Date(d.date).getFullYear() === currentYear);
+    
+    if (index !== -1) {
+      setCurrentPage(Math.floor(index / itemsPerPage) + 1);
+
+      // Auto-scroll the chart to current year
+      setTimeout(() => {
+        if (containerRef.current && containerRef.current.parentElement) {
+          const allDates = data.map(d => new Date(d.date).getTime());
+          const minTime = Math.min(...allDates);
+          const maxTime = Math.max(...allDates);
+          const totalSpan = maxTime - minTime || 1;
+          const targetTime = new Date(currentYear, 0, 1).getTime();
+          
+          const fraction = (targetTime - minTime) / totalSpan;
+          
+          const W = containerRef.current.getBoundingClientRect().width;
+          const targetX = fraction * W;
+          
+          const parent = containerRef.current.parentElement;
+          parent.scrollLeft = targetX - (parent.getBoundingClientRect().width / 2);
+        }
+      }, 300); // Wait for canvas to render and expand width
+    }
+  }, [data]);
+
+  const totalPages = Math.ceil((data?.length || 0) / itemsPerPage);
+
+  const currentData = useMemo(() => {
+    if (!data) return [];
+    const start = (currentPage - 1) * itemsPerPage;
+    return data.slice(start, start + itemsPerPage);
+  }, [data, currentPage]);
 
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -419,6 +459,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
               <option value={1}>Fit Screen</option>
               <option value={2}>200% Zoom</option>
               <option value={4}>400% Zoom</option>
+              <option value={5}>500% Default</option>
               <option value={8}>800% Zoom</option>
               <option value={15}>1500% Zoom</option>
             </select>
@@ -503,9 +544,30 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
 
       {/* Detailed Breakdown Table */}
       <div style={{ marginTop: '2rem', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <h4 style={{ margin: 0, padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', color: 'var(--primary)' }}>
-          Detailed Period Breakdown (Applicable Conditions)
-        </h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)' }}>
+          <h4 style={{ margin: 0, color: 'var(--primary)' }}>
+            Detailed Period Breakdown (Applicable Conditions)
+          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', background: 'var(--bg)', color: 'var(--foreground)', border: '1px solid var(--border)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Prev Year
+            </button>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', background: 'var(--bg)', color: 'var(--foreground)', border: '1px solid var(--border)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+            >
+              Next Year
+            </button>
+          </div>
+        </div>
         <div style={{ overflowX: 'auto' }}>
           <table className="details-table" style={{ width: '100%', fontSize: '0.85rem' }}>
             <thead>
@@ -519,7 +581,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
               </tr>
             </thead>
             <tbody>
-              {data.map((d, i) => {
+              {currentData.map((d: DashaTimePoint, i: number) => {
                 const tier = getTier(d.percentage);
                 return (
                   <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)' }}>

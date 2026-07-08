@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   const [usersList, setUsersList] = useState<UserData[]>([]);
   
   useEffect(() => {
+    if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser && ADMIN_EMAILS.includes(currentUser.email || '')) {
@@ -75,6 +76,7 @@ export default function AdminDashboard() {
 
   const handleLogin = async () => {
     try {
+      if (!auth) throw new Error("Auth not initialized");
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
       console.error("Sign in failed:", err);

@@ -17,6 +17,7 @@ export default function BlogInteractions({ slug, initialLikes }: { slug: string,
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!auth) return;
     const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -53,8 +54,9 @@ export default function BlogInteractions({ slug, initialLikes }: { slug: string,
 
   const handleLogin = async () => {
     try {
+      if (!auth) throw new Error("Auth not initialized");
       await signInWithPopup(auth, googleProvider);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login failed:", err);
     }
   };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { getKundliData, saveMLData, getTaraNirnayData } from './actions';
+import { getKundliData, getTaraNirnayData } from './actions';
 import KundliChart from '@/components/KundliChart';
 import NavamshaChakra from '@/components/NavamshaChakra';
 import AshtakavargaChart from '@/components/AshtakavargaChart';
@@ -14,6 +14,10 @@ import SpecialLagnasTable from '@/components/SpecialLagnasTable';
 import YogTab from '@/components/YogTab';
 import DashaChart from '@/components/DashaChart';
 import TransitChart from '@/components/TransitChart';
+import TransitMultiplierChart from '@/components/TransitMultiplierChart';
+import TransitBreakdownTable from '@/components/TransitBreakdownTable';
+import TimingSettings from '@/components/TimingSettings';
+import { calculateTimingOfEvents } from '@/lib/timing_engine';
 import TaraNirnaySettings from '@/components/TaraNirnaySettings';
 import { generateDashaTimeSeries, DEFAULT_NDS_WEIGHTS, NDSWeights } from '@/lib/nds_engine';
 import { DashaTab } from '@/components/DashaTab';
@@ -77,6 +81,9 @@ export default function Home() {
   const [ayanamsha, setAyanamsha] = useState<'Raman' | 'Lahiri'>('Raman');
   const [ndsWeights, setNdsWeights] = useState<NDSWeights>(DEFAULT_NDS_WEIGHTS);
   const [taraNirnayData, setTaraNirnayData] = useState<{ dashaTimeSeries: any[], transitTimeSeries: any[] } | null>(null);
+  const [timingQuestion, setTimingQuestion] = useState<'job' | 'wealth' | 'marriage' | 'abroad' | 'health' | 'goodTime' | null>(null);
+  const [submittedTimingQuestion, setSubmittedTimingQuestion] = useState<'job' | 'wealth' | 'marriage' | 'abroad' | 'health' | 'goodTime' | null>(null);
+  const [localTimingOptions, setLocalTimingOptions] = useState<any>(DEFAULT_NDS_WEIGHTS.timingOptions);
   const [taraNirnayLoading, setTaraNirnayLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -96,13 +103,44 @@ export default function Home() {
       console.error('Failed to regenerate NDS series:', e);
       return taraNirnayData?.dashaTimeSeries || [];
     }
-  }, [data, ndsWeights, taraNirnayData]);
+  }, [data, ndsWeights, taraNirnayData?.dashaTimeSeries]);
 
-  const handleGenerateTaraNirnay = async () => {
+  const timingModifiedTransitData = useMemo(() => {
+    if (!taraNirnayData?.transitTimeSeries) return [];
+    if (!submittedTimingQuestion || !['job', 'wealth', 'goodTime'].includes(submittedTimingQuestion)) return taraNirnayData.transitTimeSeries;
+    
+    try {
+      // Calculate isDay properly
+      let isDay = true;
+      if (data?.panchang?.sunrise && data?.panchang?.sunset && data?.date) {
+        const bd = new Date(data.date).getTime();
+        const sr = new Date(data.panchang.sunrise).getTime();
+        const ss = new Date(data.panchang.sunset).getTime();
+        isDay = bd > sr && bd < ss;
+      }
+
+      // Default to DEFAULT_NDS_WEIGHTS.timingOptions if not present in ndsWeights
+      const currentTimingOptions = (ndsWeights.timingOptions || DEFAULT_NDS_WEIGHTS.timingOptions) as any;
+
+      return calculateTimingOfEvents(
+        taraNirnayData.transitTimeSeries,
+        data?.positions || [],
+        data?.lagna || { longitude: 0 },
+        isDay,
+        currentTimingOptions,
+        submittedTimingQuestion
+      );
+    } catch (e) {
+      console.error("Failed to calculate timing of events", e);
+      return taraNirnayData.transitTimeSeries;
+    }
+  }, [taraNirnayData?.transitTimeSeries, submittedTimingQuestion, data, ndsWeights.timingOptions]);
+
+  const handleGenerateTaraNirnay = async (weights = ndsWeights) => {
     if (!data) return;
     setTaraNirnayLoading(true);
     try {
-      const result = await getTaraNirnayData(data);
+      const result = await getTaraNirnayData(data, weights);
       setTaraNirnayData(result);
     } catch (e: any) {
       console.error('Tara Nirnay generation failed:', e);
@@ -135,7 +173,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Listen for Authentication state changes
+    // Listen for Authentication 
+    if (!auth) return;
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
@@ -239,15 +278,16 @@ export default function Home() {
 
   const handleLogin = async () => {
     try {
+      if (!auth) throw new Error("Auth not initialized");
       await signInWithPopup(auth, googleProvider);
-    } catch (err: any) {
-      console.error("Sign in failed:", err);
-      alert(`Authentication failed: ${err.message}`);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleLogout = async () => {
     try {
+      if (!auth) return;
       await signOut(auth);
     } catch (err: any) {
       console.error("Sign out failed:", err);
@@ -305,11 +345,15 @@ export default function Home() {
       localStorage.setItem('kundliProfiles', JSON.stringify(updated));
     }
 
-    if (data && data.mlData) {
+    if (data && data.mlData && user) {
       try {
-        await saveMLData(data.mlData);
+        await setDoc(doc(collection(db, 'ml_datasets'), data.mlData.timestamp_id), {
+          ...data.mlData,
+          savedBy: user.uid,
+          savedAt: serverTimestamp()
+        });
       } catch (err) {
-        console.error("Failed to save ML data:", err);
+        console.error("Failed to save ML data to cloud:", err);
       }
     }
 
@@ -405,6 +449,12 @@ export default function Home() {
 
   const handleSaveNdsWeights = async (newWeights: NDSWeights) => {
     setNdsWeights(newWeights);
+    
+    // Regenerate heavy backend transit series with new weights
+    if (data) {
+      handleGenerateTaraNirnay(newWeights);
+    }
+    
     if (user) {
       try {
         const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences');
@@ -863,7 +913,7 @@ export default function Home() {
                           </p>
                         </div>
                         <button 
-                          onClick={handleGenerateTaraNirnay}
+                          onClick={() => handleGenerateTaraNirnay(ndsWeights)}
                           className="submit-btn"
                           style={{ 
                             padding: '0.75rem 2rem', 
@@ -915,7 +965,9 @@ export default function Home() {
                           />
                         )}
                         {taraNirnayData.transitTimeSeries && taraNirnayData.transitTimeSeries.length > 0 && (
-                          <TransitChart data={taraNirnayData.transitTimeSeries} weights={ndsWeights} />
+                          <div style={{ marginBottom: '2rem' }}>
+                            <TransitChart data={taraNirnayData.transitTimeSeries} weights={ndsWeights} />
+                          </div>
                         )}
                         <DashaChart data={activeDashaTimeSeries}>
                           <TaraNirnaySettings 
@@ -926,6 +978,65 @@ export default function Home() {
                       </>
                     )}
                   </div>
+                </div>
+              )}
+              {(activeTab === 'Uttar') && (
+                <div style={{ padding: '2rem', animation: 'fadeIn 0.3s ease' }}>
+                  <h3 style={{ fontSize: '1.5rem', marginBottom: '2rem', color: 'var(--foreground)' }}>Timing of Events</h3>
+                  
+                  {!taraNirnayData ? (
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      <p>Please generate the Tara Dasha Nirnay data first from the Tara Nirnay tab.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {taraNirnayData.transitTimeSeries && taraNirnayData.transitTimeSeries.length > 0 && (
+                        <div style={{ marginBottom: '2rem' }}>
+                          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem', padding: '1rem', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <label style={{ fontWeight: 600, color: 'var(--foreground)' }}>Timing of Events:</label>
+                            <select 
+                              value={timingQuestion || ''} 
+                              onChange={e => setTimingQuestion(e.target.value as any)}
+                              style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--foreground)', minWidth: '250px' }}
+                            >
+                              <option value="">-- Select Question --</option>
+                              <option value="job">When will I get a job?</option>
+                              <option value="wealth">When will I get wealthy?</option>
+                              <option value="goodTime">When will be my good time?</option>
+                              <option value="marriage">When will I get married?</option>
+                              <option value="abroad">When will I move abroad?</option>
+                              <option value="health">When will my health improve?</option>
+                            </select>
+                            {timingQuestion === 'job' && <span style={{ color: '#FACC15', fontSize: '1.2rem' }}>💼</span>}
+                            {timingQuestion === 'wealth' && <span style={{ color: '#22C55E', fontSize: '1.2rem' }}>💰</span>}
+                            {timingQuestion === 'goodTime' && <span style={{ color: '#EAB308', fontSize: '1.2rem' }}>🌟</span>}
+                            {['marriage', 'abroad', 'health'].includes(timingQuestion || '') && <span style={{ color: '#EF4444', fontSize: '1.2rem' }}>❌</span>}
+                            
+                            <button 
+                              onClick={() => setSubmittedTimingQuestion(timingQuestion)}
+                              disabled={!timingQuestion}
+                              style={{ 
+                                padding: '0.5rem 1rem', background: timingQuestion ? 'var(--primary)' : 'var(--border)', color: '#fff', 
+                                border: 'none', borderRadius: '8px', cursor: timingQuestion ? 'pointer' : 'not-allowed',
+                                fontWeight: 600, marginLeft: 'auto'
+                              }}
+                            >
+                              Generate Uttar Chart
+                            </button>
+                          </div>
+
+                          {submittedTimingQuestion && (
+                            <>
+                              <TransitChart data={timingModifiedTransitData} weights={ndsWeights} />
+                              <TransitMultiplierChart data={timingModifiedTransitData} weights={ndsWeights} />
+                              <TransitBreakdownTable data={timingModifiedTransitData} weights={ndsWeights} />
+                              <TimingSettings weights={ndsWeights} onSave={setNdsWeights} question={submittedTimingQuestion} />
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
               {(activeTab === 'JsonData' || isPrinting) && (
@@ -951,12 +1062,7 @@ export default function Home() {
                   </pre>
                 </div>
               )}
-              {(activeTab === 'Uttar') && (
-                <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--foreground)' }}>{t('tabs.uttar')}</h3>
-                  <p>Coming soon...</p>
-                </div>
-              )}
+
               {(activeTab === 'Yog') && (
                 <YogTab data={data} />
               )}

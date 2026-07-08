@@ -1,19 +1,27 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCmcgassrYLXPcJkOV4Z-24qMf6HIr1f8U",
-  authDomain: "project-astro-91620.firebaseapp.com",
-  projectId: "project-astro-91620",
-  storageBucket: "project-astro-91620.firebasestorage.app",
-  messagingSenderId: "698637885070",
-  appId: "1:698637885070:web:cf2ef774fb6b94764d33df"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase (SSR safe check)
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+
+// Initialize services (with try/catch for auth in case of missing API key during server build)
+let auth: Auth | null = null;
+try {
+  auth = getAuth(app);
+} catch (e) {
+  console.warn("Could not initialize Firebase Auth:", e);
+}
+
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 

@@ -570,13 +570,15 @@ export function calculateChart(year: number, month: number, day: number, hour: n
  * Computes Tara Nirnay data (NDS + Transit time series) on demand.
  * This is expensive and should only be called when the user explicitly requests it.
  */
-export function calculateTaraNirnayData(chartData: any) {
+export function calculateTaraNirnayData(chartData: any, customWeights?: any) {
   const { dasha, yogaState, positions, specialLagnas, awasthas, ashtakavarga, panchang, lagna } = chartData;
   const alSignIndex = specialLagnas?.arudhaLagna?.rasi?.index ?? 0;
 
+  const weights = customWeights || DEFAULT_NDS_WEIGHTS;
+
   let dashaTimeSeries: any[] = [];
   try {
-    dashaTimeSeries = generateDashaTimeSeries(dasha, yogaState, positions, alSignIndex, awasthas, DEFAULT_NDS_WEIGHTS);
+    dashaTimeSeries = generateDashaTimeSeries(dasha, yogaState, positions, alSignIndex, awasthas, weights);
   } catch (e) {
     console.warn('NDS time series generation failed:', e);
   }
@@ -619,6 +621,7 @@ export function generateMonthlyTransitTimeSeries(
          end: nextDate.getTime(),
          mdPlanet: d.mdPlanet,
          adPlanet: d.adPlanet,
+         pdPlanet: d.pdPlanet,
          baseNds: d.percentage
      };
   });
@@ -655,23 +658,34 @@ export function generateMonthlyTransitTimeSeries(
 
     const currentPlanetSigns: Record<string, number> = {};
     const currentPlanetNakshatras: Record<string, number> = {};
+    const currentPlanetLongitudes: Record<string, number> = {};
+    const currentPlanetSpeeds: Record<string, number> = {};
 
     let rahuLon = 0;
+    let rahuSpeed = 0;
 
     for (const p of navtaraPlanets) {
       let lon = 0;
+      let speed = 0;
       if (p === 'Ketu') {
         lon = (rahuLon + 180) % 360;
+        speed = rahuSpeed;
       } else {
         const pId = planetIds[p];
         const res = sweph.calc_ut(jd, pId, flag);
         lon = res.data[0];
-        if (p === 'Rahu') rahuLon = lon;
+        speed = res.data[3];
+        if (p === 'Rahu') {
+          rahuLon = lon;
+          rahuSpeed = speed;
+        }
       }
       const signIndex = Math.floor(lon / 30) % 12;
       const nakIndex = Math.floor(lon / (360/27)) % 27;
       currentPlanetSigns[p] = signIndex;
       currentPlanetNakshatras[p] = nakIndex;
+      currentPlanetLongitudes[p] = lon;
+      currentPlanetSpeeds[p] = speed;
     }
 
     // Ashtakavarga Average (7 planets)
@@ -707,6 +721,7 @@ export function generateMonthlyTransitTimeSeries(
     
     const mdLord = activePeriod.mdPlanet;
     const adLord = activePeriod.adPlanet;
+    const pdLord = activePeriod.pdPlanet;
 
     const isShuklaPaksha = panchang?.tithi?.index < 15;
     const moonMdAdMultiplier = isShuklaPaksha ? 1.2 : 0.9;
@@ -842,7 +857,26 @@ const signLords: Record<string, string> = {
       adLordNavtaraMultiplier,
       mdPlanet: mdLord,
       adPlanet: adLord,
-      advancedTriggers
+      pdPlanet: pdLord,
+      advancedTriggers,
+      tSun: currentPlanetLongitudes['Sun'],
+      tSunSpeed: currentPlanetSpeeds['Sun'],
+      tMoon: currentPlanetLongitudes['Moon'],
+      tMoonSpeed: currentPlanetSpeeds['Moon'],
+      tMars: currentPlanetLongitudes['Mars'],
+      tMarsSpeed: currentPlanetSpeeds['Mars'],
+      tMercury: currentPlanetLongitudes['Mercury'],
+      tMercurySpeed: currentPlanetSpeeds['Mercury'],
+      tJupiter: currentPlanetLongitudes['Jupiter'],
+      tJupiterSpeed: currentPlanetSpeeds['Jupiter'],
+      tVenus: currentPlanetLongitudes['Venus'],
+      tVenusSpeed: currentPlanetSpeeds['Venus'],
+      tSaturn: currentPlanetLongitudes['Saturn'],
+      tSaturnSpeed: currentPlanetSpeeds['Saturn'],
+      tRahu: currentPlanetLongitudes['Rahu'],
+      tRahuSpeed: currentPlanetSpeeds['Rahu'],
+      tKetu: currentPlanetLongitudes['Ketu'],
+      tKetuSpeed: currentPlanetSpeeds['Ketu']
     });
 
     currentDateTs += 15 * 24 * 60 * 60 * 1000;

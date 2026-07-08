@@ -4,6 +4,8 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import Link from 'next/link';
 import BlogInteractions from '@/components/BlogInteractions';
 
+export const dynamicParams = false;
+
 // We fetch slugs from Firestore for Static Generation
 export async function generateStaticParams() {
   try {

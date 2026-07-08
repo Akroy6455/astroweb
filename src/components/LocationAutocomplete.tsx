@@ -67,7 +67,7 @@ export default function LocationAutocomplete({ onSelect, defaultLabel = '' }: Lo
   }, [query, isOpen]);
 
   const handleSelect = (city: City) => {
-    const label = `${city.name}, ${city.admin1 ? city.admin1 + ', ' : ''}${city.countryCode}`;
+    const label = `${city.name}, ${city.admin1 ? city.admin1 + ', ' : ''}${city.countryCode} (${city.lat.toFixed(4)}, ${city.lon.toFixed(4)})`;
     setQuery(label);
     setIsOpen(false);
     onSelect(city.lat, city.lon, city.tz, label);
@@ -154,7 +154,9 @@ export default function LocationAutocomplete({ onSelect, defaultLabel = '' }: Lo
               <MapPin size={16} color="var(--primary)" />
               <div>
                 <div style={{ fontWeight: 600, color: 'var(--foreground)' }}>{city.name}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{city.admin1 ? city.admin1 + ', ' : ''}{city.countryCode} • {city.tz}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {city.admin1 ? city.admin1 + ', ' : ''}{city.countryCode} • Lat: {city.lat.toFixed(4)}, Lon: {city.lon.toFixed(4)} • {city.tz}
+                </div>
               </div>
             </div>
           ))}
