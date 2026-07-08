@@ -484,7 +484,7 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input 
                   type="checkbox" 
-                  checked={localWeights.enableLordshipMdAdTransit ?? true} 
+                  checked={localWeights.enableLordshipMdAdTransit ?? false} 
                   onChange={(e) => setLocalWeights(prev => ({ ...prev, enableLordshipMdAdTransit: e.target.checked }))}
                   style={{ accentColor: 'var(--primary)', transform: 'scale(1.2)' }}
                 />
