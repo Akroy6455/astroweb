@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { DashaTimePoint, AppliedCondition } from '@/lib/nds_engine';
+import DashaDetailTable from './DashaDetailTable';
 
 const PLANET_COLORS: Record<string, string> = {
   Sun: '#f59e0b', Moon: '#e2e8f0', Mars: '#ef4444',
@@ -23,6 +24,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<DashaTimePoint | null>(null);
+  const [clickedPoint, setClickedPoint] = useState<DashaTimePoint | null>(null);
   const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
   const [isExpanded, setIsExpanded] = useState(false);
   const [zoom, setZoom] = useState(5);
@@ -340,7 +342,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
   }, [drawChart]);
 
   // Interaction handlers
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -378,7 +380,6 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
     }
 
     if (closest) {
-      // Toggle off if clicking the same point or empty space far from the line
       const H = 420;
       const chartH = H - padding.top - padding.bottom;
       let mappedY = padding.top + chartH / 2; // Default zero line
@@ -390,12 +391,14 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
       // If click is too far vertically from the line, dismiss
       const isVerticalHit = Math.abs(clickY - mappedY) < 60;
       
-      if ((hoveredPoint && hoveredPoint.date === closest.date) || !isVerticalHit) {
+      if (!isVerticalHit) {
         setHoveredPoint(null);
         setIsExpanded(false);
       } else {
+        if (hoveredPoint?.date !== closest.date) {
+          setIsExpanded(false);
+        }
         setHoveredPoint(closest);
-        setIsExpanded(false);
         // Position popup centered on the point segment
         const mappedX = (Math.max(padding.left, pointXStart) + Math.min(rect.width - padding.right, pointXEnd)) / 2;
         setPopupPos({ x: mappedX, y: mappedY });
@@ -403,6 +406,17 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
     } else {
       setHoveredPoint(null);
       setIsExpanded(false);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredPoint(null);
+    setIsExpanded(false);
+  };
+
+  const handleClick = () => {
+    if (hoveredPoint) {
+      setClickedPoint(hoveredPoint);
     }
   };
 
@@ -467,14 +481,50 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
         </div>
 
         <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '1rem' }}>
-          <div 
-            ref={containerRef} 
-            className="dasha-chart-container"
-            style={{ position: 'relative', minWidth: '800px', height: '420px', cursor: 'crosshair', userSelect: 'none' }}
-            onClick={handleClick}
-          >
-            <canvas ref={canvasRef} style={{ display: 'block' }} />
-          </div>
+            <div 
+              ref={containerRef} 
+              className="dasha-chart-container"
+              style={{ position: 'relative', minWidth: '800px', height: '420px', cursor: 'crosshair', userSelect: 'none' }}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleClick}
+            >
+              <canvas ref={canvasRef} style={{ display: 'block' }} />
+              
+              {/* Clicked Indicator */}
+              {clickedPoint && (
+                (() => {
+                  const padding = { top: 30, right: 20, bottom: 60, left: 55 };
+                  const W = 800; // Will be actual width in rendering, but this matches container minWidth/setup
+                  const chartWInner = W - padding.left - padding.right;
+                  const t = new Date(clickedPoint.date).getTime();
+                  const H = 420;
+                  const chartH = H - padding.top - padding.bottom;
+                  let mappedY = padding.top + chartH / 2;
+                  if (clickedPoint.percentage !== 0) {
+                    mappedY = padding.top + chartH / 2 - (clickedPoint.percentage / 100) * (chartH / 2);
+                  }
+                  
+                  // Compute X position based on current zoom view
+                  if (t >= minTime && t <= maxTime) {
+                    const mappedX = padding.left + ((t - minTime) / (maxTime - minTime)) * chartWInner;
+                    return (
+                      <div style={{
+                        position: 'absolute',
+                        left: mappedX - 6,
+                        top: mappedY - 6,
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        border: '2px solid var(--primary)',
+                        pointerEvents: 'none'
+                      }} />
+                    );
+                  }
+                  return null;
+                })()
+              )}
+            </div>
         </div>
       </div>
 
@@ -627,6 +677,10 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
           </table>
         </div>
       </div>
+      {/* Clicked Point Breakdown */}
+      {clickedPoint && (
+        <DashaDetailTable dataPoint={clickedPoint} />
+      )}
     </div>
   );
 }
