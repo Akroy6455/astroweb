@@ -875,48 +875,65 @@ export function getArudhaModifiers(planet: Planet, yogaState: YogaState, alSignI
 
   // Kartari Yoga (Degree based)
   const currentLon = yogaState.planets[planet].position.longitude;
-  let hasMaleficBehind = false;
-  let hasMaleficAhead = false;
-  let hasBeneficBehind = false;
-  let hasBeneficAhead = false;
-
-  let saturnConjunct = false;
-  let jupiterConjunct = false;
+  
+  let minDiffBehind = 31;
+  let closestBehind: Planet | null = null;
+  
+  let minDiffAhead = 31;
+  let closestAhead: Planet | null = null;
+  
+  let minDiffConjunct = 6;
+  let closestConjunct: Planet | null = null;
 
   for (const p of PLANETS) {
     if (p === planet) continue;
     const pLon = yogaState.planets[p as Planet].position.longitude;
     const diffBehind = (currentLon - pLon + 360) % 360;
     const diffAhead = (pLon - currentLon + 360) % 360;
+    
     const diffAbs = Math.min(diffBehind, diffAhead);
-
     if (diffAbs <= 5) {
-      if (p === 'Saturn') saturnConjunct = true;
-      if (p === 'Jupiter') jupiterConjunct = true;
+      if (diffAbs < minDiffConjunct) {
+        minDiffConjunct = diffAbs;
+        closestConjunct = p as Planet;
+      }
     }
 
     if (diffBehind > 0 && diffBehind <= 30) {
-      if (isNaturalMalefic(p as Planet)) hasMaleficBehind = true;
-      if (isNaturalBenefic(p as Planet)) hasBeneficBehind = true;
+      if (diffBehind < minDiffBehind) {
+        minDiffBehind = diffBehind;
+        closestBehind = p as Planet;
+      }
     }
 
     if (diffAhead > 0 && diffAhead <= 30) {
-      if (isNaturalMalefic(p as Planet)) hasMaleficAhead = true;
-      if (isNaturalBenefic(p as Planet)) hasBeneficAhead = true;
+      if (diffAhead < minDiffAhead) {
+        minDiffAhead = diffAhead;
+        closestAhead = p as Planet;
+      }
     }
   }
 
-  const isPapaKartari = (hasMaleficBehind && hasMaleficAhead) || saturnConjunct;
-  const isShubhaKartari = (hasBeneficBehind && hasBeneficAhead) || jupiterConjunct;
+  const hasMaleficBehind = closestBehind ? isNaturalMalefic(closestBehind) : false;
+  const hasBeneficBehind = closestBehind ? isNaturalBenefic(closestBehind) : false;
+  
+  const hasMaleficAhead = closestAhead ? isNaturalMalefic(closestAhead) : false;
+  const hasBeneficAhead = closestAhead ? isNaturalBenefic(closestAhead) : false;
+
+  let isPapaKartari = hasMaleficBehind && hasMaleficAhead;
+  let isShubhaKartari = hasBeneficBehind && hasBeneficAhead;
+
+  if (closestConjunct === 'Saturn') isPapaKartari = true;
+  if (closestConjunct === 'Jupiter') isShubhaKartari = true;
 
   if (isPapaKartari) {
     score += w.papaKartari;
-    conditions.push({ key: 'papaKartari', name: 'Papa Kartari Yoga (Malefics within 30° or Saturn conjunct)', value: w.papaKartari });
+    conditions.push({ key: 'papaKartari', name: 'Papa Kartari Yoga (Malefics closest within 30° or Saturn closest conjunct)', value: w.papaKartari });
   }
   
   if (isShubhaKartari) {
     score += w.shubhaKartari;
-    conditions.push({ key: 'shubhaKartari', name: 'Shubha Kartari Yoga (Benefics within 30° or Jupiter conjunct)', value: w.shubhaKartari });
+    conditions.push({ key: 'shubhaKartari', name: 'Shubha Kartari Yoga (Benefics closest within 30° or Jupiter closest conjunct)', value: w.shubhaKartari });
   }
 
   return { score, conditions };
