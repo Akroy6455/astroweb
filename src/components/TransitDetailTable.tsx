@@ -53,8 +53,8 @@ export default function TransitDetailTable({ dataPoint, weights }: TransitDetail
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <td style={{ padding: '0.75rem', color: 'var(--foreground)', fontWeight: 500 }}>Transit BAV (MD/AD)</td>
               <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>BAV transit score for current MD and AD lords.</td>
-              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: dataPoint.mdAdBavM >= 1.0 ? '#22c55e' : '#ef4444' }}>
-                x{dataPoint.mdAdBavM?.toFixed(2)}
+              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: (dataPoint.mdLordMultiplier * dataPoint.adLordMultiplier) >= 1.0 ? '#22c55e' : '#ef4444' }}>
+                x{(dataPoint.mdLordMultiplier * dataPoint.adLordMultiplier)?.toFixed(2)}
               </td>
             </tr>
           )}
@@ -73,8 +73,8 @@ export default function TransitDetailTable({ dataPoint, weights }: TransitDetail
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <td style={{ padding: '0.75rem', color: 'var(--foreground)', fontWeight: 500 }}>Navtara (MD/AD)</td>
               <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>Navtara transit score for current MD and AD lords.</td>
-              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: dataPoint.mdAdNavtaraM >= 1.0 ? '#22c55e' : '#ef4444' }}>
-                x{dataPoint.mdAdNavtaraM?.toFixed(2)}
+              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: ((dataPoint.mdLordNavtaraMultiplier || 1.0) * (dataPoint.adLordNavtaraMultiplier || 1.0)) >= 1.0 ? '#22c55e' : '#ef4444' }}>
+                x{((dataPoint.mdLordNavtaraMultiplier || 1.0) * (dataPoint.adLordNavtaraMultiplier || 1.0)).toFixed(2)}
               </td>
             </tr>
           )}
