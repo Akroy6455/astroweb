@@ -542,6 +542,13 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
         </div>
       </div>
 
+      {/* Clicked Point Breakdown */}
+      {clickedPoint && (
+        <div style={{ marginTop: '2rem' }}>
+          <DashaDetailTable dataPoint={clickedPoint} />
+        </div>
+      )}
+
       {children && <div style={{ marginTop: '2rem' }}>{children}</div>}
 
       {/* Detailed Breakdown Table */}
@@ -629,10 +636,6 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
           </table>
         </div>
       </div>
-      {/* Clicked Point Breakdown */}
-      {clickedPoint && (
-        <DashaDetailTable dataPoint={clickedPoint} />
-      )}
     </div>
   );
 }
