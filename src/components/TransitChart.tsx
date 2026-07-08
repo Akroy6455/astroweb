@@ -67,19 +67,21 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
 
     const mapped = data.map(d => {
       let mBonus = 0;
+      let mdAdBavM = 1.0;
+      let mdAdNavtaraM = 1.0;
 
       if (weights.enableTransitMultiplier) mBonus += (d.avgMultiplier - 1.0);
       if (weights.enableMdAdTransitMultiplier) {
-        mBonus += (d.mdLordMultiplier - 1.0);
-        mBonus += (d.adLordMultiplier - 1.0);
+        mdAdBavM = (d.mdLordMultiplier + d.adLordMultiplier) / 2;
+        mBonus += (mdAdBavM - 1.0);
       }
       
       if (weights.enableNavtaraTransit && d.avgNavtaraMultiplier) {
         mBonus += (d.avgNavtaraMultiplier - 1.0);
       }
       if (weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier) {
-        mBonus += (d.mdLordNavtaraMultiplier - 1.0);
-        mBonus += (d.adLordNavtaraMultiplier - 1.0);
+        mdAdNavtaraM = (d.mdLordNavtaraMultiplier + d.adLordNavtaraMultiplier) / 2;
+        mBonus += (mdAdNavtaraM - 1.0);
       }
 
       const calcAdvM = (planet?: string) => {
@@ -99,11 +101,10 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
       if (weights.enableAdvancedTransitMultiplier && d.advancedTriggers) {
         const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
         advAvgM = planets.reduce((acc, p) => acc + calcAdvM(p), 0) / 7;
-        advMdAdM = calcAdvM(d.mdPlanet) * calcAdvM(d.adPlanet);
+        advMdAdM = (calcAdvM(d.mdPlanet) + calcAdvM(d.adPlanet)) / 2;
         
         mBonus += (advAvgM - 1.0);
-        mBonus += (calcAdvM(d.mdPlanet) - 1.0);
-        mBonus += (calcAdvM(d.adPlanet) - 1.0);
+        mBonus += (advMdAdM - 1.0);
       }
       
       const tMultiplier = d.timingMultiplier || 1.0;
@@ -127,7 +128,7 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
       } else {
         finalScore = Math.max(-100, Math.min(100, finalScore));
       }
-      return { ...d, finalScore, advAvgM, advMdAdM, M };
+      return { ...d, finalScore, advAvgM, advMdAdM, mdAdBavM, mdAdNavtaraM, M };
     });
     
     let currentHigh = -Infinity;
@@ -414,7 +415,7 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
               {weights.enableMdAdTransitMultiplier && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
                   <span>BAV MD/AD:</span>
-                  <span style={{ fontWeight: 600 }}>x{(hoveredPoint.mdLordMultiplier * hoveredPoint.adLordMultiplier).toFixed(2)}</span>
+                  <span style={{ fontWeight: 600 }}>x{((hoveredPoint as any).mdAdBavM).toFixed(2)}</span>
                 </div>
               )}
 
@@ -428,7 +429,7 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
               {weights.enableNavtaraMdAd && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
                   <span>Navtara MD/AD:</span>
-                  <span style={{ fontWeight: 600 }}>x{((hoveredPoint.mdLordNavtaraMultiplier || 1.0) * (hoveredPoint.adLordNavtaraMultiplier || 1.0)).toFixed(2)}</span>
+                  <span style={{ fontWeight: 600 }}>x{((hoveredPoint as any).mdAdNavtaraM).toFixed(2)}</span>
                 </div>
               )}
 
