@@ -26,7 +26,6 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
   const [hoveredPoint, setHoveredPoint] = useState<DashaTimePoint | null>(null);
   const [clickedPoint, setClickedPoint] = useState<DashaTimePoint | null>(null);
   const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
-  const [isExpanded, setIsExpanded] = useState(false);
   const [zoom, setZoom] = useState(5);
 
   const itemsPerPage = 24;
@@ -75,7 +74,6 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
       const target = e.target as HTMLElement;
       if (!target.closest('.dasha-chart-container') && !target.closest('.dasha-popup')) {
         setHoveredPoint(null);
-        setIsExpanded(false);
       }
     };
     document.addEventListener('mousedown', handleGlobalClick);
@@ -393,11 +391,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
       
       if (!isVerticalHit) {
         setHoveredPoint(null);
-        setIsExpanded(false);
       } else {
-        if (hoveredPoint?.date !== closest.date) {
-          setIsExpanded(false);
-        }
         setHoveredPoint(closest);
         // Position popup centered on the point segment
         const mappedX = (Math.max(padding.left, pointXStart) + Math.min(rect.width - padding.right, pointXEnd)) / 2;
@@ -405,18 +399,42 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
       }
     } else {
       setHoveredPoint(null);
-      setIsExpanded(false);
     }
   };
 
   const handleMouseLeave = () => {
     setHoveredPoint(null);
-    setIsExpanded(false);
   };
 
-  const handleClick = () => {
-    if (hoveredPoint) {
-      setClickedPoint(hoveredPoint);
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const padding = { top: 30, right: 20, bottom: 60, left: 55 };
+    
+    if (x < padding.left || x > rect.width - padding.right) return;
+
+    const chartW = rect.width - padding.left - padding.right;
+    const fraction = (x - padding.left) / chartW;
+    
+    const visStart = minTime;
+    const visEnd = maxTime;
+    const clickTime = visStart + fraction * (visEnd - visStart);
+
+    let closest: DashaTimePoint | null = null;
+    for (let i = 0; i < data.length; i++) {
+      const t = new Date(data[i].date).getTime();
+      const nextT = i < data.length - 1 ? new Date(data[i+1].date).getTime() : Infinity;
+      if (clickTime >= t && clickTime < nextT) {
+        closest = data[i];
+        break;
+      }
+    }
+
+    if (closest) {
+      setClickedPoint(closest);
     }
   };
 
@@ -542,6 +560,7 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
           color: '#f8fafc',
           boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.7)',
           width: '320px',
+          pointerEvents: 'none'
         }}>
           <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '0.5rem' }}>
             {new Date(hoveredPoint.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -571,21 +590,8 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
               </div>
             </div>
           </div>
-          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-            <span style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>AD Applicable Rules</span>
-            {formatConditions(isExpanded ? hoveredPoint.adResult.conditions : hoveredPoint.adResult.conditions.slice(0, 4))}
-            
-            {hoveredPoint.adResult.conditions.length > 4 && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-                style={{ 
-                  background: 'transparent', border: 'none', color: '#38bdf8', fontSize: '0.8rem', 
-                  marginTop: '0.5rem', cursor: 'pointer', padding: 0, textDecoration: 'underline' 
-                }}
-              >
-                {isExpanded ? 'Show less' : `+${hoveredPoint.adResult.conditions.length - 4} more...`}
-              </button>
-            )}
+          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.15)', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>
+            Click on this point to view its detailed breakdown below
           </div>
         </div>
       )}
