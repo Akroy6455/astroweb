@@ -72,7 +72,7 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
 
       if (weights.enableTransitMultiplier) mBonus += (d.avgMultiplier - 1.0);
       if (weights.enableMdAdTransitMultiplier) {
-        mdAdBavM = (d.mdLordMultiplier + d.adLordMultiplier) / 2;
+        mdAdBavM = (d.mdLordMultiplier + d.adLordMultiplier + 5.0) / 7.0;
         mBonus += (mdAdBavM - 1.0);
       }
       
@@ -80,7 +80,7 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
         mBonus += (d.avgNavtaraMultiplier - 1.0);
       }
       if (weights.enableNavtaraMdAd && d.mdLordNavtaraMultiplier && d.adLordNavtaraMultiplier) {
-        mdAdNavtaraM = (d.mdLordNavtaraMultiplier + d.adLordNavtaraMultiplier) / 2;
+        mdAdNavtaraM = (d.mdLordNavtaraMultiplier + d.adLordNavtaraMultiplier + 5.0) / 7.0;
         mBonus += (mdAdNavtaraM - 1.0);
       }
 
@@ -101,7 +101,7 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
       if (weights.enableAdvancedTransitMultiplier && d.advancedTriggers) {
         const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
         advAvgM = planets.reduce((acc, p) => acc + calcAdvM(p), 0) / 7;
-        advMdAdM = (calcAdvM(d.mdPlanet) + calcAdvM(d.adPlanet)) / 2;
+        advMdAdM = (calcAdvM(d.mdPlanet) + calcAdvM(d.adPlanet) + 5.0) / 7.0;
         
         mBonus += (advAvgM - 1.0);
         mBonus += (advMdAdM - 1.0);
