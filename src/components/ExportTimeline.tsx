@@ -67,9 +67,11 @@ export default function ExportTimeline({ dashaData, transitData, weights }: Expo
       let advAvgM = 1.0;
       let advMdAdM = 1.0;
 
-      if (weights.enableAdvancedTransitMultiplier && d.advancedTriggers) {
+      if (weights.enableLordshipTransit && d.advancedTriggers) {
         const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
         advAvgM = planets.reduce((acc, p) => acc + calcAdvM(p), 0) / 7;
+      }
+      if (weights.enableLordshipMdAdTransit && d.advancedTriggers) {
         advMdAdM = calcAdvM(d.mdPlanet) * calcAdvM(d.adPlanet);
       }
 

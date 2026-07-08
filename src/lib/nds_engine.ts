@@ -140,7 +140,8 @@ export interface NDSWeights {
   enableNavtaraTransit?: boolean;
   enableNavtaraMdAd?: boolean;
   enableBaseNdsInTransit?: boolean;
-  enableAdvancedTransitMultiplier?: boolean;
+  enableLordshipTransit?: boolean;
+  enableLordshipMdAdTransit?: boolean;
   advancedMaleficAsc?: number;
   advancedMaleficMoon?: number;
   advancedBeneficAsc?: number;
@@ -218,7 +219,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   enableNavtaraTransit: true,
   enableNavtaraMdAd: true,
   enableBaseNdsInTransit: true,
-  enableAdvancedTransitMultiplier: true,
+  enableLordshipTransit: true,
+  enableLordshipMdAdTransit: true,
   advancedMaleficAsc: 0.6,
     advancedMaleficMoon: 0.8,
     advancedBeneficAsc: 1.4,

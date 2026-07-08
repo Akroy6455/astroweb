@@ -79,10 +79,12 @@ export default function TransitBreakdownTable({ data, weights }: TransitBreakdow
         return count > 0 ? (sum / count) : 1.0;
       };
 
-      if (weights.enableAdvancedTransitMultiplier && d.advancedTriggers) {
+      if (weights.enableLordshipTransit && d.advancedTriggers) {
         const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
         const advAvgM = planets.reduce((acc, p) => acc + calcAdvM(p), 0) / 7;
         mBonus += (advAvgM - 1.0);
+      }
+      if (weights.enableLordshipMdAdTransit && d.advancedTriggers) {
         mBonus += (calcAdvM(d.mdPlanet) - 1.0);
         mBonus += (calcAdvM(d.adPlanet) - 1.0);
       }

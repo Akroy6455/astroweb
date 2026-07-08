@@ -96,12 +96,13 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
       let advAvgM = 1.0;
       let advMdAdM = 1.0;
 
-      if (weights.enableAdvancedTransitMultiplier && d.advancedTriggers) {
+      if (weights.enableLordshipTransit && d.advancedTriggers) {
         const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
         advAvgM = planets.reduce((acc, p) => acc + calcAdvM(p), 0) / 7;
-        advMdAdM = calcAdvM(d.mdPlanet) * calcAdvM(d.adPlanet);
-        
         mBonus += (advAvgM - 1.0);
+      }
+      if (weights.enableLordshipMdAdTransit && d.advancedTriggers) {
+        advMdAdM = calcAdvM(d.mdPlanet) * calcAdvM(d.adPlanet);
         mBonus += (calcAdvM(d.mdPlanet) - 1.0);
         mBonus += (calcAdvM(d.adPlanet) - 1.0);
       }
@@ -433,14 +434,14 @@ export default function TransitChart({ data, weights, chartTitle = 'Timing of Ev
               )}
 
               
-              {weights.enableAdvancedTransitMultiplier && (
+              {weights.enableLordshipTransit && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
                   <span>Lordship Avg:</span>
                   <span style={{ fontWeight: 600 }}>x{(hoveredPoint as any).advAvgM.toFixed(2)}</span>
                 </div>
               )}
 
-              {weights.enableAdvancedTransitMultiplier && (
+              {weights.enableLordshipMdAdTransit && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
                   <span>Lordship MD/AD:</span>
                   <span style={{ fontWeight: 600 }}>x{(hoveredPoint as any).advMdAdM.toFixed(2)}</span>

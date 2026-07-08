@@ -79,7 +79,7 @@ export default function TransitDetailTable({ dataPoint, weights }: TransitDetail
             </tr>
           )}
 
-          {weights.enableAdvancedTransitMultiplier && (
+          {weights.enableLordshipTransit && (
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <td style={{ padding: '0.75rem', color: 'var(--foreground)', fontWeight: 500 }}>Lordship (Avg)</td>
               <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>Average transit score based on Lordship rules across all planets.</td>
@@ -89,7 +89,7 @@ export default function TransitDetailTable({ dataPoint, weights }: TransitDetail
             </tr>
           )}
 
-          {weights.enableAdvancedTransitMultiplier && (
+          {weights.enableLordshipMdAdTransit && (
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <td style={{ padding: '0.75rem', color: 'var(--foreground)', fontWeight: 500 }}>Lordship (MD/AD)</td>
               <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>Transit score based on Lordship rules for current MD and AD lords.</td>

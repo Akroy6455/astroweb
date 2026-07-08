@@ -374,8 +374,8 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <div>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable Ashtakavarga Transit Multiplier</span>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Multiply Dasha score by average 7-planet BAV in transiting rashi.</p>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Transit BAV (Avg)</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Average BAV transit score across all planets.</p>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input 
@@ -419,8 +419,8 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable MD/AD Lord Transit Multiplier</span>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Further multiply by current MD & AD lord BAV in transiting rashi.</p>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Transit BAV (MD/AD)</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>BAV transit score for current MD and AD lords.</p>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input 
@@ -434,8 +434,8 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem', marginBottom: '0.75rem' }}>
               <div>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable Navtara Transit Multiplier</span>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Multiply Dasha score by average 9-planet Navtara in transiting nakshatra.</p>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Navtara (Avg)</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Average Navtara (Tara) transit score across all planets.</p>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input 
@@ -449,8 +449,8 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable MD/AD Lord Navtara Multiplier</span>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Further multiply by current MD & AD lord Navtara.</p>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Navtara (MD/AD)</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Navtara transit score for current MD and AD lords.</p>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input 
@@ -463,20 +463,35 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
               <div>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable Functional Lordship Transit Multiplier</span>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Multiply Dasha score by functional lordship weights (averaging 7 planets and MD/AD).</p>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Lordship (Avg)</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Average transit score based on Lordship rules across all planets.</p>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input 
                   type="checkbox" 
-                  checked={localWeights.enableAdvancedTransitMultiplier ?? true} 
-                  onChange={(e) => setLocalWeights(prev => ({ ...prev, enableAdvancedTransitMultiplier: e.target.checked }))}
+                  checked={localWeights.enableLordshipTransit ?? true} 
+                  onChange={(e) => setLocalWeights(prev => ({ ...prev, enableLordshipTransit: e.target.checked }))}
                   style={{ accentColor: 'var(--primary)', transform: 'scale(1.2)' }}
                 />
               </label>
             </div>
 
-            {localWeights.enableAdvancedTransitMultiplier && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem' }}>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Lordship (MD/AD)</span>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Transit score based on Lordship rules for current MD and AD lords.</p>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={localWeights.enableLordshipMdAdTransit ?? true} 
+                  onChange={(e) => setLocalWeights(prev => ({ ...prev, enableLordshipMdAdTransit: e.target.checked }))}
+                  style={{ accentColor: 'var(--primary)', transform: 'scale(1.2)' }}
+                />
+              </label>
+            </div>
+
+            {(localWeights.enableLordshipTransit || localWeights.enableLordshipMdAdTransit) && (
               <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px', marginTop: '0.75rem', border: '1px solid var(--border)' }}>
                 <h5 style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: 'var(--foreground)' }}>Lordship Advanced Multipliers</h5>
                 
