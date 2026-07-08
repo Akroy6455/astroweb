@@ -1139,7 +1139,8 @@ export function calculateNDS(
   awasthasData: any,
   weights: NDSWeights,
   mdLord?: Planet,
-  praveshData?: any
+  praveshData?: any,
+  isDispositorCall: boolean = false
 ): NDSResult {
   const base = getBaseLordshipScore(planet, yogaState, weights);
   const dignity = getDignityScore(planet, yogaState, positions, weights);
@@ -1161,7 +1162,23 @@ export function calculateNDS(
     ...advanced.conditions
   ].filter(c => c.value !== 0);
 
-  const netScore = base.score + dignity.score + mutual.score + arudha.score + navamsha.score + awastha.score + pravesh.score + advanced.score;
+  let netScore = base.score + dignity.score + mutual.score + arudha.score + navamsha.score + awastha.score + pravesh.score + advanced.score;
+
+  if (!isDispositorCall && (planet === 'Rahu' || planet === 'Ketu')) {
+    const nodeHouse = yogaState.planets[planet].house;
+    const dispositor = yogaState.houses[nodeHouse].lord;
+    if (dispositor && dispositor !== 'Rahu' && dispositor !== 'Ketu') {
+      const dispositorResult = calculateNDS(dispositor, yogaState, positions, alSignIndex, awasthasData, weights, mdLord, praveshData, true);
+      const addedScore = Math.round(dispositorResult.netScore * 0.5);
+      allConditions.push({
+        key: 'dispositorScore' as keyof NDSWeights,
+        name: `50% of Dispositor (${dispositor}) Score`,
+        value: addedScore
+      });
+      netScore += addedScore;
+    }
+  }
+
   const maxPossible = allConditions.reduce((sum, c) => sum + Math.abs(c.value), 0);
   
   let percentage = 0;
