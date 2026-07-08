@@ -280,7 +280,7 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
     [-30, -40, 70, -30, -20, 70, -40, -50, 60, 50, 80, 50]
   ],
   yogaKaraka: 100,
-  rahuKetuYogKaraka: 75,
+  rahuKetuYogKaraka: 100,
   functionalBenefic: 60,
   functionalMalefic: -60,
   exaltation: 100,
@@ -442,6 +442,32 @@ function H(n: number): House {
   return n as House;
 }
 
+export function checkNodeYoga(node: Planet, other: Planet, yogaState: YogaState): boolean {
+  if (node !== 'Rahu' && node !== 'Ketu') return false;
+  if (node === other) return false;
+  
+  const nodeHouse = yogaState.planets[node].house;
+  const otherHouse = yogaState.planets[other].house;
+  
+  const isInfluencing = (nodeHouse === otherHouse) || hasVedicAspect(other, otherHouse, nodeHouse);
+  if (!isInfluencing) return false;
+
+  const inKendra = [1,4,7,10].includes(nodeHouse);
+  const inTrikona = [1,5,9].includes(nodeHouse);
+  if (!inKendra && !inTrikona) return false;
+
+  const lordshipMap = buildLordshipMap(yogaState);
+  const otherHouses = lordshipMap.get(other) || [];
+  
+  const otherLordsKendra = otherHouses.some(h => [1,4,7,10].includes(h));
+  const otherLordsTrikona = otherHouses.some(h => [1,5,9].includes(h));
+
+  if (inKendra && otherLordsTrikona) return true;
+  if (inTrikona && otherLordsKendra) return true;
+  
+  return false;
+}
+
 function isNaturalMalefic(planet: Planet): boolean {
   return PLANET_NATURE[planet] === 'Malefic';
 }
@@ -500,8 +526,30 @@ export function getBaseLordshipScore(planet: Planet, yogaState: YogaState, w: ND
   let score = 0;
 
   if (planet === 'Ketu') {
+    let isNodeYogKaraka = false;
+    for (const otherPlanet of PLANETS) {
+      if (otherPlanet !== planet && checkNodeYoga(planet, otherPlanet as Planet, yogaState)) {
+        isNodeYogKaraka = true;
+        break;
+      }
+    }
+    if (isNodeYogKaraka) {
+      score += w.rahuKetuYogKaraka;
+      conditions.push({ key: 'rahuKetuYogKaraka', name: 'Node Yog Karaka (Module 1)', value: w.rahuKetuYogKaraka });
+    }
     if (houses.length === 0) return { score, conditions };
   } else if (planet === 'Rahu') {
+    let isNodeYogKaraka = false;
+    for (const otherPlanet of PLANETS) {
+      if (otherPlanet !== planet && checkNodeYoga(planet, otherPlanet as Planet, yogaState)) {
+        isNodeYogKaraka = true;
+        break;
+      }
+    }
+    if (isNodeYogKaraka) {
+      score += w.rahuKetuYogKaraka;
+      conditions.push({ key: 'rahuKetuYogKaraka', name: 'Node Yog Karaka (Module 1)', value: w.rahuKetuYogKaraka });
+    }
     if (houses.length === 0) return { score, conditions };
   } else {
     if (houses.length === 0) return { score, conditions };
@@ -763,31 +811,7 @@ export function getMutualPlacement(mdLord: Planet, adLord: Planet, yogaState: Yo
     }
   }
 
-  const checkNodeYoga = (node: Planet, other: Planet) => {
-    if (node !== 'Rahu' && node !== 'Ketu') return false;
-    const nodeHouse = yogaState.planets[node].house;
-    const otherHouse = yogaState.planets[other].house;
-    
-    const isInfluencing = (nodeHouse === otherHouse) || hasVedicAspect(other, otherHouse, nodeHouse);
-    if (!isInfluencing) return false;
-
-    const inKendra = [1,4,7,10].includes(nodeHouse);
-    const inTrikona = [1,5,9].includes(nodeHouse);
-    if (!inKendra && !inTrikona) return false;
-
-    const lordshipMap = buildLordshipMap(yogaState);
-    const otherHouses = lordshipMap.get(other) || [];
-    
-    const otherLordsKendra = otherHouses.some(h => [1,4,7,10].includes(h));
-    const otherLordsTrikona = otherHouses.some(h => [1,5,9].includes(h));
-
-    if (inKendra && otherLordsTrikona) return true;
-    if (inTrikona && otherLordsKendra) return true;
-    
-    return false;
-  };
-
-  if (checkNodeYoga(mdLord, adLord) || checkNodeYoga(adLord, mdLord)) {
+  if (checkNodeYoga(mdLord, adLord, yogaState) || checkNodeYoga(adLord, mdLord, yogaState)) {
     score += w.rahuKetuYogKaraka;
     conditions.push({ key: 'rahuKetuYogKaraka', name: 'Node + Aspect Yog Karaka', value: w.rahuKetuYogKaraka });
   }
