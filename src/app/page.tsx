@@ -966,7 +966,7 @@ export default function Home() {
                         )}
                         {taraNirnayData.transitTimeSeries && taraNirnayData.transitTimeSeries.length > 0 && (
                           <div style={{ marginBottom: '2rem' }}>
-                            <TransitChart data={taraNirnayData.transitTimeSeries} weights={ndsWeights} />
+                            <TransitChart data={taraNirnayData.transitTimeSeries} weights={ndsWeights} chartTitle="Transit Weighted NDF" />
                           </div>
                         )}
                         <DashaChart data={activeDashaTimeSeries}>
