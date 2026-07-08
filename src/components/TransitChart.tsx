@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
+import TransitDetailTable from './TransitDetailTable';
 import { Download } from 'lucide-react';
 import { applyAsymptoticCap } from '@/lib/nds_engine';
 import type { NDSWeights } from '@/lib/nds_engine';
@@ -25,11 +26,13 @@ interface TransitDataPoint {
 interface TransitChartProps {
   data: TransitDataPoint[];
   weights: NDSWeights;
+  chartTitle?: string;
 }
 
-export default function TransitChart({ data, weights }: TransitChartProps) {
-  const [hoveredPoint, setHoveredPoint] = useState<(TransitDataPoint & { finalScore: number, x: number, y: number }) | null>(null);
-  const [enableSoftCap, setEnableSoftCap] = useState(true);
+export default function TransitChart({ data, weights, chartTitle = 'Timing of Events' }: TransitChartProps) {
+  const [hoveredPoint, setHoveredPoint] = useState<(TransitDataPoint & { M: number, finalScore: number, x: number, y: number }) | null>(null);
+  const [clickedPoint, setClickedPoint] = useState<any | null>(null);
+  const [enableSoftCap, setEnableSoftCap] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const downloadRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(5);
@@ -242,7 +245,7 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
     <div style={{ marginBottom: '1.5rem', background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--foreground)' }}>Transit weighted NDF flow</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--foreground)' }}>{chartTitle}</h3>
           <button 
             onClick={handleDownload}
             disabled={isDownloading}
@@ -284,7 +287,7 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
             </select>
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            {weights.enableTransitMultiplier ? '7-Planet Avg Enabled' : 'Avg Disabled'} â€¢ {weights.enableMdAdTransitMultiplier ? 'MD/AD Lords Enabled' : 'MD/AD Disabled'}
+            {weights.enableTransitMultiplier ? '7-Planet Avg Enabled' : 'Avg Disabled'} • {weights.enableMdAdTransitMultiplier ? 'MD/AD Lords Enabled' : 'MD/AD Disabled'}
           </div>
         </div>
       </div>
@@ -293,10 +296,20 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
         <div ref={downloadRef} style={{ width: `${chartWidth}px`, position: 'relative', background: 'var(--surface)', padding: '1rem 0' }}>
           <div 
             ref={containerRef}
-          style={{ width: `${chartWidth}px`, height: `${height}px`, position: 'relative', cursor: 'crosshair', overflow: 'hidden' }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHoveredPoint(null)}
-        >
+            style={{ width: `${chartWidth}px`, height: `${height}px`, position: 'relative', cursor: 'crosshair', overflow: 'hidden' }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setHoveredPoint(null)}
+            onClick={(e) => {
+              if (!containerRef.current) return;
+              const rect = containerRef.current.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const fraction = x / containerWidth;
+              const idx = Math.round(fraction * (visibleData.length - 1));
+              if (idx >= 0 && idx < visibleData.length) {
+                setClickedPoint(visibleData[idx]);
+              }
+            }}
+          >
           <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
             <defs>
               <linearGradient id="transitGradient" x1="0" y1="0" x2="0" y2="1">
@@ -339,7 +352,27 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
             {hoveredPoint && (
               <circle cx={hoveredPoint.x} cy={hoveredPoint.y} r="5" fill="var(--primary)" stroke="var(--background)" strokeWidth="2" />
             )}
+            {/* Clicked Indicator */}
+            {clickedPoint && (
+              <circle 
+                cx={clickedPoint.x ?? (visibleData.indexOf(clickedPoint) / Math.max(1, visibleData.length - 1)) * containerWidth} 
+                cy={mapY(clickedPoint.finalScore)} 
+                r="6" 
+                fill="transparent" 
+                stroke="var(--primary)" 
+                strokeWidth="3" 
+                strokeDasharray="2 2"
+                style={{ animation: 'spin 4s linear infinite' }}
+              />
+            )}
           </svg>
+
+          {/* Tooltip Overlay */}
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', top: 10, right: 10, fontSize: '0.8rem', color: 'var(--text-muted)', background: 'var(--background-modifier-hover)', padding: '4px 8px', borderRadius: '4px' }}>
+              Click on any point to view its detailed breakdown below
+            </div>
+          </div>
 
           {hoveredPoint && (
             <div style={{
@@ -467,6 +500,11 @@ export default function TransitChart({ data, weights }: TransitChartProps) {
         </div>
         </div>
       </div>
+      
+      {/* Clicked Point Breakdown */}
+      {clickedPoint && (
+        <TransitDetailTable dataPoint={clickedPoint} weights={weights} />
+      )}
     </div>
   );
 }
