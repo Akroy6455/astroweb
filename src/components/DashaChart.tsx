@@ -25,7 +25,6 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<DashaTimePoint | null>(null);
   const [clickedPoint, setClickedPoint] = useState<DashaTimePoint | null>(null);
-  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(5);
 
   const itemsPerPage = 24;
@@ -393,9 +392,6 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
         setHoveredPoint(null);
       } else {
         setHoveredPoint(closest);
-        // Position popup centered on the point segment
-        const mappedX = (Math.max(padding.left, pointXStart) + Math.min(rect.width - padding.right, pointXEnd)) / 2;
-        setPopupPos({ x: mappedX, y: mappedY });
       }
     } else {
       setHoveredPoint(null);
@@ -545,56 +541,6 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
             </div>
         </div>
       </div>
-
-      {hoveredPoint && (
-        <div className="dasha-popup" style={{
-          position: 'absolute',
-          top: popupPos.y > 200 ? popupPos.y - 180 : popupPos.y + 20,
-          left: popupPos.x > 340 ? popupPos.x - 320 : popupPos.x + 20,
-          background: 'rgba(15, 23, 42, 0.98)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(201, 168, 106, 0.5)',
-          padding: '1.25rem',
-          borderRadius: '12px',
-          zIndex: 1000,
-          color: '#f8fafc',
-          boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.7)',
-          width: '320px',
-          pointerEvents: 'none'
-        }}>
-          <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '0.5rem' }}>
-            {new Date(hoveredPoint.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.75rem' }}>
-            <strong style={{ fontSize: '1.2rem', color: '#C9A86A' }}>
-              {hoveredPoint.mdPlanet}-{hoveredPoint.adPlanet}
-            </strong>
-            <span style={{ fontWeight: 'bold', fontSize: '1.3rem', color: getNdsColor(hoveredPoint.percentage) }}>
-              {hoveredPoint.percentage}%
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#94a3b8' }}>MD Score ({hoveredPoint.mdPlanet})</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>({hoveredPoint.mdResult.netScore > 0 ? '+' : ''}{hoveredPoint.mdResult.netScore} pts)</span>
-                <span style={{ color: getNdsColor(hoveredPoint.mdPercentage), fontWeight: 600 }}>{hoveredPoint.mdPercentage}%</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#94a3b8' }}>AD Score ({hoveredPoint.adPlanet})</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>({hoveredPoint.adResult.netScore > 0 ? '+' : ''}{hoveredPoint.adResult.netScore} pts)</span>
-                <span style={{ color: getNdsColor(hoveredPoint.adPercentage), fontWeight: 600 }}>{hoveredPoint.adPercentage}%</span>
-              </div>
-            </div>
-          </div>
-          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.15)', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>
-            Click on this point to view its detailed breakdown below
-          </div>
-        </div>
-      )}
 
       {children && <div style={{ marginTop: '2rem' }}>{children}</div>}
 
