@@ -184,28 +184,54 @@ export default function DashaChart({ data, children }: { data: DashaTimePoint[],
       }
     }
 
-    // Draw MD boundary markers
+    // Draw MD and AD boundary markers
     let prevMd = '';
+    let prevAd = '';
+    let lastAdLabelX = -100;
+
     for (const point of visible) {
-      if (point.mdPlanet !== prevMd) {
+      const isNewMd = point.mdPlanet !== prevMd;
+      const isNewAd = !isNewMd && point.adPlanet !== prevAd;
+
+      if (isNewMd || isNewAd) {
         const t = new Date(point.date).getTime();
         const x = toX(t);
-        ctx.strokeStyle = 'rgba(201, 168, 106, 0.4)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 4]);
+        
+        ctx.strokeStyle = isNewMd ? 'rgba(201, 168, 106, 0.4)' : 'rgba(201, 168, 106, 0.15)';
+        ctx.lineWidth = isNewMd ? 1.5 : 1;
+        ctx.setLineDash(isNewMd ? [4, 4] : [2, 4]);
         ctx.beginPath();
         ctx.moveTo(x, padding.top);
         ctx.lineTo(x, H - padding.bottom);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // MD label
-        ctx.fillStyle = PLANET_COLORS[point.mdPlanet] || '#C9A86A';
-        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${point.mdPlanet} MD`, x + 4, padding.top + 12);
-
-        prevMd = point.mdPlanet;
+        if (isNewMd) {
+          // MD label
+          ctx.fillStyle = PLANET_COLORS[point.mdPlanet] || '#C9A86A';
+          ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(`${point.mdPlanet} MD`, x + 4, padding.top + 12);
+          
+          // Print AD label alongside MD
+          ctx.fillStyle = PLANET_COLORS[point.adPlanet] || '#94a3b8';
+          ctx.font = '10px Inter, system-ui, sans-serif';
+          ctx.fillText(`${point.adPlanet} AD`, x + 4, padding.top + 26);
+          
+          prevMd = point.mdPlanet;
+          prevAd = point.adPlanet;
+          lastAdLabelX = x;
+        } else if (isNewAd) {
+          // AD label only if enough space
+          if (x - lastAdLabelX > 45) {
+            ctx.fillStyle = PLANET_COLORS[point.adPlanet] || '#94a3b8';
+            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${point.adPlanet} AD`, x + 4, padding.top + 26);
+            lastAdLabelX = x;
+          }
+          prevAd = point.adPlanet;
+        }
       }
     }
 
