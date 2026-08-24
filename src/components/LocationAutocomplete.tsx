@@ -120,7 +120,7 @@ export default function LocationAutocomplete({ onSelect, defaultLabel = '' }: Lo
             if (query.length >= 2) setIsOpen(true);
           }}
           placeholder={t('placeholders.searchLocation')}
-          style={{ width: '100%', padding: '0.5rem 2.2rem 0.5rem 2.2rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)' }}
+          style={{ width: '100%', height: '38px', boxSizing: 'border-box', padding: '0.5rem 2.2rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)' }}
         />
         {query && (
           <button 

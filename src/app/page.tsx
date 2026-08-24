@@ -88,6 +88,7 @@ export default function Home() {
   const [submittedTimingQuestion, setSubmittedTimingQuestion] = useState<'job' | 'wealth' | 'marriage' | 'abroad' | 'health' | 'goodTime' | null>(null);
   const [localTimingOptions, setLocalTimingOptions] = useState<any>(DEFAULT_NDS_WEIGHTS.timingOptions);
   const [taraNirnayLoading, setTaraNirnayLoading] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const activeDashaTimeSeries = useMemo(() => {
@@ -481,10 +482,6 @@ export default function Home() {
     <main className="app-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1400px' }}>
       <header className="header" style={{ borderBottom: 'none', paddingBottom: '0', marginBottom: '0' }}>
         <div className="header-brand">
-          <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex' }}>
-            <ThemeSwitcher />
-            <LanguageSwitcher />
-          </div>
           <div style={{
             fontSize: '64px', 
             fontWeight: 800, 
@@ -503,34 +500,55 @@ export default function Home() {
           <p style={{ color: 'var(--text-muted)' }}>{t('header.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          {/* Ayanamsha Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--card-bg)', padding: '0.5rem 1rem', borderRadius: '24px', border: '1px solid var(--border)' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: ayanamsha === 'Raman' ? 600 : 400, color: ayanamsha === 'Raman' ? 'var(--primary)' : 'var(--text-muted)' }}>Raman</span>
-            <div 
-              onClick={toggleAyanamsha}
-              style={{
-                width: '44px',
-                height: '24px',
-                background: ayanamsha === 'Raman' ? 'var(--primary)' : '#8b5cf6',
-                borderRadius: '12px',
-                position: 'relative',
-                cursor: 'pointer',
-                transition: 'background 0.3s ease'
-              }}
+          {/* Settings Dropdown */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
+              className="submit-btn" 
+              style={{ background: 'var(--card-bg)', color: 'var(--foreground)', border: '1px solid var(--border)', padding: '0.5rem 1rem', height: '42px', width: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '24px' }}
             >
+              <Settings size={18} />
+              <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Settings</span>
+            </button>
+
+            {isSettingsOpen && (
               <div style={{
                 position: 'absolute',
-                top: '2px',
-                left: ayanamsha === 'Raman' ? '2px' : '22px',
-                width: '20px',
-                height: '20px',
-                background: '#fff',
-                borderRadius: '50%',
-                transition: 'left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-              }} />
-            </div>
-            <span style={{ fontSize: '0.85rem', fontWeight: ayanamsha === 'Lahiri' ? 600 : 400, color: ayanamsha === 'Lahiri' ? '#8b5cf6' : 'var(--text-muted)' }}>Lahiri</span>
+                top: 'calc(100% + 0.5rem)',
+                right: 0,
+                background: 'var(--background)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                minWidth: '220px',
+                zIndex: 100,
+                boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 600 }}>Ayanamsha</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card-bg)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: ayanamsha === 'Raman' ? 600 : 400, color: ayanamsha === 'Raman' ? 'var(--primary)' : 'var(--text-muted)' }}>Raman</span>
+                    <div onClick={toggleAyanamsha} style={{ width: '40px', height: '22px', background: ayanamsha === 'Raman' ? 'var(--primary)' : '#8b5cf6', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease' }}>
+                      <div style={{ position: 'absolute', top: '2px', left: ayanamsha === 'Raman' ? '2px' : '20px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', transition: 'left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                    </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: ayanamsha === 'Lahiri' ? 600 : 400, color: ayanamsha === 'Lahiri' ? '#8b5cf6' : 'var(--text-muted)' }}>Lahiri</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 600 }}>Theme</div>
+                  <ThemeSwitcher />
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 600 }}>Language</div>
+                  <LanguageSwitcher />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="auth-panel">
@@ -571,19 +589,19 @@ export default function Home() {
       <div className="gold-divider"></div>
 
       {/* Top Bar Form */}
-      <div className="glass-card" style={{ padding: '1.5rem' }}>
-        <form ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end' }}>
+      <div className="glass-card" style={{ padding: '0.75rem 1.5rem', marginBottom: '1rem' }}>
+        <form ref={formRef} onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}>
           <div className="form-group" style={{ flex: '1 1 200px', marginBottom: 0 }}>
             <label htmlFor="name">{t('form.name')}</label>
-            <input type="text" id="name" name="name" required placeholder={t('placeholders.namePlaceholder')} style={{ padding: '0.5rem' }} />
+            <input type="text" id="name" name="name" required placeholder={t('placeholders.namePlaceholder')} style={{ padding: '0.5rem', height: '38px', boxSizing: 'border-box' }} />
           </div>
           <div className="form-group" style={{ flex: '1 1 130px', marginBottom: 0 }}>
             <label htmlFor="date">{t('form.date')}</label>
-            <input type="date" id="date" name="date" required defaultValue="2000-01-01" style={{ padding: '0.5rem' }} />
+            <input type="date" id="date" name="date" required defaultValue="2000-01-01" style={{ padding: '0.5rem', height: '38px', boxSizing: 'border-box' }} />
           </div>
           <div className="form-group" style={{ flex: '1 1 100px', marginBottom: 0 }}>
             <label htmlFor="time">{t('form.time')}</label>
-            <input type="time" id="time" name="time" step="1" required defaultValue="12:00:00" style={{ padding: '0.5rem' }} />
+            <input type="time" id="time" name="time" step="1" required defaultValue="12:00:00" style={{ padding: '0.5rem', height: '38px', boxSizing: 'border-box' }} />
           </div>
 
           <input type="hidden" name="lat" value={formLocation.lat} />
@@ -596,13 +614,13 @@ export default function Home() {
             defaultLabel={formLocation.label}
           />
           <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 200px' }}>
-            <button type="submit" className="submit-btn" disabled={loading} style={{ padding: '0.6rem 1rem', flex: 2 }}>
-              {loading ? t('form.generating') : "Generate Chart (v3)"}
+            <button type="submit" className="submit-btn" disabled={loading} style={{ padding: '0.5rem 1rem', flex: 2, height: '38px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {loading ? t('form.generating') : "Generate Chart"}
             </button>
-            <button type="button" className="submit-btn save-btn" onClick={handleSaveProfileClick} style={{ padding: '0.6rem 1rem', flex: 1, backgroundColor: 'var(--border)', color: 'var(--foreground)' }} title="Save Profile">
+            <button type="button" className="submit-btn save-btn" onClick={handleSaveProfileClick} style={{ padding: '0.5rem 1rem', flex: 1, backgroundColor: 'var(--border)', color: 'var(--foreground)', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Save Profile">
               <Save size={18} />
             </button>
-            <button type="button" className="submit-btn list-btn" onClick={() => setShowKundliListModal(true)} style={{ padding: '0.6rem 1rem', flex: 1, backgroundColor: 'var(--border)', color: 'var(--foreground)' }} title="Kundli List">
+            <button type="button" className="submit-btn list-btn" onClick={() => setShowKundliListModal(true)} style={{ padding: '0.5rem 1rem', flex: 1, backgroundColor: 'var(--border)', color: 'var(--foreground)', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Kundli List">
               <List size={18} />
             </button>
           </div>
@@ -671,7 +689,7 @@ export default function Home() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {/* Sidebar Tabs */}
         {data && (
-          <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'row', gap: '0.5rem', overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="glass-card" style={{ padding: '0.5rem 1rem', display: 'flex', flexDirection: 'row', gap: '0.5rem', overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <button className={activeTab === 'D1' ? 'tab active' : 'tab'} onClick={() => setActiveTab('D1')}><LayoutTemplate size={18} /> Charts</button>
             <button className={activeTab === 'Panchang' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Panchang')}><Clock size={18} /> {t('tabs.panchang')}</button>
             <button className={activeTab === 'Ashtakavarga' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Ashtakavarga')}><Grid3X3 size={18} /> {t('tabs.ashtakavarga')}</button>
@@ -684,7 +702,7 @@ export default function Home() {
             <button className={activeTab === 'Yog' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Yog')}><Sparkles size={18} /> {t('tabs.yog')}</button>
             <button className={activeTab === 'JsonData' ? 'tab active' : 'tab'} onClick={() => setActiveTab('JsonData')}><Database size={18} /> {t('tabs.jsonData')}</button>
             
-            <button onClick={handlePrint} className="submit-btn" style={{ marginLeft: 'auto', padding: '0.75rem', background: 'var(--text-muted)', flexShrink: 0 }}>
+            <button onClick={handlePrint} className="submit-btn" style={{ marginLeft: 'auto', padding: '0.4rem 1rem', height: '34px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--text-muted)', flexShrink: 0 }}>
               {isPrinting ? 'Preparing PDF...' : 'Print Report'}
             </button>
           </div>

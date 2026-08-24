@@ -127,10 +127,13 @@ export default function NavamshaChakra({ data }: ChakraProps) {
     );
   });
 
+  const ascLong = data.lagna?.longitude || 0;
+
   return (
     <div className="chakra-container">
       <svg viewBox="0 0 1000 1000" className="chakra-svg">
-        <circle cx={cx} cy={cy} r={rEdge} fill="none" stroke="var(--border)" strokeWidth="2" />
+        <g transform={`rotate(${ascLong}, ${cx}, ${cy})`}>
+          <circle cx={cx} cy={cy} r={rEdge} fill="none" stroke="var(--border)" strokeWidth="2" />
         <circle cx={cx} cy={cy} r={rOuter} fill="none" stroke="var(--border)" strokeWidth="2" />
         <circle cx={cx} cy={cy} r={rMid} fill="none" stroke="var(--border)" strokeWidth="2" />
         <circle cx={cx} cy={cy} r={rInner} fill="none" stroke="var(--border)" strokeWidth="2" />
@@ -152,6 +155,7 @@ export default function NavamshaChakra({ data }: ChakraProps) {
         {nakTexts}
         {navTexts}
         {planetMarkers}
+        </g>
       </svg>
     </div>
   );
