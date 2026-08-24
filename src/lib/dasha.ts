@@ -126,3 +126,162 @@ export function calculateVimshottariDasha(moonLongitude: number, birthDate: Date
 
   return dashas;
 }
+const YOGINI_LORDS = [
+  { planet: 'Mangla (Moon)', years: 1 },
+  { planet: 'Pingla (Sun)', years: 2 },
+  { planet: 'Dhanya (Jupiter)', years: 3 },
+  { planet: 'Bhramari (Mars)', years: 4 },
+  { planet: 'Bhadrika (Mercury)', years: 5 },
+  { planet: 'Ulka (Saturn)', years: 6 },
+  { planet: 'Siddha (Venus)', years: 7 },
+  { planet: 'Sankata (Rahu)', years: 8 }
+];
+
+export function calculateYoginiDasha(moonLongitude: number, birthDate: Date): DashaPeriod[] {
+  const nakshatraLength = 360 / 27; // 13.333333 degrees
+  const exactNakshatra = moonLongitude / nakshatraLength;
+  const nakshatraIndex = Math.floor(exactNakshatra);
+  const fractionPassed = exactNakshatra - nakshatraIndex;
+
+  const nakNum = nakshatraIndex + 1;
+  let remainder = (nakNum + 3) % 8;
+  if (remainder === 0) remainder = 8;
+  const startLordIndex = remainder - 1;
+
+  const firstLord = YOGINI_LORDS[startLordIndex];
+  
+  const passedDays = fractionPassed * firstLord.years * DAYS_IN_YEAR;
+  const fullStart = addDays(birthDate, -passedDays);
+
+  const TOTAL_YOGINI_YEARS = 36;
+  const allDashas: DashaPeriod[] = [];
+  let currentStart = fullStart;
+  
+  for (let cycle = 0; cycle < 4; cycle++) {
+    for (let i = 0; i < 8; i++) {
+        const mdLordIndex = (startLordIndex + i) % 8;
+        const mdLord = YOGINI_LORDS[mdLordIndex];
+        const mdDuration = mdLord.years * DAYS_IN_YEAR;
+        const mdEnd = addDays(currentStart, mdDuration);
+    
+        const adPeriods: DashaPeriod[] = [];
+        let adStart = currentStart;
+    
+        for (let j = 0; j < 8; j++) {
+          const adLordIndex = (mdLordIndex + j) % 8;
+          const adLord = YOGINI_LORDS[adLordIndex];
+          const adDuration = mdDuration * (adLord.years / TOTAL_YOGINI_YEARS);
+          const adEnd = addDays(adStart, adDuration);
+    
+          const pdPeriods: DashaPeriod[] = [];
+          let pdStart = adStart;
+          for (let k = 0; k < 8; k++) {
+            const pdLordIndex = (adLordIndex + k) % 8;
+            const pdLord = YOGINI_LORDS[pdLordIndex];
+            const pdDuration = adDuration * (pdLord.years / TOTAL_YOGINI_YEARS);
+            const pdEnd = addDays(pdStart, pdDuration);
+    
+            if (pdEnd > birthDate) {
+              pdPeriods.push({
+                planet: pdLord.planet,
+                start: (pdStart < birthDate ? birthDate : pdStart).toISOString(),
+                end: pdEnd.toISOString()
+              });
+            }
+            pdStart = pdEnd;
+          }
+    
+          if (adEnd > birthDate) {
+            adPeriods.push({
+              planet: adLord.planet,
+              start: (adStart < birthDate ? birthDate : adStart).toISOString(),
+              end: adEnd.toISOString(),
+              subPeriods: pdPeriods
+            });
+          }
+          adStart = adEnd;
+        }
+    
+        if (mdEnd > birthDate) {
+          allDashas.push({
+            planet: mdLord.planet,
+            start: (currentStart < birthDate ? birthDate : currentStart).toISOString(),
+            end: mdEnd.toISOString(),
+            subPeriods: adPeriods
+          });
+        }
+        
+        currentStart = mdEnd;
+    }
+  }
+  return allDashas;
+}
+
+const RASI_NAMES = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+const RASI_LORDS = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
+const DIRECT_SIGNS = [0, 1, 2, 6, 7, 8];
+
+export function calculateJaminiCharDasha(lagnaSignIndex: number, positions: any[], birthDate: Date): DashaPeriod[] {
+  const dashas: DashaPeriod[] = [];
+  let currentStart = birthDate;
+  
+  const isOdd = (lagnaSignIndex + 1) % 2 !== 0;
+  
+  for (let i = 0; i < 12; i++) {
+    const rasiIndex = isOdd ? (lagnaSignIndex + i) % 12 : (lagnaSignIndex - i + 12) % 12;
+    const rasiName = RASI_NAMES[rasiIndex];
+    
+    let lordName = RASI_LORDS[rasiIndex];
+    let lordRasiIndex = -1;
+    const lordPos = positions.find((p: any) => (p.name || p.planet) === lordName);
+    if (lordPos && lordPos.rasi) {
+       lordRasiIndex = lordPos.rasi.index;
+    }
+    
+    let years = 12;
+    if (lordRasiIndex !== -1) {
+       const isDirect = DIRECT_SIGNS.includes(rasiIndex);
+       let count = 0;
+       if (isDirect) {
+         count = (lordRasiIndex - rasiIndex + 12) % 12;
+       } else {
+         count = (rasiIndex - lordRasiIndex + 12) % 12;
+       }
+       
+       if (count === 0) years = 12;
+       else years = count;
+    }
+    
+    const mdDuration = years * DAYS_IN_YEAR;
+    const mdEnd = addDays(currentStart, mdDuration);
+    
+    const adPeriods: DashaPeriod[] = [];
+    let adStart = currentStart;
+    
+    for (let j = 0; j < 12; j++) {
+       const adRasiIndex = isOdd ? (rasiIndex + j) % 12 : (rasiIndex - j + 12) % 12;
+       const adName = RASI_NAMES[adRasiIndex];
+       const adDuration = mdDuration / 12;
+       const adEnd = addDays(adStart, adDuration);
+       
+       adPeriods.push({
+         planet: adName,
+         start: adStart.toISOString(),
+         end: adEnd.toISOString()
+       });
+       
+       adStart = adEnd;
+    }
+    
+    dashas.push({
+      planet: rasiName,
+      start: currentStart.toISOString(),
+      end: mdEnd.toISOString(),
+      subPeriods: adPeriods
+    });
+    
+    currentStart = mdEnd;
+  }
+  
+  return dashas;
+}

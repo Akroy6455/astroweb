@@ -5,7 +5,7 @@ import { calculateAshtakavarga } from './ashtakavarga';
 import { calculateShadbala } from './shadbala';
 import { extractMLFeatures } from './ml_features';
 import { calculateAwasthas, calculateVargaClassifications } from './awasthas';
-import { calculateVimshottariDasha } from './dasha';
+import { calculateVimshottariDasha, calculateYoginiDasha, calculateJaminiCharDasha } from './dasha';
 import { calculatePanchang } from './panchang';
 import { evaluateYogaState } from './yoga_engine/engine';
 import { calculateVimshopakBala } from './vimshopak';
@@ -68,13 +68,57 @@ const SIGNS = [
   "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
 ];
 
+const NAKSHATRA_LORDS = [
+  "Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"
+];
+
+const NAKSHATRA_DEVTAS = [
+  "Ashwini Kumaras", "Yama", "Agni", "Brahma", "Soma", "Rudra",
+  "Aditi", "Brihaspati", "Nagas", "Pitris", "Bhaga", "Aryaman",
+  "Savitri", "Vishwakarma", "Vayu", "Indra-Agni", "Mitra", "Indra",
+  "Nirriti", "Apas", "Vishwedevas", "Vishnu", "Vasus", "Varuna",
+  "Aja Ekapad", "Ahir Budhyana", "Pushan"
+];
+
+const DASHA_YEARS = [
+  { planet: "Ketu", years: 7 },
+  { planet: "Venus", years: 20 },
+  { planet: "Sun", years: 6 },
+  { planet: "Moon", years: 10 },
+  { planet: "Mars", years: 7 },
+  { planet: "Rahu", years: 18 },
+  { planet: "Jupiter", years: 16 },
+  { planet: "Saturn", years: 19 },
+  { planet: "Mercury", years: 17 }
+];
+
+function getSubLord(nakIndex: number, degreesInNakshatra: number): string {
+    let currentDegree = 0;
+    let lordStartIndex = nakIndex % 9;
+    
+    for (let i = 0; i < 9; i++) {
+        let currentLordIndex = (lordStartIndex + i) % 9;
+        let lordSpan = (DASHA_YEARS[currentLordIndex].years / 120) * (360 / 27);
+        currentDegree += lordSpan;
+        if (degreesInNakshatra <= currentDegree) {
+            return DASHA_YEARS[currentLordIndex].planet;
+        }
+    }
+    return DASHA_YEARS[(lordStartIndex + 8) % 9].planet;
+}
+
 function getNakshatra(longitude: number) {
   // Total 360 degrees divided by 27 nakshatras = 13.333333 degrees per nakshatra
   const degreesPerNakshatra = 360 / 27;
   const index = Math.floor(longitude / degreesPerNakshatra);
   const remainder = longitude % degreesPerNakshatra;
   const pada = Math.floor(remainder / (degreesPerNakshatra / 4)) + 1;
-  return { name: NAKSHATRAS[index], pada, index };
+  
+  const lord = NAKSHATRA_LORDS[index % 9];
+  const devta = NAKSHATRA_DEVTAS[index];
+  const subLord = getSubLord(index, remainder);
+  
+  return { name: NAKSHATRAS[index], pada, index, lord, devta, subLord };
 }
 
 function getRasi(longitude: number) {

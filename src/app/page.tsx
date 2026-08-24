@@ -76,7 +76,10 @@ export default function Home() {
   const [loadedProfileMetadata, setLoadedProfileMetadata] = useState<{query?: string, notes?: string}>({});
   const [user, setUser] = useState<User | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [activeDivisionalChart, setActiveDivisionalChart] = useState('D9');
+  const [activeChartLeft, setActiveChartLeft] = useState('D1');
+  const [activeChartRight, setActiveChartRight] = useState('D9');
+  const [referencePlanetLeft, setReferencePlanetLeft] = useState('Lagna');
+  const [referencePlanetRight, setReferencePlanetRight] = useState('Lagna');
   const [formLocation, setFormLocation] = useState({ lat: 25.78, lon: 87.48, ianaTz: 'Asia/Kolkata', label: 'Purnia, BR, IN' });
   const [ayanamsha, setAyanamsha] = useState<'Raman' | 'Lahiri'>('Raman');
   const [ndsWeights, setNdsWeights] = useState<NDSWeights>(DEFAULT_NDS_WEIGHTS);
@@ -669,10 +672,8 @@ export default function Home() {
         {/* Sidebar Tabs */}
         {data && (
           <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'row', gap: '0.5rem', overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <button className={activeTab === 'D1' ? 'tab active' : 'tab'} onClick={() => setActiveTab('D1')}><LayoutTemplate size={18} /> {t('tabs.d1')}</button>
+            <button className={activeTab === 'D1' ? 'tab active' : 'tab'} onClick={() => setActiveTab('D1')}><LayoutTemplate size={18} /> Charts</button>
             <button className={activeTab === 'Panchang' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Panchang')}><Clock size={18} /> {t('tabs.panchang')}</button>
-            <button className={activeTab === 'Divisional' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Divisional')}><Grid3X3 size={18} /> {t('tabs.divisional')}</button>
-            <button className={activeTab === 'Chakra' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Chakra')}><Aperture size={18} /> {t('tabs.chakra')}</button>
             <button className={activeTab === 'Ashtakavarga' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Ashtakavarga')}><Grid3X3 size={18} /> {t('tabs.ashtakavarga')}</button>
             <button className={activeTab === 'Strength' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Strength')}><BarChart size={18} /> {t('tabs.strength')}</button>
             <button className={activeTab === 'Transit' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Transit')}><Clock size={18} /> {t('tabs.transit')}</button>
@@ -693,61 +694,204 @@ export default function Home() {
         <div className="glass-card display-card">
           {data ? (
             <div className="tab-content">
-              {(activeTab === 'D1' || isPrinting) && (
+                            {(activeTab === 'D1' || isPrinting) && (
                   <div className={isPrinting ? 'print-section' : ''}>
-                    {isPrinting && <h2 className="print-only-heading">D-1 Chart</h2>}
+                    {isPrinting && <h2 className="print-only-heading">Charts</h2>}
+                    
                     <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '2rem', justifyContent: 'center' }}>
+                       {/* Left Chart / Mobile Chart */}
                        <div style={{ flex: '1 1 300px', maxWidth: '450px', width: '100%' }}>
-                          <h3 style={{ textAlign: 'center', margin: '0 0 1rem 0', color: 'var(--primary)', fontSize: '1.2rem' }}>D-1 (Rasi)</h3>
-                          <KundliChart data={{ lagna: data.lagna, houses: data.houses }} />
+                          <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+                            <select
+                              value={activeChartLeft}
+                              onChange={(e) => setActiveChartLeft(e.target.value)}
+                              style={{ padding: '0.65rem 1rem', fontSize: '0.95rem', background: 'var(--card-bg)', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', width: '100%', maxWidth: '300px' }}
+                            >
+                              {DIVISIONAL_CHARTS_INFO.map(c => (
+                                <option key={c.key} value={c.key}>{c.key} - {c.name}</option>
+                              ))}
+                              <option value="Chakra">Chakra - Navamsha Chakra</option>
+                            </select>
+                            <select
+                              value={referencePlanetLeft}
+                              onChange={(e) => setReferencePlanetLeft(e.target.value)}
+                              style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: 'var(--card-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', width: '100%', maxWidth: '250px' }}
+                            >
+                              <option value="Lagna">Asc: Lagna</option>
+                              {[2,3,4,5,6,7,8,9,10,11,12].map(num => (
+                                <option key={`h${num}`} value={`House ${num}`}>Asc: House {num}</option>
+                              ))}
+                              {data.positions && data.positions.map((p: any) => (
+                                <option key={p.name} value={p.name}>Asc: {p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          {(() => {
+                            const rotateHouses = (houses: any[], refName: string) => {
+                                if (refName === 'Lagna' || refName === 'House 1') return houses;
+                                let targetSignIndex = -1;
+                                if (refName.startsWith('House ')) {
+                                    const targetHouse = parseInt(refName.replace('House ', ''));
+                                    const h = houses.find((h: any) => h.house === targetHouse);
+                                    if (h) targetSignIndex = h.signIndex;
+                                } else {
+                                    for (const h of houses) {
+                                        if (h.planets && h.planets.find((p: any) => p.name === refName)) {
+                                            targetSignIndex = h.signIndex;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (targetSignIndex === -1) return houses;
+                                return houses.map((h: any) => ({
+                                    ...h,
+                                    house: (h.signIndex - targetSignIndex + 12) % 12 + 1
+                                }));
+                            };
+                            let chartData = null;
+                            if (activeChartLeft === 'Chakra') return <NavamshaChakra data={data} />;
+                            if (activeChartLeft === 'D1') chartData = { lagna: data.lagna, houses: data.houses };
+                            else if (activeChartLeft === 'D9' && (!data.divisionalCharts || !data.divisionalCharts['D9'])) chartData = { lagna: data.d9Lagna, houses: data.d9Houses };
+                            else if (data.divisionalCharts && data.divisionalCharts[activeChartLeft]) chartData = { lagna: data.divisionalCharts[activeChartLeft].lagna, houses: data.divisionalCharts[activeChartLeft].houses };
+
+                            if (!chartData) return <div style={{textAlign:'center', padding:'2rem'}}>Chart data not available</div>;
+                            return <KundliChart data={{ lagna: chartData.lagna, houses: rotateHouses(chartData.houses, referencePlanetLeft) }} />;
+                          })()}
                        </div>
+                       {/* Right Chart (Desktop Only) */}
                        <div className="desktop-only" style={{ flex: '1 1 300px', maxWidth: '450px', width: '100%' }}>
-                          <h3 style={{ textAlign: 'center', margin: '0 0 1rem 0', color: 'var(--primary)', fontSize: '1.2rem' }}>D-9 (Navamsha)</h3>
-                          <KundliChart data={{ lagna: data.d9Lagna, houses: data.d9Houses }} />
+                          <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+                            <select
+                              value={activeChartRight}
+                              onChange={(e) => setActiveChartRight(e.target.value)}
+                              style={{ padding: '0.65rem 1rem', fontSize: '0.95rem', background: 'var(--card-bg)', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', width: '100%', maxWidth: '300px' }}
+                            >
+                              {DIVISIONAL_CHARTS_INFO.map(c => (
+                                <option key={c.key} value={c.key}>{c.key} - {c.name}</option>
+                              ))}
+                              <option value="Chakra">Chakra - Navamsha Chakra</option>
+                            </select>
+                            <select
+                              value={referencePlanetRight}
+                              onChange={(e) => setReferencePlanetRight(e.target.value)}
+                              style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', background: 'var(--card-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', width: '100%', maxWidth: '250px' }}
+                            >
+                              <option value="Lagna">Asc: Lagna</option>
+                              {[2,3,4,5,6,7,8,9,10,11,12].map(num => (
+                                <option key={`h${num}`} value={`House ${num}`}>Asc: House {num}</option>
+                              ))}
+                              {data.positions && data.positions.map((p: any) => (
+                                <option key={p.name} value={p.name}>Asc: {p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          {(() => {
+                            const rotateHouses = (houses: any[], refName: string) => {
+                                if (refName === 'Lagna' || refName === 'House 1') return houses;
+                                let targetSignIndex = -1;
+                                if (refName.startsWith('House ')) {
+                                    const targetHouse = parseInt(refName.replace('House ', ''));
+                                    const h = houses.find((h: any) => h.house === targetHouse);
+                                    if (h) targetSignIndex = h.signIndex;
+                                } else {
+                                    for (const h of houses) {
+                                        if (h.planets && h.planets.find((p: any) => p.name === refName)) {
+                                            targetSignIndex = h.signIndex;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (targetSignIndex === -1) return houses;
+                                return houses.map((h: any) => ({
+                                    ...h,
+                                    house: (h.signIndex - targetSignIndex + 12) % 12 + 1
+                                }));
+                            };
+                            let chartData = null;
+                            if (activeChartRight === 'Chakra') return <NavamshaChakra data={data} />;
+                            if (activeChartRight === 'D1') chartData = { lagna: data.lagna, houses: data.houses };
+                            else if (activeChartRight === 'D9' && (!data.divisionalCharts || !data.divisionalCharts['D9'])) chartData = { lagna: data.d9Lagna, houses: data.d9Houses };
+                            else if (data.divisionalCharts && data.divisionalCharts[activeChartRight]) chartData = { lagna: data.divisionalCharts[activeChartRight].lagna, houses: data.divisionalCharts[activeChartRight].houses };
+
+                            if (!chartData) return <div style={{textAlign:'center', padding:'2rem'}}>Chart data not available</div>;
+                            return <KundliChart data={{ lagna: chartData.lagna, houses: rotateHouses(chartData.houses, referencePlanetRight) }} />;
+                          })()}
                        </div>
                     </div>
-                  <div style={{ overflowX: 'auto', marginTop: '2rem' }}>
-                    <table className="details-table" style={{ minWidth: '600px' }}>
-                      <thead style={{ background: 'var(--text-muted)', color: 'var(--background)' }}>
-                        <tr>
-                          <th style={{ color: 'var(--background)' }}>Planet</th>
-                          <th style={{ color: 'var(--background)' }}>Longitude</th>
-                          <th style={{ color: 'var(--background)' }}>Speed</th>
-                          <th style={{ color: 'var(--background)' }}>Rasi (D-1)</th>
-                          <th style={{ color: 'var(--background)' }}>Nakshatra</th>
-                          <th style={{ color: 'var(--background)' }}>Pada</th>
-                          <th style={{ color: 'var(--background)' }}>Navamsha (D-9)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.lagna && (
-                          <tr style={{ background: 'rgba(232, 220, 203, 0.5)' }}>
-                            <td><strong>Lagna</strong></td>
-                            <td>{formatDMS(data.lagna.longitude)}</td>
-                            <td>-</td>
-                            <td>{data.lagna.rasi.name} ({formatDMS(data.lagna.rasi.degreesInSign)})</td>
-                            <td>{data.lagna.nakshatra.name}</td>
-                            <td>{data.lagna.nakshatra.pada}</td>
-                            <td>{data.lagna.navamsha.name}</td>
-                          </tr>
-                        )}
-                        {data.positions.map((p: any, i: number) => {
-                          const isSpecial = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'].includes(p.name);
-                          return (
-                            <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)' }}>
-                              <td style={isSpecial ? { color: '#3b82f6', fontSize: '0.85em' } : {}}><strong>{p.name}</strong> {p.retrograde ? <span style={{ color: '#cc0000' }}>(R)</span> : ''}</td>
-                              <td>{formatDMS(p.longitude)}</td>
-                              <td>{(p.speed > 0 ? '+' : '')}{p.speed.toFixed(3)}Ã‚Â°/d</td>
-                              <td>{p.rasi.name} ({formatDMS(p.rasi.degreesInSign)})</td>
-                              <td>{p.nakshatra.name}</td>
-                              <td>{p.nakshatra.pada}</td>
-                              <td>{p.navamsha.name}</td>
+                                    {(() => {
+                    const info = DIVISIONAL_CHARTS_INFO.find(c => c.key === activeChartLeft);
+                    if (!info || !data.positions) return null;
+                    const div = info.division;
+
+                    const allEntries: any[] = [];
+                    if (data.lagna) {
+                      allEntries.push({ name: 'Lagna', id: 'lagna', longitude: data.lagna.longitude, speed: 0, rasi: data.lagna.rasi, nakshatra: data.lagna.nakshatra, isLagna: true });
+                    }
+                    allEntries.push(...data.positions);
+
+                    const sevenPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+                    const planetDegrees = allEntries
+                        .filter(p => sevenPlanets.includes(p.name))
+                        .map(p => ({ name: p.name, deg: p.rasi.degreesInSign }))
+                        .sort((a, b) => b.deg - a.deg);
+                    
+                    const karakaNames = ['AK', 'AmK', 'BK', 'MK', 'PK', 'GK', 'DK'];
+                    const karakaMap: Record<string, string> = {};
+                    planetDegrees.forEach((p, idx) => {
+                        karakaMap[p.name] = karakaNames[idx];
+                    });
+
+                    return (
+                      <div style={{ overflowX: 'auto', marginTop: '2rem' }}>
+                        <table className="details-table" style={{ minWidth: '800px', width: '100%' }}>
+                          <thead style={{ background: 'var(--text-muted)', color: 'var(--background)' }}>
+                            <tr>
+                              <th style={{ color: 'var(--background)' }}>Planet</th>
+                              <th style={{ color: 'var(--background)' }}>Longitude</th>
+                              <th style={{ color: 'var(--background)' }}>Speed</th>
+                              <th style={{ color: 'var(--background)' }}>Rasi (D-1)</th>
+                              <th style={{ color: 'var(--background)' }}>Nakshatra</th>
+                              <th style={{ color: 'var(--background)' }}>Pada</th>
+                              <th style={{ color: 'var(--background)' }}>Nak Devta</th>
+                              <th style={{ color: 'var(--background)' }}>Nak Lord</th>
+                              <th style={{ color: 'var(--background)' }}>Sub Lord</th>
+                              <th style={{ color: 'var(--background)' }}>{info.key} Sign</th>
+                              <th style={{ color: 'var(--background)' }}>{div === 1 ? 'Chara Karaka' : `${info.key} Devta`}</th>
+                              {div === 60 && <th style={{ color: 'var(--background)' }}>Nature</th>}
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                          </thead>
+                          <tbody>
+                            {allEntries.map((p: any, i: number) => {
+                              const sIdx = p.rasi.index;
+                              const deg = p.rasi.degreesInSign;
+                              const divSign = getDivisionalSign(sIdx, deg, div);
+                              const devta = getVargaDevta(sIdx, deg, div);
+                              const isSpecial = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'].includes(p.name);
+                              
+                              return (
+                                <tr key={p.id || p.name} style={{ background: p.isLagna ? 'rgba(232, 220, 203, 0.5)' : (i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)') }}>
+                                  <td style={isSpecial ? { color: '#3b82f6', fontSize: '0.85em' } : {}}><strong>{p.name}</strong> {p.retrograde ? <span style={{ color: '#cc0000' }}>(R)</span> : ''}</td>
+                                  <td>{formatDMS(p.longitude)}</td>
+                                  <td>{p.isLagna ? '-' : (p.speed > 0 ? '+' : '') + p.speed.toFixed(3) + '°/d'}</td>
+                                  <td>{p.rasi.name} ({formatDMS(p.rasi.degreesInSign)})</td>
+                                  <td>{p.nakshatra.name}</td>
+                                  <td>{p.nakshatra.pada}</td>
+                                  <td style={{ color: '#C9A86A' }}>{p.nakshatra.devta}</td>
+                                  <td>{p.nakshatra.lord}</td>
+                                  <td>{p.nakshatra.subLord}</td>
+                                  <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getDivSignName(divSign)}</td>
+                                  <td style={{ color: div === 1 ? 'var(--primary)' : (devta === '—' ? 'var(--text-muted)' : '#C9A86A'), fontWeight: (div === 1 || devta !== '—') ? 600 : 400 }}>
+                                    {div === 1 ? (karakaMap[p.name] || '—') : devta}
+                                  </td>
+                                  {div === 60 && <td style={{ color: getD60Nature(sIdx, deg) === 'Benefic' ? '#10b981' : '#ef4444', fontWeight: 600 }}>{getD60Nature(sIdx, deg)}</td>}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
                   <div style={{ marginTop: '2rem' }}>
                     <SpecialLagnasTable data={data} />
                   </div>
@@ -759,124 +903,7 @@ export default function Home() {
                   <PanchangTab data={data} />
                 </div>
               )}
-              {(activeTab === 'Divisional' || isPrinting) && (
-                <div className={isPrinting ? 'print-section' : ''}>
-                  {isPrinting && <h2 className="print-only-heading">Divisional Charts</h2>}
-                  {!isPrinting && (
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem' }}>
-                        <div className="form-group" style={{ flex: '1 1 300px', marginBottom: 0 }}>
-                          <label style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>Select Divisional Chart</label>
-                          <select
-                            value={activeDivisionalChart}
-                            onChange={(e) => setActiveDivisionalChart(e.target.value)}
-                            style={{ padding: '0.65rem 1rem', fontSize: '0.95rem', background: 'var(--card-bg)', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
-                          >
-                            {DIVISIONAL_CHARTS_INFO.map(c => (
-                              <option key={c.key} value={c.key}>
-                                {c.key} Ã¢â‚¬â€ {c.name} (ÃƒÂ·{c.division})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      {(() => {
-                        const info = DIVISIONAL_CHARTS_INFO.find(c => c.key === activeDivisionalChart);
-                        if (!info) return null;
-                        return (
-                          <div style={{
-                            background: 'linear-gradient(135deg, rgba(201,168,106,0.15), rgba(94,124,123,0.1))',
-                            border: '1px solid rgba(201,168,106,0.35)',
-                            borderRadius: '10px',
-                            padding: '1rem 1.25rem',
-                            display: 'flex',
-                            gap: '0.75rem',
-                            alignItems: 'flex-start'
-                          }}>
-                            <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>Ã°Å¸â€œÅ“</span>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--primary)', marginBottom: '0.25rem' }}>
-                                {info.name} ({info.key})
-                                <span style={{ fontWeight: 400, fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>Division: {info.division}</span>
-                              </div>
-                              <div style={{ fontSize: '0.9rem', color: 'var(--foreground)', lineHeight: 1.5 }}>
-                                {info.meaning}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                  {data.divisionalCharts && data.divisionalCharts[activeDivisionalChart] ? (
-                    <KundliChart data={{ lagna: data.divisionalCharts[activeDivisionalChart].lagna, houses: data.divisionalCharts[activeDivisionalChart].houses }} />
-                  ) : (
-                    <KundliChart data={{ lagna: data.d9Lagna, houses: data.d9Houses }} />
-                  )}
-
-                  {/* Planet Details Table */}
-                  {(() => {
-                    const info = DIVISIONAL_CHARTS_INFO.find(c => c.key === activeDivisionalChart);
-                    if (!info || !data.positions) return null;
-                    const div = info.division;
-
-                    const allEntries: any[] = [];
-                    if (data.lagna) {
-                      allEntries.push({ name: 'Lagna', short: 'As', longitude: data.lagna.longitude, rasi: data.lagna.rasi, isLagna: true });
-                    }
-                    allEntries.push(...data.positions);
-
-                    return (
-                      <div style={{ overflowX: 'auto', marginTop: '2rem' }}>
-                        <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '1rem' }}>
-                          {info.key} Planetary Positions & Devtas
-                        </h3>
-                        <table className="details-table" style={{ width: '100%', fontSize: '0.82rem' }}>
-                          <thead style={{ background: 'var(--text-muted)', color: 'var(--background)' }}>
-                            <tr>
-                              <th style={{ color: 'var(--background)' }}>Planet</th>
-                              <th style={{ color: 'var(--background)' }}>Natal Sign</th>
-                              <th style={{ color: 'var(--background)' }}>Deg in Sign</th>
-                              <th style={{ color: 'var(--background)' }}>{info.key} Sign</th>
-                              <th style={{ color: 'var(--background)' }}>Part</th>
-                              <th style={{ color: 'var(--background)' }}>Devta</th>
-                              {div === 60 && <th style={{ color: 'var(--background)' }}>Nature</th>}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {allEntries.map((p: any, i: number) => {
-                              const sIdx = p.rasi.index;
-                              const deg = p.rasi.degreesInSign;
-                              const isOdd = sIdx % 2 === 0;
-                              const divSign = getDivisionalSign(sIdx, deg, div);
-                              const part = getDivPart(deg, div, isOdd);
-                              const devta = getVargaDevta(sIdx, deg, div);
-                              const isSpecial = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'].includes(p.name);
-                              return (
-                                <tr key={p.name} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)' }}>
-                                  <td style={isSpecial ? { color: '#3b82f6', fontSize: '0.85em' } : {}}><strong>{p.name}</strong>{p.retrograde ? <span style={{ color: '#cc0000', marginLeft: 4 }}>(R)</span> : null}</td>
-                                  <td>{p.rasi.name}</td>
-                                  <td>{formatDMS(deg)}</td>
-                                  <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getDivSignName(divSign)}</td>
-                                  <td>{part + 1}/{div}</td>
-                                  <td style={{ color: devta === 'Ã¢â‚¬â€' ? 'var(--text-muted)' : '#C9A86A', fontWeight: devta !== 'Ã¢â‚¬â€' ? 600 : 400 }}>{devta}</td>
-                                  {div === 60 && <td style={{ color: getD60Nature(sIdx, deg) === 'Benefic' ? '#10b981' : '#ef4444', fontWeight: 600 }}>{getD60Nature(sIdx, deg)}</td>}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-              {(activeTab === 'Chakra' || isPrinting) && (
-                <div className={isPrinting ? 'print-section' : ''}>
-                  {isPrinting && <h2 className="print-only-heading">Navamsha Chakra</h2>}
-                  <NavamshaChakra data={data} />
-                </div>
-              )}
+              
               {(activeTab === 'Ashtakavarga' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>
                   {isPrinting && <h2 className="print-only-heading">Ashtakavarga</h2>}

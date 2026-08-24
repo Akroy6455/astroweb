@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { getPdAuspiciousness, getPdAuspiciousnessCategory } from '@/lib/pd_matrix';
-import { calculateVimshottariDasha } from '@/lib/dasha';
+import { calculateVimshottariDasha, calculateYoginiDasha, calculateJaminiCharDasha } from '@/lib/dasha';
 
 interface DashaPeriod {
   planet: string;
@@ -26,13 +26,23 @@ export function DashaTab({ defaultDashas, chartData }: DashaTabProps) {
   const [expandedMD, setExpandedMD] = useState<string | null>(null);
   const [expandedAD, setExpandedAD] = useState<string | null>(null);
   const [seedOption, setSeedOption] = useState<string>('Moon');
+  const [dashaSystem, setDashaSystem] = useState<string>('Vimshottari');
 
   const dashas = React.useMemo(() => {
     if (!chartData || !chartData.birthDate) return defaultDashas;
+    const birthDate = new Date(chartData.birthDate);
     
     let seedLongitude = 0;
     const moonPos = chartData.positions.find((p: any) => (p.name || p.planet) === 'Moon');
     const moonLon = moonPos ? moonPos.longitude : 0;
+    
+    if (dashaSystem === 'Yogini') {
+        return calculateYoginiDasha(moonLon, birthDate);
+    }
+    
+    if (dashaSystem === 'Jamini Char') {
+        return calculateJaminiCharDasha(chartData.lagna?.rasi?.index || 0, chartData.positions, birthDate);
+    }
     
     if (seedOption === 'Moon') {
        return defaultDashas;
@@ -55,9 +65,8 @@ export function DashaTab({ defaultDashas, chartData }: DashaTabProps) {
        seedLongitude = pos ? pos.longitude : 0;
     }
     
-    const birthDate = new Date(chartData.birthDate);
     return calculateVimshottariDasha(seedLongitude, birthDate, chartData.positions, chartData.houses);
-  }, [defaultDashas, chartData, seedOption]);
+  }, [defaultDashas, chartData, seedOption, dashaSystem]);
 
   // Conditions info
   let conditionText = '';
@@ -80,7 +89,24 @@ export function DashaTab({ defaultDashas, chartData }: DashaTabProps) {
   };
 
   const getPlanetStyle = (planet: string) => {
-    switch (planet) {
+    const match = planet.match(/\((.*?)\)/);
+    let basePlanet = match ? match[1] : planet;
+    
+    const rasiToPlanet: Record<string, string> = {
+      'Aries': 'Mars', 'Scorpio': 'Mars',
+      'Taurus': 'Venus', 'Libra': 'Venus',
+      'Gemini': 'Mercury', 'Virgo': 'Mercury',
+      'Cancer': 'Moon',
+      'Leo': 'Sun',
+      'Sagittarius': 'Jupiter', 'Pisces': 'Jupiter',
+      'Capricorn': 'Saturn', 'Aquarius': 'Saturn'
+    };
+    
+    if (rasiToPlanet[basePlanet]) {
+      basePlanet = rasiToPlanet[basePlanet];
+    }
+
+    switch (basePlanet) {
       case 'Sun': return { color: '#eab308', bg: 'rgba(234, 179, 8, 0.1)', border: 'rgba(234, 179, 8, 0.2)' }; // Yellow
       case 'Moon': return { color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.1)', border: 'rgba(156, 163, 175, 0.2)' }; // Silver
       case 'Mars': return { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.2)' }; // Red
@@ -103,38 +129,53 @@ export function DashaTab({ defaultDashas, chartData }: DashaTabProps) {
       {chartData && (
         <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div className="form-group" style={{ marginBottom: 0, flex: '1 1 300px' }}>
-            <label style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>Vimshottari Seed Nakshatra</label>
+            <label style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>Dasha System</label>
             <select
-              value={seedOption}
-              onChange={(e) => setSeedOption(e.target.value)}
+              value={dashaSystem}
+              onChange={(e) => setDashaSystem(e.target.value)}
               style={{ padding: '0.65rem 1rem', width: '100%', fontSize: '0.95rem', background: 'var(--card-bg)', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
             >
-              <option value="Moon">Moon (Default)</option>
-              <option value="D1 Lagna">D1 Lagna</option>
-              <option value="Kshema Tara (4th)">Kshema Tara (4th)</option>
-              <option value="Utpanna Tara (5th)">Utpanna Tara (5th)</option>
-              <option value="Aadhana Tara (7th)">Aadhana Tara (7th)</option>
-              <option value="Sun">Sun</option>
-              <option value="Mars">Mars</option>
-              <option value="Mercury">Mercury</option>
-              <option value="Jupiter">Jupiter</option>
-              <option value="Venus">Venus</option>
-              <option value="Saturn">Saturn</option>
-              <option value="Rahu">Rahu</option>
-              <option value="Ketu">Ketu</option>
-              <option value="D9 Lagna">D9 Lagna</option>
-              <option value="D9 Sun">D9 Sun</option>
-              <option value="D9 Moon">D9 Moon</option>
-              <option value="D9 Mars">D9 Mars</option>
-              <option value="D9 Mercury">D9 Mercury</option>
-              <option value="D9 Jupiter">D9 Jupiter</option>
-              <option value="D9 Venus">D9 Venus</option>
-              <option value="D9 Saturn">D9 Saturn</option>
-              <option value="D9 Rahu">D9 Rahu</option>
-              <option value="D9 Ketu">D9 Ketu</option>
+              <option value="Vimshottari">Vimshottari Dasha</option>
+              <option value="Yogini">Yogini Dasha</option>
+              <option value="Jamini Char">Jamini Char Dasha</option>
             </select>
           </div>
-          {conditionText && (
+          
+          {dashaSystem === 'Vimshottari' && (
+            <div className="form-group" style={{ marginBottom: 0, flex: '1 1 300px' }}>
+              <label style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>Vimshottari Seed Nakshatra</label>
+              <select
+                value={seedOption}
+                onChange={(e) => setSeedOption(e.target.value)}
+                style={{ padding: '0.65rem 1rem', width: '100%', fontSize: '0.95rem', background: 'var(--card-bg)', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                <option value="Moon">Moon (Default)</option>
+                <option value="D1 Lagna">D1 Lagna</option>
+                <option value="Kshema Tara (4th)">Kshema Tara (4th)</option>
+                <option value="Utpanna Tara (5th)">Utpanna Tara (5th)</option>
+                <option value="Aadhana Tara (7th)">Aadhana Tara (7th)</option>
+                <option value="Sun">Sun</option>
+                <option value="Mars">Mars</option>
+                <option value="Mercury">Mercury</option>
+                <option value="Jupiter">Jupiter</option>
+                <option value="Venus">Venus</option>
+                <option value="Saturn">Saturn</option>
+                <option value="Rahu">Rahu</option>
+                <option value="Ketu">Ketu</option>
+                <option value="D9 Lagna">D9 Lagna</option>
+                <option value="D9 Sun">D9 Sun</option>
+                <option value="D9 Moon">D9 Moon</option>
+                <option value="D9 Mars">D9 Mars</option>
+                <option value="D9 Mercury">D9 Mercury</option>
+                <option value="D9 Jupiter">D9 Jupiter</option>
+                <option value="D9 Venus">D9 Venus</option>
+                <option value="D9 Saturn">D9 Saturn</option>
+                <option value="D9 Rahu">D9 Rahu</option>
+                <option value="D9 Ketu">D9 Ketu</option>
+              </select>
+            </div>
+          )}
+          {dashaSystem === 'Vimshottari' && conditionText && (
             <div style={{ flex: '1 1 300px', fontSize: '0.85rem', color: 'var(--primary)', fontStyle: 'italic', padding: '0.5rem', borderLeft: '3px solid var(--primary)' }}>
               {conditionText}
             </div>
@@ -142,7 +183,7 @@ export function DashaTab({ defaultDashas, chartData }: DashaTabProps) {
         </div>
       )}
       <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '1rem' }}>
-        Vimshottari Dasha (120 Years)
+        {dashaSystem === 'Vimshottari' ? 'Vimshottari Dasha (120 Years)' : dashaSystem === 'Yogini' ? 'Yogini Dasha (36 Years)' : 'Jamini Char Dasha'}
       </h3>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -198,7 +239,7 @@ export function DashaTab({ defaultDashas, chartData }: DashaTabProps) {
                               <span style={{ fontSize: '0.6rem', padding: '0.1rem 0.3rem', background: pdStyle.border, color: pdStyle.color, borderRadius: '3px', textTransform: 'uppercase' }}>Pratyantar</span>
                               
                               {/* Display PD Auspiciousness Matrix Score */}
-                              {(() => {
+                              {dashaSystem === 'Vimshottari' && (() => {
                                 const pdScore = getPdAuspiciousness(ad.planet, pd.planet);
                                 const pdCat = getPdAuspiciousnessCategory(pdScore);
                                 return (
