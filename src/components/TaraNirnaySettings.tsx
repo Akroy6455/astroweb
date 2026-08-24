@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { NDSWeights, DEFAULT_NDS_WEIGHTS } from '@/lib/nds_engine';
@@ -29,6 +29,8 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   functionalBenefic: "Applied if the planet is a Functional Benefic for the Lagna.",
   functionalMalefic: "Applied if the planet is a Functional Malefic for the Lagna.",
   rahuKetuYogKaraka: "Applied to Rahu/Ketu if placed in Kendra and aspected/conjoined by Trikon lord, or in Trikon and aspected/conjoined by Kendra lord.",
+  advancedJupSatConjunctPoints: "When Jupiter is conjuct Saturn and difference is less than 10 degree and no planet is between them.",
+  advanced8th9thLordPoints: "When 8th lord is conjuct 9th lord and no planet is between them and difference is less than 10 degrees OR they exchange rasis OR they aspect each other.",
   
   exaltation: "Percentage modifier applied if the planet is Exalted or in Moolatrikona.",
   ownSign: "Percentage modifier applied if the planet is in its Own Sign.",
@@ -56,8 +58,8 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   arudha11thAny: "Applied if the planet is placed in the 11th house from Arudha Lagna (AL).",
   arudha11thBenefic: "Additional bonus applied if a natural Benefic is placed in the 11th house from AL.",
   arudha12thAny: "Applied if the planet is placed in the 12th house from Arudha Lagna (AL).",
-  papaKartari: "Applied if the planet is hemmed between Malefics on both sides within 30°, OR conjunct Saturn within 5° (Papa Kartari Yoga).",
-  shubhaKartari: "Applied if the planet is hemmed between Benefics on both sides within 30°, OR conjunct Jupiter within 5° (Shubha Kartari Yoga).",
+  papaKartari: "Applied if the planet is hemmed between Malefics on both sides within 30Ã‚Â°, OR conjunct Saturn within 5Ã‚Â° (Papa Kartari Yoga).",
+  shubhaKartari: "Applied if the planet is hemmed between Benefics on both sides within 30Ã‚Â°, OR conjunct Jupiter within 5Ã‚Â° (Shubha Kartari Yoga).",
 
   combustionBadLord: "Applied to combusted planets if Sun rules houses 2, 3, 6, 7, 8, or 12.",
   combustionGoodLord: "Applied to combusted planets if Sun rules houses 1, 4, 5, 9, 10, or 11.",
@@ -215,7 +217,7 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
     {
       title: 'Module 9: Advanced Rules',
       keys: [
-        'rahuKetuMoonConjunct'
+        'rahuKetuMoonConjunct', 'advancedJupSatConjunctPoints', 'advanced8th9thLordPoints'
       ]
     }
   ];
@@ -750,10 +752,187 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
             </table>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            {DESCRIPTIONS.sayanadiAwasthaMatrix}
-            <br/><br/>
-            <strong>Disclaimer:</strong> This awastha is subject to various other factors like planetary strength, your name, planetary position, etc as said by Rishi Parasara which were very tough to be coded but who knows the future!
+              {DESCRIPTIONS.sayanadiAwasthaMatrix}
+              <br/><br/>
+              <strong>Disclaimer:</strong> This awastha is subject to various other factors like planetary strength, your name, planetary position, etc as said by Rishi Parasara which were very tough to be coded but who knows the future!
+            </div>
+          </div>
+
+          {/* TARADASHA TUNING MATRIX */}
+          <div style={{ 
+            marginBottom: '2rem',
+            opacity: 1, 
+            pointerEvents: 'auto', 
+            transition: 'all 0.3s ease' 
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>
+                Taradasha Nirnay Matrix
+              </h4>
+            </div>
+            <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
+              <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '400px', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '4px', textAlign: 'left', color: 'var(--text-muted)' }}>Planet</th>
+                    {['MD', 'AD', 'PD'].map((level, i) => (
+                      <th key={i} style={{ padding: '4px', textAlign: 'center', fontWeight: 600, color: 'var(--primary)' }}>{level}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(localWeights.taradashaMatrix || DEFAULT_NDS_WEIGHTS.taradashaMatrix)?.map((row, pIdx) => {
+                    const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+                    return (
+                      <tr key={pIdx}>
+                        <td style={{ padding: '4px', fontWeight: 600, color: 'var(--foreground)' }}>{planets[pIdx]}</td>
+                        {row.map((val, cIdx) => (
+                          <td key={cIdx} style={{ padding: '2px' }}>
+                            <input
+                              type="number"
+                              value={val}
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value, 10);
+                                if (!isNaN(v)) {
+                                  setLocalWeights(prev => {
+                                    const nm = (prev.taradashaMatrix || DEFAULT_NDS_WEIGHTS.taradashaMatrix || []).map(r => [...r]);
+                                    if (nm[pIdx]) nm[pIdx][cIdx] = v;
+                                    return { ...prev, taradashaMatrix: nm };
+                                  });
+                                }
+                              }}
+                              style={{
+                                width: '100%',
+                                minWidth: '40px',
+                                padding: '4px',
+                                textAlign: 'center',
+                                background: 'rgba(0,0,0,0.2)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '4px',
+                                color: val > 0 ? 'var(--positive)' : val < 0 ? 'var(--negative)' : 'var(--text-muted)'
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Add explicit points to a planet depending on whether it is the MD, AD, or PD Lord. Default is 0.
+            </div>
+          </div>
+
+          {/* NAVTARA POINTS */}
+          <div style={{ 
+            marginBottom: '2rem',
+            opacity: 1, 
+            pointerEvents: 'auto', 
+            transition: 'all 0.3s ease' 
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>
+                Planet in Navtara (D1 Chart)
+              </h4>
+            </div>
+            <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
+              <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '400px', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr>
+                    {['Janma (1)', 'Sampat (2)', 'Vipat (3)', 'Kshema (4)', 'Pratyari (5)', 'Sadhaka (6)', 'Naidhana (7)', 'Mitra (8)', 'Ati Mitra (9)'].map((tara, i) => (
+                      <th key={i} style={{ padding: '4px', textAlign: 'center', fontWeight: 600, color: 'var(--primary)' }}>{tara}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {(localWeights.navtaraPoints || DEFAULT_NDS_WEIGHTS.navtaraPoints || []).map((val, i) => (
+                      <td key={i} style={{ padding: '2px' }}>
+                        <input
+                          type="number"
+                          value={val}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!isNaN(v)) {
+                              setLocalWeights(prev => {
+                                const arr = [...(prev.navtaraPoints || DEFAULT_NDS_WEIGHTS.navtaraPoints || [])];
+                                arr[i] = v;
+                                return { ...prev, navtaraPoints: arr };
+                              });
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            minWidth: '40px',
+                            padding: '4px',
+                            textAlign: 'center',
+                            background: 'rgba(0,0,0,0.2)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '4px',
+                            color: val > 0 ? 'var(--positive)' : val < 0 ? 'var(--negative)' : 'var(--text-muted)'
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Points added based on the Navtara (from Moon) of the planet.
+            </div>
+          </div>
           
+          {/* SHASTIAMSA SLIDERS */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+              Shastiamsa (D60) Tuning
+            </h4>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ background: 'var(--bg)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--foreground)' }}>
+                    Benefic Shastiamsa Points
+                  </label>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 600 }}>
+                    {localWeights.beneficShastiamsaPoints ?? 100}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="-200"
+                  max="200"
+                  step="5"
+                  value={localWeights.beneficShastiamsaPoints ?? 100}
+                  onChange={(e) => setLocalWeights(prev => ({ ...prev, beneficShastiamsaPoints: parseInt(e.target.value, 10) }))}
+                  style={{ width: '100%', accentColor: 'var(--primary)' }}
+                />
+              </div>
+
+              <div style={{ background: 'var(--bg)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--foreground)' }}>
+                    Malefic Shastiamsa Points
+                  </label>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 600 }}>
+                    {localWeights.maleficShastiamsaPoints ?? -100}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="-200"
+                  max="200"
+                  step="5"
+                  value={localWeights.maleficShastiamsaPoints ?? -100}
+                  onChange={(e) => setLocalWeights(prev => ({ ...prev, maleficShastiamsaPoints: parseInt(e.target.value, 10) }))}
+                  style={{ width: '100%', accentColor: 'var(--primary)' }}
+                />
+              </div>
+            </div>
+          </div>    
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <div>
               <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable Sun Combustion Tradeoff</span>
@@ -768,8 +947,6 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
               />
             </label>
           </div>
-        </div>
-        </div>
 
         <div style={{ 
           marginBottom: '2rem',
@@ -948,6 +1125,8 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
     </div>
   );
 }
+
+
 
 
 

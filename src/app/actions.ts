@@ -67,7 +67,7 @@ export async function getKundliData(formData: FormData) {
     const localDate = new Date(year, month - 1, day);
     const localDayOfWeek = localDate.getDay();
   
-    const res = calculateChart(
+    const res: any = calculateChart(
         utDate.getUTCFullYear(), 
         utDate.getUTCMonth() + 1, 
         utDate.getUTCDate(), 
@@ -78,7 +78,8 @@ export async function getKundliData(formData: FormData) {
         ayanamsha
     );
     try {
-      const jsonStr = JSON.stringify(res);
+      res.birthDate = utDate.toISOString();
+    const jsonStr = JSON.stringify(res);
       return { __success: jsonStr };
     } catch (stringifyErr: any) {
       return { __error: "JSON Stringify failed: " + stringifyErr.message };

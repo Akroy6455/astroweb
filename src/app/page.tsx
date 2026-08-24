@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { getKundliData, getTaraNirnayData } from './actions';
@@ -635,7 +635,7 @@ export default function Home() {
       <div style={{ background: 'var(--background)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0, color: 'var(--primary)' }}>Saved Kundlis</h3>
-          <button type="button" onClick={() => setShowKundliListModal(false)} style={{ background: 'none', border: 'none', color: 'var(--foreground)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          <button type="button" onClick={() => setShowKundliListModal(false)} style={{ background: 'none', border: 'none', color: 'var(--foreground)', fontSize: '1.2rem', cursor: 'pointer' }}>Ã¢Å“â€¢</button>
         </div>
         <input 
           type="text" 
@@ -654,7 +654,7 @@ export default function Home() {
                 <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--primary)' }}>{p.name}</h4>
                 {p.query && <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}><strong>Query:</strong> {p.query}</p>}
               </div>
-              <button type="button" onClick={(e) => { e.stopPropagation(); deleteProfile(p.name); }} className="profile-delete" title="Delete Profile" style={{ padding: '0.4rem', marginLeft: '1rem', cursor: 'pointer', zIndex: 10 }}>✕</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); deleteProfile(p.name); }} className="profile-delete" title="Delete Profile" style={{ padding: '0.4rem', marginLeft: '1rem', cursor: 'pointer', zIndex: 10 }}>Ã¢Å“â€¢</button>
             </div>
           ))}
           {savedProfiles.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No saved Kundlis found.</p>}
@@ -665,10 +665,10 @@ export default function Home() {
 
 
       {/* Main Two-Column Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {/* Sidebar Tabs */}
         {data && (
-          <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', height: 'fit-content' }}>
+          <div className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'row', gap: '0.5rem', overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <button className={activeTab === 'D1' ? 'tab active' : 'tab'} onClick={() => setActiveTab('D1')}><LayoutTemplate size={18} /> {t('tabs.d1')}</button>
             <button className={activeTab === 'Panchang' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Panchang')}><Clock size={18} /> {t('tabs.panchang')}</button>
             <button className={activeTab === 'Divisional' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Divisional')}><Grid3X3 size={18} /> {t('tabs.divisional')}</button>
@@ -683,20 +683,29 @@ export default function Home() {
             <button className={activeTab === 'Yog' ? 'tab active' : 'tab'} onClick={() => setActiveTab('Yog')}><Sparkles size={18} /> {t('tabs.yog')}</button>
             <button className={activeTab === 'JsonData' ? 'tab active' : 'tab'} onClick={() => setActiveTab('JsonData')}><Database size={18} /> {t('tabs.jsonData')}</button>
             
-            <button onClick={handlePrint} className="submit-btn" style={{ marginTop: 'auto', padding: '0.75rem', background: 'var(--text-muted)' }}>
+            <button onClick={handlePrint} className="submit-btn" style={{ marginLeft: 'auto', padding: '0.75rem', background: 'var(--text-muted)', flexShrink: 0 }}>
               {isPrinting ? 'Preparing PDF...' : 'Print Report'}
             </button>
           </div>
         )}
 
         {/* Content Area */}
-        <div className="glass-card display-card" style={{ gridColumn: data ? 'span 3' : '1 / -1' }}>
+        <div className="glass-card display-card">
           {data ? (
             <div className="tab-content">
               {(activeTab === 'D1' || isPrinting) && (
-                <div className={isPrinting ? 'print-section' : ''}>
-                  {isPrinting && <h2 className="print-only-heading">D-1 Chart</h2>}
-                  <KundliChart data={{ lagna: data.lagna, houses: data.houses }} />
+                  <div className={isPrinting ? 'print-section' : ''}>
+                    {isPrinting && <h2 className="print-only-heading">D-1 Chart</h2>}
+                    <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '2rem', justifyContent: 'center' }}>
+                       <div style={{ flex: '1 1 300px', maxWidth: '450px', width: '100%' }}>
+                          <h3 style={{ textAlign: 'center', margin: '0 0 1rem 0', color: 'var(--primary)', fontSize: '1.2rem' }}>D-1 (Rasi)</h3>
+                          <KundliChart data={{ lagna: data.lagna, houses: data.houses }} />
+                       </div>
+                       <div className="desktop-only" style={{ flex: '1 1 300px', maxWidth: '450px', width: '100%' }}>
+                          <h3 style={{ textAlign: 'center', margin: '0 0 1rem 0', color: 'var(--primary)', fontSize: '1.2rem' }}>D-9 (Navamsha)</h3>
+                          <KundliChart data={{ lagna: data.d9Lagna, houses: data.d9Houses }} />
+                       </div>
+                    </div>
                   <div style={{ overflowX: 'auto', marginTop: '2rem' }}>
                     <table className="details-table" style={{ minWidth: '600px' }}>
                       <thead style={{ background: 'var(--text-muted)', color: 'var(--background)' }}>
@@ -728,7 +737,7 @@ export default function Home() {
                             <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)' }}>
                               <td style={isSpecial ? { color: '#3b82f6', fontSize: '0.85em' } : {}}><strong>{p.name}</strong> {p.retrograde ? <span style={{ color: '#cc0000' }}>(R)</span> : ''}</td>
                               <td>{formatDMS(p.longitude)}</td>
-                              <td>{(p.speed > 0 ? '+' : '')}{p.speed.toFixed(3)}°/d</td>
+                              <td>{(p.speed > 0 ? '+' : '')}{p.speed.toFixed(3)}Ã‚Â°/d</td>
                               <td>{p.rasi.name} ({formatDMS(p.rasi.degreesInSign)})</td>
                               <td>{p.nakshatra.name}</td>
                               <td>{p.nakshatra.pada}</td>
@@ -765,7 +774,7 @@ export default function Home() {
                           >
                             {DIVISIONAL_CHARTS_INFO.map(c => (
                               <option key={c.key} value={c.key}>
-                                {c.key} — {c.name} (÷{c.division})
+                                {c.key} Ã¢â‚¬â€ {c.name} (ÃƒÂ·{c.division})
                               </option>
                             ))}
                           </select>
@@ -784,7 +793,7 @@ export default function Home() {
                             gap: '0.75rem',
                             alignItems: 'flex-start'
                           }}>
-                            <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>📜</span>
+                            <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>Ã°Å¸â€œÅ“</span>
                             <div>
                               <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--primary)', marginBottom: '0.25rem' }}>
                                 {info.name} ({info.key})
@@ -850,7 +859,7 @@ export default function Home() {
                                   <td>{formatDMS(deg)}</td>
                                   <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getDivSignName(divSign)}</td>
                                   <td>{part + 1}/{div}</td>
-                                  <td style={{ color: devta === '—' ? 'var(--text-muted)' : '#C9A86A', fontWeight: devta !== '—' ? 600 : 400 }}>{devta}</td>
+                                  <td style={{ color: devta === 'Ã¢â‚¬â€' ? 'var(--text-muted)' : '#C9A86A', fontWeight: devta !== 'Ã¢â‚¬â€' ? 600 : 400 }}>{devta}</td>
                                   {div === 60 && <td style={{ color: getD60Nature(sIdx, deg) === 'Benefic' ? '#10b981' : '#ef4444', fontWeight: 600 }}>{getD60Nature(sIdx, deg)}</td>}
                                 </tr>
                               );
@@ -895,7 +904,7 @@ export default function Home() {
               {(activeTab === 'Dasha' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>
                   {isPrinting && <h2 className="print-only-heading">Vimshottari Dasha</h2>}
-                  <DashaTab dashas={data.dasha} />
+                  <DashaTab defaultDashas={data.dasha} chartData={data} />
                 </div>
               )}
               {(activeTab === 'TaraNirnay' || isPrinting) && (
@@ -1014,10 +1023,10 @@ export default function Home() {
                               <option value="abroad">When will I move abroad?</option>
                               <option value="health">When will my health improve?</option>
                             </select>
-                            {timingQuestion === 'job' && <span style={{ color: '#FACC15', fontSize: '1.2rem' }}>💼</span>}
-                            {timingQuestion === 'wealth' && <span style={{ color: '#22C55E', fontSize: '1.2rem' }}>💰</span>}
-                            {timingQuestion === 'goodTime' && <span style={{ color: '#EAB308', fontSize: '1.2rem' }}>🌟</span>}
-                            {['marriage', 'abroad', 'health'].includes(timingQuestion || '') && <span style={{ color: '#EF4444', fontSize: '1.2rem' }}>❌</span>}
+                            {timingQuestion === 'job' && <span style={{ color: '#FACC15', fontSize: '1.2rem' }}>Ã°Å¸â€™Â¼</span>}
+                            {timingQuestion === 'wealth' && <span style={{ color: '#22C55E', fontSize: '1.2rem' }}>Ã°Å¸â€™Â°</span>}
+                            {timingQuestion === 'goodTime' && <span style={{ color: '#EAB308', fontSize: '1.2rem' }}>Ã°Å¸Å’Å¸</span>}
+                            {['marriage', 'abroad', 'health'].includes(timingQuestion || '') && <span style={{ color: '#EF4444', fontSize: '1.2rem' }}>Ã¢ÂÅ’</span>}
                             
                             <button 
                               onClick={() => setSubmittedTimingQuestion(timingQuestion)}
@@ -1139,6 +1148,8 @@ export default function Home() {
     </main>
   );
 }
+
+
 
 
 

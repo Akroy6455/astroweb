@@ -124,7 +124,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: {
     formData.append('lon', tLon);
     formData.append('tzOffset', tTz);
     
-    getKundliData(formData).then(setTransitData).catch(console.error);
+    getKundliData(formData).then(r => setTransitData(r?.__success ? JSON.parse(r.__success) : r)).catch(console.error);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -132,8 +132,8 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: {
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     try {
-      const res = await getKundliData(formData);
-      setTransitData(res);
+      const resData = await getKundliData(formData);
+      setTransitData(resData?.__success ? JSON.parse(resData.__success) : resData);
     } catch (err: any) {
       alert(err.message);
     }
@@ -609,7 +609,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: {
                         formData.append('ayanamsha', ayanamsha);
 
                         const newData = await getKundliData(formData);
-                        setTransitData(newData);
+                        setTransitData(newData?.__success ? JSON.parse(newData.__success) : newData);
                       }
                   } catch (e: any) {
                     alert(e.message);

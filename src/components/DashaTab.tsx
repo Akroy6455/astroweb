@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { getPdAuspiciousness, getPdAuspiciousnessCategory } from '@/lib/pd_matrix';
+import { calculateVimshottariDasha } from '@/lib/dasha';
 
 interface DashaPeriod {
   planet: string;
@@ -12,7 +13,8 @@ interface DashaPeriod {
 }
 
 interface DashaTabProps {
-  dashas: DashaPeriod[];
+  defaultDashas: DashaPeriod[];
+  chartData?: any;
 }
 
 function formatDate(isoString: string) {
@@ -20,13 +22,48 @@ function formatDate(isoString: string) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export function DashaTab({ dashas }: DashaTabProps) {
+export function DashaTab({ defaultDashas, chartData }: DashaTabProps) {
   const [expandedMD, setExpandedMD] = useState<string | null>(null);
   const [expandedAD, setExpandedAD] = useState<string | null>(null);
+  const [seedOption, setSeedOption] = useState<string>('Moon');
 
-  if (!dashas || dashas.length === 0) {
-    return <div className="p-4 text-gray-500">No Dasha data available.</div>;
-  }
+  const dashas = React.useMemo(() => {
+    if (!chartData || !chartData.birthDate) return defaultDashas;
+    
+    let seedLongitude = 0;
+    const moonPos = chartData.positions.find((p: any) => (p.name || p.planet) === 'Moon');
+    const moonLon = moonPos ? moonPos.longitude : 0;
+    
+    if (seedOption === 'Moon') {
+       return defaultDashas;
+    } else if (seedOption === 'D1 Lagna') {
+       seedLongitude = chartData.lagna?.longitude || 0;
+    } else if (seedOption === 'Kshema Tara (4th)') {
+       seedLongitude = (moonLon + 3 * (360/27)) % 360;
+    } else if (seedOption === 'Utpanna Tara (5th)') {
+       seedLongitude = (moonLon + 4 * (360/27)) % 360;
+    } else if (seedOption === 'Aadhana Tara (7th)') {
+       seedLongitude = (moonLon + 6 * (360/27)) % 360;
+    } else if (seedOption === 'D9 Lagna') {
+       seedLongitude = ((chartData.lagna?.longitude || 0) * 9) % 360;
+    } else if (seedOption.startsWith('D9 ')) {
+       const pName = seedOption.replace('D9 ', '');
+       const pos = chartData.positions.find((p: any) => (p.name || p.planet) === pName);
+       seedLongitude = pos ? (pos.longitude * 9) % 360 : 0;
+    } else {
+       const pos = chartData.positions.find((p: any) => (p.name || p.planet) === seedOption);
+       seedLongitude = pos ? pos.longitude : 0;
+    }
+    
+    const birthDate = new Date(chartData.birthDate);
+    return calculateVimshottariDasha(seedLongitude, birthDate, chartData.positions, chartData.houses);
+  }, [defaultDashas, chartData, seedOption]);
+
+  // Conditions info
+  let conditionText = '';
+  if (seedOption === 'Kshema Tara (4th)') conditionText = 'Condition: Use when Moon is in 2nd or 6th house.';
+  else if (seedOption === 'Utpanna Tara (5th)') conditionText = 'Condition: Use when Moon is in 6th or 11th house.';
+  else if (seedOption === 'Aadhana Tara (7th)') conditionText = 'Condition: Use when Moon is in 8th or 12th house.';
 
   const toggleMD = (planet: string) => {
     if (expandedMD === planet) {
@@ -57,8 +94,53 @@ export function DashaTab({ dashas }: DashaTabProps) {
     }
   };
 
+  if (!dashas || dashas.length === 0) {
+    return <div className="p-4 text-gray-500">No Dasha data available.</div>;
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {chartData && (
+        <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="form-group" style={{ marginBottom: 0, flex: '1 1 300px' }}>
+            <label style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>Vimshottari Seed Nakshatra</label>
+            <select
+              value={seedOption}
+              onChange={(e) => setSeedOption(e.target.value)}
+              style={{ padding: '0.65rem 1rem', width: '100%', fontSize: '0.95rem', background: 'var(--card-bg)', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              <option value="Moon">Moon (Default)</option>
+              <option value="D1 Lagna">D1 Lagna</option>
+              <option value="Kshema Tara (4th)">Kshema Tara (4th)</option>
+              <option value="Utpanna Tara (5th)">Utpanna Tara (5th)</option>
+              <option value="Aadhana Tara (7th)">Aadhana Tara (7th)</option>
+              <option value="Sun">Sun</option>
+              <option value="Mars">Mars</option>
+              <option value="Mercury">Mercury</option>
+              <option value="Jupiter">Jupiter</option>
+              <option value="Venus">Venus</option>
+              <option value="Saturn">Saturn</option>
+              <option value="Rahu">Rahu</option>
+              <option value="Ketu">Ketu</option>
+              <option value="D9 Lagna">D9 Lagna</option>
+              <option value="D9 Sun">D9 Sun</option>
+              <option value="D9 Moon">D9 Moon</option>
+              <option value="D9 Mars">D9 Mars</option>
+              <option value="D9 Mercury">D9 Mercury</option>
+              <option value="D9 Jupiter">D9 Jupiter</option>
+              <option value="D9 Venus">D9 Venus</option>
+              <option value="D9 Saturn">D9 Saturn</option>
+              <option value="D9 Rahu">D9 Rahu</option>
+              <option value="D9 Ketu">D9 Ketu</option>
+            </select>
+          </div>
+          {conditionText && (
+            <div style={{ flex: '1 1 300px', fontSize: '0.85rem', color: 'var(--primary)', fontStyle: 'italic', padding: '0.5rem', borderLeft: '3px solid var(--primary)' }}>
+              {conditionText}
+            </div>
+          )}
+        </div>
+      )}
       <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '1rem' }}>
         Vimshottari Dasha (120 Years)
       </h3>
