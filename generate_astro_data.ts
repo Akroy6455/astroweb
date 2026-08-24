@@ -1,4 +1,4 @@
-import sweph from 'sweph';
+import * as sweph from 'sweph';
 import path from 'path';
 import fs from 'fs';
 

@@ -5,9 +5,8 @@ const nextConfig: NextConfig = {
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   serverExternalPackages: ['sweph'],
   outputFileTracingIncludes: {
-    '/**': [
+    '/': [
       './ephe/**/*',
-      './node_modules/sweph/prebuilds/**/*',
     ],
   },
 };

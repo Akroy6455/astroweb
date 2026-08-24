@@ -1,41 +1,9 @@
-'use server';
+import re
 
-import { calculateChart, calculateTaraNirnayData } from '@/lib/astrology';
-import { DateTime } from 'luxon';
-import fs from 'fs';
-import path from 'path';
+with open('src/app/actions.ts', 'r', encoding='utf-8') as f:
+    content = f.read()
 
-let citiesCache: any[] | null = null;
-
-export async function searchCities(query: string) {
-  if (!query || query.length < 2) return [];
-  
-  if (!citiesCache) {
-    try {
-      const citiesPath = path.join(process.cwd(), 'src', 'lib', 'cities.json');
-      const fileContent = fs.readFileSync(citiesPath, 'utf8');
-      citiesCache = JSON.parse(fileContent);
-    } catch (err) {
-      console.error('Failed to load cities.json', err);
-      return [];
-    }
-  }
-
-  const q = query.toLowerCase();
-  // Filter by matching city name, prioritizing exact startsWith
-  return citiesCache!
-    .filter(c => c[0].toLowerCase().startsWith(q) || c[0].toLowerCase().includes(q))
-    .slice(0, 15)
-    .map(c => ({
-      name: c[0],
-      admin1: c[1],
-      countryCode: c[2],
-      lat: c[3],
-      lon: c[4],
-      tz: c[5]
-    }));
-}
-
+new_getkundlidata = '''
 export async function getKundliData(formData: FormData) {
   try {
     const dateStr = formData.get('date') as string;
@@ -88,32 +56,10 @@ export async function getKundliData(formData: FormData) {
     return { __error: err.message, stack: err.stack };
   }
 }
+'''
 
-export async function getTaraNirnayData(chartData: any, customWeights?: any) {
-  return calculateTaraNirnayData(chartData, customWeights);
-}
+pattern = r"export async function getKundliData\(formData: FormData\).*?\} catch \(err: any\) \{.*?return \{ __error: err\.message, stack: err\.stack \};\n  \}\n\}"
+content = re.sub(pattern, new_getkundlidata.strip(), content, flags=re.DOTALL)
 
-
-import sweph from 'sweph';
-import { findNextTransit } from '@/lib/transit_finder';
-
-export async function findNextTransitEvent(
-  planetName: string,
-  offsetDeg: number,
-  ranges: [number, number][],
-  isPoint: boolean,
-  currentDateIso: string,
-  direction: number = 1,
-  ayanamsha: string = 'Raman'
-) {
-  const date = new Date(currentDateIso);
-  const jd = sweph.julday(
-    date.getUTCFullYear(),
-    date.getUTCMonth() + 1,
-    date.getUTCDate(),
-    date.getUTCHours() + date.getUTCMinutes() / 60,
-    sweph.constants.SE_GREG_CAL
-  );
-  
-  return await findNextTransit(planetName, offsetDeg, ranges, jd, isPoint, direction, ayanamsha);
-}
+with open('src/app/actions.ts', 'w', encoding='utf-8') as f:
+    f.write(content)

@@ -506,3 +506,10 @@ function calculateGoodTiming(
 }
 
 // 💼 Job Timing 💼
+export interface CustomTransitRule { id: string; target: string; relation: string; referenceType: string; referenceValue: number | string; multiplier: number; }
+
+export interface CustomDashaRule { id: string; target: string; level: string; multiplier: number; }
+
+export interface CustomQuestion { id: string; name: string; positionType?: string; transitRules: CustomTransitRule[]; dashaRules: CustomDashaRule[]; }
+
+export const SAHAMA_NAMES = ['Punya', 'Vidya', 'Yashas', 'Mitra', 'Mahatmya', 'Asha', 'Samartha', 'Bhratri', 'Gaurava', 'Pitri', 'Rajya', 'Matri', 'Putra', 'Jivita', 'Karma', 'Roga', 'Kala', 'Shastra', 'Bandhu', 'Mrityu', 'Jadya', 'Karya', 'Vyadhi', 'Vinaasha', 'Paradara', 'Paradesha', 'Artha', 'Paradravya', 'Preeti', 'Yuddha', 'Apamrityu', 'Jalapatana', 'Bandhana', 'Apavada', 'Utthana', 'Gaurava', 'Karyasiddhi', 'Vivaha', 'Sutika', 'Santapa', 'Shraddha', 'Priti', 'Jadya', 'Vyapar', 'Shatru', 'Jalapayana', 'Bandhana'];

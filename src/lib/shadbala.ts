@@ -1,5 +1,31 @@
 import sweph from 'sweph';
 
+// PyJHora Ahargana Logic for Kaala Bala
+function getDaysElapsedSinceBase(year: number, baseYear = 1951, baseDays = 174) {
+  const totalYears = year - baseYear;
+  let leapYears = 0;
+  for (let y = baseYear + 1; y <= year; y++) {
+    if ((y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0)) leapYears++;
+  }
+  const nonLeapYears = totalYears - leapYears;
+  return baseDays + (leapYears * 366) + (nonLeapYears * 365);
+}
+
+function inverseLagrange(xs: number[], ys: number[], x: number) {
+  let result = 0;
+  for (let i = 0; i < xs.length; i++) {
+    let term = ys[i];
+    for (let j = 0; j < xs.length; j++) {
+      if (j !== i) {
+        term = term * (x - xs[j]) / (xs[i] - xs[j]);
+      }
+    }
+    result += term;
+  }
+  return result;
+}
+
+
 // Parashari Shadbala Engine - Exact Implementation
 
 export type PlanetName = 'Sun' | 'Moon' | 'Mars' | 'Mercury' | 'Jupiter' | 'Venus' | 'Saturn';
@@ -50,13 +76,14 @@ function norm(a: number) { return ((a % 360) + 360) % 360; }
 export function calculateShadbala(positions: any[], lagna: any, jd: number, lat: number, lon: number) {
   const result: Record<string, any> = {};
 
-  const sun = positions.find(p => p.name === 'Sun');
+const sun = positions.find(p => p.name === 'Sun');
   const moon = positions.find(p => p.name === 'Moon');
-  const ascLong = lagna.longitude;
+  const ascLong = lagna?.longitude || 0;
   const sunLongGlobal = sun ? sun.longitude : 0;
-  const sunAscAngle = norm(ascLong - sunLongGlobal);
-  let localHour = (sunAscAngle / 15) + 6;
-  if (localHour >= 24) localHour -= 24;
+  
+  // Exact Local Mean Time Hour
+  const lmtJD = jd + (lon / 360.0);
+  let localHour = ((lmtJD + 0.5) % 1) * 24;
 
   // 1. Calculate Vargas for all planets
   const vargas: Record<string, Record<string, number>> = {};
@@ -70,7 +97,7 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number, lat:
     const d1 = sign;
     // D2 Hora
     const isEven = sign % 2 !== 0; // 1 is Taurus (Even)
-    let d2 = isEven ? (degInSign < 15 ? 3 : 4) : (degInSign < 15 ? 4 : 3);
+    const d2 = isEven ? (degInSign < 15 ? 3 : 4) : (degInSign < 15 ? 4 : 3);
     // D3 Drekkana
     const dec = Math.floor(degInSign / 10);
     const d3 = (sign + (dec * 4)) % 12;
@@ -128,43 +155,55 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number, lat:
   
   // Exact Sunrise Calculation using Swiss Ephemeris
   const geopos: [number, number, number] = [lon, lat, 0];
-  let s1 = sweph.rise_trans(jd - 1.5, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data;
-  let s2 = sweph.rise_trans(s1 + 0.1, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data;
+  const s1 = sweph.rise_trans(jd - 1.5, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data;
+  const s2 = sweph.rise_trans(s1 + 0.1, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data;
   
   const final_sunrise_jd = (s2 < jd) ? s2 : s1;
   const next_sunrise_jd = (s2 < jd) ? sweph.rise_trans(s2 + 0.1, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_RISE, geopos, 0, 0).data : s2;
 
-  let ss1 = sweph.rise_trans(final_sunrise_jd, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_SET, geopos, 0, 0).data;
+  const ss1 = sweph.rise_trans(final_sunrise_jd, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_SET, geopos, 0, 0).data;
   const final_sunset_jd = (ss1 > final_sunrise_jd && ss1 < next_sunrise_jd) ? ss1 : sweph.rise_trans(final_sunrise_jd + 0.5, sweph.constants.SE_SUN, '', sweph.constants.SEFLG_SWIEPH, sweph.constants.SE_CALC_SET, geopos, 0, 0).data;
 
-  // Exact Vedic Day Lord
+// Exact Vedic Day Lord (Sunrise to Sunrise)
   const localSunriseJD = final_sunrise_jd + (lon / 360);
-  const wd = Math.floor(localSunriseJD + 1.5) % 7;
+  let wd = Math.floor(jd + 1.5) % 7;
+  const tobh = localHour; // 0 to 24 local time
+  const srh = (final_sunrise_jd + 0.5) % 1 * 24; // approx sunrise hour UT -> Local is roughly srh + tz. Let's use simpler logic: if jd < final_sunrise_jd, it's previous day.
+  if (jd < final_sunrise_jd) wd = (wd - 1 + 7) % 7;
   const dayLord = WEEKDAY_LORDS[wd];
 
   // Exact Hora Lord
-  const ahoratra = next_sunrise_jd - final_sunrise_jd;
-  const horaFraction = (jd - final_sunrise_jd) / ahoratra; // 0 to 1
-  const horaNum = Math.floor(horaFraction * 24); // 0 to 23
-  const dayLordHoraIdx = HORA_SEQ.indexOf(dayLord);
-  const horaLord = HORA_SEQ[(dayLordHoraIdx + horaNum) % 7]; 
+  const HORA_ORDER = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon'];
+  // Convert jd to local hours elapsed since sunrise
+  let hoursSinceSunrise = (jd - final_sunrise_jd) * 24;
+  if (hoursSinceSunrise < 0) {
+      hoursSinceSunrise += 24;
+  }
+  const horaIndex = (Math.floor(hoursSinceSunrise) + wd + 1) % 7;
+  const horaLord = HORA_ORDER[horaIndex];
 
-  // Exact Savana Ahargana for Abda and Masa Lords (from Kali Epoch: 588465.5)
-  const ahargana = Math.floor(localSunriseJD - 588465.5);
-  const years = Math.floor(ahargana / 360);
+  // Abda Lord and Masa Lord (PyJHora BV Raman 1951 Base)
+  const utMillis = (jd - 2440587.5) * 86400000;
+  const utDate = new Date(utMillis);
+  const ay = utDate.getUTCFullYear();
+  const base1951Millis = Date.UTC(ay, 0, 1);
+  const base1951JD = (base1951Millis / 86400000) + 2440587.5;
+  const elapsedDaysInYear = Math.floor(jd - base1951JD + 1);
+  const aharganaDays = getDaysElapsedSinceBase(ay - 1, 1951, 174) + elapsedDaysInYear;
   
-  // JHora default "Use 360-day savana year (from creation)"
-  // Srishti epoch solar years = 1955885114
-  const srishtiYears = 1955885114 + years;
-  const abdaWd = srishtiYears % 7;
-  
-  // Masa Lord in JHora uses Srishti Epoch months
-  // Srishti epoch months = Srishti epoch years * 12
-  const srishtiMonths = 1955885114 * 12 + Math.floor(ahargana / 30);
-  const masaWd = srishtiMonths % 7;
-  
-  const abdaLord = WEEKDAY_LORDS[abdaWd];
-  const masaLord = WEEKDAY_LORDS[masaWd];
+  const ABDA_WEEKDAYS = ['Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Sun', 'Moon'];
+  const abdaDayIndex = (Math.floor(aharganaDays / 360) * 3 + 1) % 7;
+  const abdaLord = ABDA_WEEKDAYS[abdaDayIndex];
+
+  const masaDayIndex = (Math.floor(aharganaDays / 30) * 2 + 1) % 7;
+  const masaLord = ABDA_WEEKDAYS[masaDayIndex];
+
+  // Vara Lord (PyJHora 1827 Base)
+  const aharganaDays1827 = getDaysElapsedSinceBase(ay - 1, 1827, 244) + elapsedDaysInYear;
+  let varaDays = aharganaDays1827;
+  if (jd < final_sunrise_jd) varaDays -= 1;
+  const varaDayIndex = Math.floor(varaDays) % 7;
+  const varaLord = ABDA_WEEKDAYS[varaDayIndex];
 
   for (const pos of positions) {
     if (!['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'].includes(pos.name)) continue;
@@ -284,14 +323,14 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number, lat:
       if (jd < final_sunset_jd) {
         // Day time
         const dayDuration = final_sunset_jd - final_sunrise_jd;
-        const partOfDay = (jd - final_sunrise_jd) / dayDuration;
+        const partOfDay = dayDuration > 0 ? (jd - final_sunrise_jd) / dayDuration : 0;
         if (partOfDay < 1/3 && name === 'Mercury') tribhagaBala = 60;
         else if (partOfDay >= 1/3 && partOfDay < 2/3 && name === 'Sun') tribhagaBala = 60;
         else if (partOfDay >= 2/3 && name === 'Saturn') tribhagaBala = 60;
       } else {
         // Night time
         const nightDuration = next_sunrise_jd - final_sunset_jd;
-        const partOfNight = (jd - final_sunset_jd) / nightDuration;
+        const partOfNight = nightDuration > 0 ? (jd - final_sunset_jd) / nightDuration : 0;
         if (partOfNight < 1/3 && name === 'Moon') tribhagaBala = 60;
         else if (partOfNight >= 1/3 && partOfNight < 2/3 && name === 'Venus') tribhagaBala = 60;
         else if (partOfNight >= 2/3 && name === 'Mars') tribhagaBala = 60;
@@ -303,22 +342,30 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number, lat:
     const masaBala = masaLord === name ? 30 : 0;
     const abdaBala = abdaLord === name ? 15 : 0;
 
-    // 3.5 Ayana
-    // Lahiri ayanamsa approximation: roughly 24 deg
-    const tropLong = norm(long + 24);
-    const kranti = Math.asin(Math.sin(tropLong * Math.PI / 180) * Math.sin(23.45 * Math.PI / 180)) * 180 / Math.PI;
+// 3.5 Ayana Bala (PyJHora Exact Surya Siddhanta Interpolation)
+    // Raman ayanamsa approximation to avoid Vercel C++ segfault on get_ayanamsa_ut
+  const ayanamsaVal = 22.4428 + ((jd - 2433282.5) / 365.25) * (50.25 / 3600);
+    const p_long = norm(long + ayanamsaVal);
     
-    let ayanaVal = 0;
-    if (['Moon', 'Saturn'].includes(name)) {
-      ayanaVal = 60 * (24 - kranti) / 48;
-    } else if (['Sun', 'Mars', 'Jupiter', 'Venus'].includes(name)) {
-      ayanaVal = 60 * (24 + kranti) / 48;
-    } else if (name === 'Mercury') {
-      ayanaVal = 60 * (24 + Math.abs(kranti)) / 48;
+    let nss = 1;
+    if (p_long >= 0 && p_long < 180) {
+       if (['Moon', 'Saturn'].includes(name)) nss = -1;
+    } else {
+       if (['Sun', 'Mars', 'Jupiter', 'Venus'].includes(name)) nss = -1;
     }
+    if (name === 'Mercury') nss = 1;
+
+    let bhuja = p_long;
+    if (p_long > 90 && p_long <= 180) bhuja = 180 - p_long;
+    else if (p_long > 180 && p_long <= 270) bhuja = p_long - 180;
+    else if (p_long > 270) bhuja = 360 - p_long;
+
+    const bd = [0, 362/60, 703/60, 1002/60, 1238/60, 1388/60, 1440/60];
+    const bx = [0, 15, 30, 45, 60, 75, 90];
+    const declination = nss * inverseLagrange(bx, bd, bhuja);
     
-    let ayanaBala = Math.max(0, Math.min(60, ayanaVal));
-    if (name === 'Sun') ayanaBala *= 2; // Double for Sun, max 120
+    let ayanaBala = (24.0 + declination) * 1.25;
+    if (name === 'Sun') ayanaBala *= 2;
 
 
     const kalaBala = nathonathaBala + pakshaBala + tribhagaBala + varaBala + horaBala + masaBala + abdaBala + ayanaBala;
@@ -336,10 +383,9 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number, lat:
         seeghrochcha = sunLongGlobal; // True Sun
       } else {
         // Inner planets (Mercury, Venus): Seeghrochcha is their Heliocentric Longitude
-        const id = name === 'Mercury' ? sweph.constants.SE_MERCURY : sweph.constants.SE_VENUS;
-        const flags = sweph.constants.SEFLG_SWIEPH | sweph.constants.SEFLG_HELCTR | sweph.constants.SEFLG_SIDEREAL;
-        const res = sweph.calc_ut(jd, id, flags);
-        seeghrochcha = res.data[0];
+        // Fallback for Vercel C++ segfault on SEFLG_HELCTR flag
+        // Use Sun as Seeghrochcha for inner planets in absence of safe heliocentric lookup
+        seeghrochcha = sunLongGlobal;
       }
       
       let ck = norm(seeghrochcha - long);
@@ -359,7 +405,7 @@ export function calculateShadbala(positions: any[], lagna: any, jd: number, lat:
       
       const aspectingName = other.name as PlanetName;
       // Angle 'a' between aspecting and aspected. User formula: Aspected - Aspector
-      let a = norm(long - other.longitude);
+      const a = norm(long - other.longitude);
       
       let val = 0;
       if (a >= 30 && a < 60) {

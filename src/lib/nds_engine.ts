@@ -17,7 +17,7 @@ import {
   Sign
 } from './yoga_engine/constants';
 import { YogaState } from './yoga_engine/types';
-import { TimingOptions } from './timing_engine';
+import { TimingOptions, CustomQuestion } from './timing_engine';
 
 function isExalted(planet: Planet, sign: Sign): boolean {
   if (planet === 'Rahu' && (sign === 'Taurus' || sign === 'Gemini')) return true;
@@ -48,6 +48,7 @@ export interface NDSWeights {
   sayanadiAwasthaMatrix?: number[][];
   version?: number;
   timingOptions?: TimingOptions;
+  customQuestions?: CustomQuestion[];
   // Module 1: Lordship
   lordHouse1: number;
   lordHouse2: number;

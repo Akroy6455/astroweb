@@ -406,7 +406,14 @@ export default function Home() {
     
     try {
       const formData = new FormData(e.currentTarget);
-      const res = await getKundliData(formData);
+      const resData = await getKundliData(formData);
+      
+      if (resData && ("__error" in resData ? resData.__error : undefined)) {
+        setError("SERVER ERROR: " + ("__error" in resData ? resData.__error : undefined));
+        return;
+      }
+      
+      const res = resData.__success ? JSON.parse(resData.__success) : resData;
       setData(res);
       setTaraNirnayData(null); // Clear cached TaraNirnay data for new chart
       
@@ -587,7 +594,7 @@ export default function Home() {
           />
           <div style={{ display: 'flex', gap: '0.5rem', flex: '1 1 200px' }}>
             <button type="submit" className="submit-btn" disabled={loading} style={{ padding: '0.6rem 1rem', flex: 2 }}>
-              {loading ? t('form.generating') : t('form.generate')}
+              {loading ? t('form.generating') : "Generate Chart (v3)"}
             </button>
             <button type="button" className="submit-btn save-btn" onClick={handleSaveProfileClick} style={{ padding: '0.6rem 1rem', flex: 1, backgroundColor: 'var(--border)', color: 'var(--foreground)' }} title="Save Profile">
               <Save size={18} />
@@ -1132,6 +1139,10 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
 
 
 

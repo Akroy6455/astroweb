@@ -2,6 +2,9 @@
   "name": "astro-web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,6 +12,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fusionstrings/swiss-eph": "^0.1.1",
     "@fusionstrings/swisseph-wasi": "^0.1.0",
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
@@ -23,7 +27,7 @@
     "next-mdx-remote": "^6.0.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sweph": "^2.10.3-5",
+    "sweph": "^2.10.3-7",
     "tz-lookup": "^6.1.25"
   },
   "devDependencies": {
