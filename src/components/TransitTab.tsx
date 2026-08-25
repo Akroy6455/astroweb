@@ -122,6 +122,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausStartDate, setAusStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [ausData, setAusData] = useState<any[]>([]);
   const [ausLoading, setAusLoading] = useState(false);
+    const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly'>('Hourly');
 
   const handleCalculateAuspicious = async () => {
     setAusLoading(true);
@@ -143,7 +144,32 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   };
 
 
-  // Form State
+  
+    const getChartData = () => {
+      if (ausZoom === 'Hourly') return ausData;
+      
+      const aggregated: any[] = [];
+      const interval = ausZoom === 'Daily' ? 24 : 168;
+      
+      for (let i = 0; i < ausData.length; i += interval) {
+        const chunk = ausData.slice(i, i + interval);
+        const avgScore = chunk.reduce((sum: number, p: any) => sum + p.score, 0) / chunk.length;
+        aggregated.push({
+          ...chunk[0],
+          score: Number(avgScore.toFixed(2)),
+          formattedTime: ausZoom === 'Daily' 
+            ? new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })
+            : `Week of ${new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })}`,
+          breakdown: null 
+        });
+      }
+      return aggregated;
+    };
+
+    const top11Auspicious = [...ausData].sort((a, b) => b.score - a.score).slice(0, 11);
+    const chartData = getChartData();
+
+    // Form State
   const [tDate, setTDate] = useState(new Date().toISOString().split('T')[0]);
   const [tTime, setTTime] = useState(new Date().toTimeString().slice(0, 5));
   const [tLat, setTLat] = useState('28.6139');
@@ -385,26 +411,77 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 {ausLoading ? 'Calculating...' : 'Generate 2-Month Chart'}
               </button>
             </div>
+
+            {ausData.length > 0 && (
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', alignItems: 'center' }}>
+                <label style={{ fontWeight: 600, color: 'var(--text)' }}>Chart Zoom:</label>
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg)', padding: '0.25rem', borderRadius: '8px' }}>
+                  {['Hourly', 'Daily', 'Weekly'].map((zoom) => (
+                    <button 
+                      key={zoom}
+                      onClick={() => setAusZoom(zoom as any)}
+                      style={{
+                        padding: '0.25rem 1rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: ausZoom === zoom ? 'var(--primary)' : 'transparent',
+                        color: ausZoom === zoom ? '#fff' : 'var(--text-muted)',
+                        fontWeight: ausZoom === zoom ? 600 : 400,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {zoom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {ausData.length > 0 && (
             <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', height: '500px' }}>
               <div style={{ overflowX: 'auto', width: '100%', height: '100%' }}>
-                <div style={{ width: `${Math.max(1200, ausData.length * 8)}px`, height: '100%' }}>
+                <div style={{ width: ausZoom === 'Hourly' ? `${Math.max(1200, ausData.length * 8)}px` : '100%', minWidth: '1000px', height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={ausData}>
+                    <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                      <XAxis dataKey="formattedTime" stroke="var(--text-muted)" tick={{ fontSize: 12 }} interval={48} />
+                      <XAxis dataKey="formattedTime" stroke="var(--text-muted)" tick={{ fontSize: 12 }} interval={ausZoom === "Hourly" ? 48 : "preserveStartEnd"} />
                       <YAxis stroke="var(--text-muted)" />
                       <Tooltip 
                         contentStyle={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px' }}
                         labelStyle={{ color: 'var(--primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}
-                        formatter={(value: any, name: any) => [value, name === 'score' ? 'Total Auspicious Score' : name]}
+                        formatter={(value: any, name: any, props: any) => [value, name === 'score' ? (ausZoom === 'Hourly' ? 'Total Auspicious Score' : 'Average Auspicious Score') : name]}
                       />
                       <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+              </div>
+            </div>
+          )}
+          {ausData.length > 0 && (
+            <div style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', marginTop: '2rem' }}>
+              <h4 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Top 11 Most Auspicious Hours</h4>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Rank</th>
+                      <th style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Date & Time</th>
+                      <th style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {top11Auspicious.map((point: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '0.75rem' }}>#{idx + 1}</td>
+                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>{new Date(point.time).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td style={{ padding: '0.75rem', color: 'var(--primary)', fontWeight: 'bold' }}>{point.score}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
