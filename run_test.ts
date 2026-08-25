@@ -1,0 +1,1 @@
+import { calculateChart, generateAuspiciousTimeSeries } from './src/lib/astrology'; const chartData = calculateChart(1990, 1, 1, 12, 28.6139, 77.2090, 0, 'Raman'); const result = generateAuspiciousTimeSeries(new Date().toISOString(), 28.6139, 77.2090, chartData); console.log(result[0]);

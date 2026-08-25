@@ -1,0 +1,1 @@
+import { calculateChart, generateAuspiciousTimeSeries } from './src/lib/astrology'; const chartData = calculateChart(1990, 1, 1, 12, 28.6139, 77.2090, 0, 'Raman'); console.log('has bav?', !!chartData?.ashtakavarga?.bav); const res = generateAuspiciousTimeSeries(new Date().toISOString(), 28.6139, 77.2090, chartData); console.log('length:', res.length);

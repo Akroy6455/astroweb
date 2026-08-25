@@ -432,8 +432,8 @@ export function calculateChart(year: number, month: number, day: number, hour: n
 
   // Calculate Ascendant (Lagna)
   const houses = sweph.houses_ex(jd, flag, lat, lon, 'P');
-  const points = (houses as any).points || (houses as any).data?.points;
-  const ascLongitude = points ? points[0] : 0;
+  const housePoints = (houses as any).points || (houses as any).data?.points;
+  const ascLongitude = housePoints ? housePoints[0] : 0;
   
   let lagna = null;
   let d9Lagna = null;
@@ -966,7 +966,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
   const points: any[] = [];
   const startDate = new Date(startDateISO);
   let currentDateTs = startDate.getTime();
-  const endDateTs = currentDateTs + (60 * 24 * 60 * 60 * 1000); // 60 days
+  const endDateTs = currentDateTs + (60 * 24 * 60 * 60 * 1000); 
 
   const transitPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   const planetIds: Record<string, number> = {
@@ -1040,8 +1040,8 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
 
     // Lagna transit calculation
         const houses = sweph.houses_ex(jd, flag, lat, lon, 'P');
-    const points = (houses as any).points || (houses as any).data?.points;
-    const ascLongitude = points ? points[0] : 0;
+    const housePoints = (houses as any).points || (houses as any).data?.points;
+    const ascLongitude = housePoints ? housePoints[0] : 0;
     const lagnaRasiIndex = Math.floor(ascLongitude / 30);
     const lagnaBavPoints = chartData.ashtakavarga.bav['Lagna'][lagnaRasiIndex] || 0;
     const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
