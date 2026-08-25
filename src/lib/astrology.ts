@@ -966,7 +966,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
   const points: any[] = [];
   const startDate = new Date(startDateISO);
   let currentDateTs = startDate.getTime();
-  const endDateTs = currentDateTs + (60 * 24 * 60 * 60 * 1000); 
+  const endDateTs = currentDateTs + (90 * 24 * 60 * 60 * 1000); 
 
   const transitPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   const planetIds: Record<string, number> = {

@@ -400,7 +400,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
           <div style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Auspicious Time Calculator</h3>
             <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.95rem' }}>
-              Calculates overall auspiciousness for a 2-month period based on Ashtakavarga transit scores and Navatara adjustments.
+              Calculates overall auspiciousness for a 3-month period based on Ashtakavarga transit scores and Navatara adjustments.
               Positions are evaluated every 1 hour.
             </p>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -409,7 +409,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 <input type="date" value={ausStartDate} onChange={e => setAusStartDate(e.target.value)} className="input" />
               </div>
               <button onClick={handleCalculateAuspicious} className="submit-btn" style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', height: 'fit-content' }}>
-                {ausLoading ? 'Calculating...' : 'Generate 2-Month Chart'}
+                {ausLoading ? 'Calculating...' : 'Generate 3-Month Chart'}
               </button>
             </div>
 
