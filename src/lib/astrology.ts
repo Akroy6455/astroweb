@@ -1045,7 +1045,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
     const lagnaRasiIndex = Math.floor(ascLongitude / 30);
     const lagnaBavPoints = chartData.ashtakavarga.bav['Lagna'][lagnaRasiIndex] || 0;
     const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
-    const lagnaMult = getNavataraMultiplier(lagnaNakIndex, natalLagnaNakIndex);
+    const lagnaMult = 1;
     
     const lagnaScore = lagnaBavPoints * lagnaMult;
     breakdown['Lagna'] = { bav: lagnaBavPoints, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
