@@ -108,9 +108,8 @@ export interface NDSWeights {
   mutualDistance12: number;
 
   // Module 4: Arudha
-  arudha11thAny: number;
-  arudha11thBenefic: number;
-  arudha12thAny: number;
+  arudha11thAspectOrPosition: number;
+  arudhaKarakamsa12thAspectOrPosition: number;
   papaKartari: number;        
   shubhaKartari: number;
 
@@ -325,9 +324,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   mutualDistance10: 70,
   mutualDistance11: 80,
   mutualDistance12: -60,
-  arudha11thAny: 60,
-  arudha11thBenefic: 90,
-  arudha12thAny: -50,
+  arudha11thAspectOrPosition: 50,
+  arudhaKarakamsa12thAspectOrPosition: -50,
   papaKartari: -100,
   shubhaKartari: 100,
   lajita: -15,
@@ -847,111 +845,51 @@ export function getArudhaModifiers(planet: Planet, yogaState: YogaState, alSignI
   const conditions: AppliedCondition[] = [];
   const planetSignIndex = yogaState.planets[planet].position.rasi.index;
 
-  const isBenefic = isNaturalBenefic(planet);
-  const isMalefic = isNaturalMalefic(planet);
+  // Calculate KL (Karakamsa Lagna)
+  const charaKarakas = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'] as Planet[];
+  let maxDeg = -1;
+  let atmakaraka: Planet = 'Sun';
+  for (const p of charaKarakas) {
+    if (yogaState.planets[p]) {
+      const deg = yogaState.planets[p].position.rasi.degreesInSign;
+      if (deg > maxDeg) {
+        maxDeg = deg;
+        atmakaraka = p;
+      }
+    }
+  }
+  const klSignIndex = yogaState.planets[atmakaraka].position.navamsha.index;
 
   // 11th from AL
   const sign11th = (alSignIndex + 10) % 12;
   const isPlaced11th = planetSignIndex === sign11th;
-  
-  // Convert 0-11 sign index to 1-12 house index for hasVedicAspect. 
-  // It expects sourceHouse and targetHouse.
   const isAspecting11th = hasVedicAspect(planet, (planetSignIndex + 1) as House, (sign11th + 1) as House);
 
   if (isPlaced11th || isAspecting11th) {
-    score += w.arudha11thAny;
-    const desc = isPlaced11th ? 'Placed 11th from Arudha Lagna' : 'Aspects 11th from Arudha Lagna';
-    conditions.push({ key: 'arudha11thAny', name: desc, value: w.arudha11thAny });
-    if (isBenefic) {
-      score += w.arudha11thBenefic;
-      const bDesc = isPlaced11th ? 'Benefic in 11th from AL' : 'Benefic aspects 11th from AL';
-      conditions.push({ key: 'arudha11thBenefic', name: bDesc, value: w.arudha11thBenefic });
-    }
+    score += w.arudha11thAspectOrPosition;
+    const desc = isPlaced11th ? 'Posited in 11th from AL' : 'Aspects 11th from AL';
+    conditions.push({ key: 'arudha11thAspectOrPosition', name: desc, value: w.arudha11thAspectOrPosition });
   }
 
   // 12th from AL
   const al12 = (alSignIndex + 11) % 12;
-  if (al12 === planetSignIndex) {
-    score += w.arudha12thAny;
-    conditions.push({ key: 'arudha12thAny', name: 'Placed 12th from Arudha Lagna', value: w.arudha12thAny });
-  }
+  const isPlaced12thAL = planetSignIndex === al12;
+  const isAspecting12thAL = hasVedicAspect(planet, (planetSignIndex + 1) as House, (al12 + 1) as House);
 
-  const signOccupants: Map<number, Planet[]> = new Map();
-  for (const p of PLANETS) {
-    const sIdx = yogaState.planets[p as Planet].position.rasi.index;
-    if (!signOccupants.has(sIdx)) signOccupants.set(sIdx, []);
-    signOccupants.get(sIdx)!.push(p as Planet);
-  }
+  // 12th from KL
+  const kl12 = (klSignIndex + 11) % 12;
+  const isPlaced12thKL = planetSignIndex === kl12;
+  const isAspecting12thKL = hasVedicAspect(planet, (planetSignIndex + 1) as House, (kl12 + 1) as House);
 
-  const sign3rd = (alSignIndex + 2) % 12;
-  const sign6th = (alSignIndex + 5) % 12;
-
-  const maleficsIn3rd = (signOccupants.get(sign3rd) ?? []).filter(isNaturalMalefic);
-  const maleficsIn6th = (signOccupants.get(sign6th) ?? []).filter(isNaturalMalefic);
-
-  // Removed arudha3rdMalefic and arudha6thMalefic
-
-  // Kartari Yoga (Degree based)
-  const currentLon = yogaState.planets[planet].position.longitude;
-  
-  let minDiffBehind = 31;
-  let closestBehind: Planet | null = null;
-  
-  let minDiffAhead = 31;
-  let closestAhead: Planet | null = null;
-  
-  let minDiffConjunct = 6;
-  let closestConjunct: Planet | null = null;
-
-  for (const p of PLANETS) {
-    if (p === planet) continue;
-    const pLon = yogaState.planets[p as Planet].position.longitude;
-    const diffBehind = (currentLon - pLon + 360) % 360;
-    const diffAhead = (pLon - currentLon + 360) % 360;
+  if (isPlaced12thAL || isAspecting12thAL || isPlaced12thKL || isAspecting12thKL) {
+    score += w.arudhaKarakamsa12thAspectOrPosition;
+    let desc = 'Influences 12th from AL or KL';
+    if (isPlaced12thAL) desc = 'Posited in 12th from AL';
+    else if (isAspecting12thAL) desc = 'Aspects 12th from AL';
+    else if (isPlaced12thKL) desc = 'Posited in 12th from KL';
+    else if (isAspecting12thKL) desc = 'Aspects 12th from KL';
     
-    const diffAbs = Math.min(diffBehind, diffAhead);
-    if (diffAbs <= 5) {
-      if (diffAbs < minDiffConjunct) {
-        minDiffConjunct = diffAbs;
-        closestConjunct = p as Planet;
-      }
-    }
-
-    if (diffBehind > 0 && diffBehind <= 30) {
-      if (diffBehind < minDiffBehind) {
-        minDiffBehind = diffBehind;
-        closestBehind = p as Planet;
-      }
-    }
-
-    if (diffAhead > 0 && diffAhead <= 30) {
-      if (diffAhead < minDiffAhead) {
-        minDiffAhead = diffAhead;
-        closestAhead = p as Planet;
-      }
-    }
-  }
-
-  const hasMaleficBehind = closestBehind ? isNaturalMalefic(closestBehind) : false;
-  const hasBeneficBehind = closestBehind ? isNaturalBenefic(closestBehind) : false;
-  
-  const hasMaleficAhead = closestAhead ? isNaturalMalefic(closestAhead) : false;
-  const hasBeneficAhead = closestAhead ? isNaturalBenefic(closestAhead) : false;
-
-  let isPapaKartari = hasMaleficBehind && hasMaleficAhead;
-  let isShubhaKartari = hasBeneficBehind && hasBeneficAhead;
-
-  if (closestConjunct === 'Saturn') isPapaKartari = true;
-  if (closestConjunct === 'Jupiter') isShubhaKartari = true;
-
-  if (isPapaKartari) {
-    score += w.papaKartari;
-    conditions.push({ key: 'papaKartari', name: 'Papa Kartari Yoga (Malefics closest within 30ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â° or Saturn closest conjunct)', value: w.papaKartari });
-  }
-  
-  if (isShubhaKartari) {
-    score += w.shubhaKartari;
-    conditions.push({ key: 'shubhaKartari', name: 'Shubha Kartari Yoga (Benefics closest within 30ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â° or Jupiter closest conjunct)', value: w.shubhaKartari });
+    conditions.push({ key: 'arudhaKarakamsa12thAspectOrPosition', name: desc, value: w.arudhaKarakamsa12thAspectOrPosition });
   }
 
   return { score, conditions };
