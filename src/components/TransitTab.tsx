@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import KundliChart from './KundliChart';
+import SouthIndianChart from './SouthIndianChart';
+import { calculateVedha, calculateLatta, Arrow } from '@/lib/vedhaLatta';
+import { getLatta, getVedhaNakshatras } from '@/lib/sbc_engine';
 import { formatDMS } from '@/lib/utils';
 import { getKundliData, findNextTransitEvent } from '@/app/actions';
 import yavanajatakaTransitSun from '@/data/yavanajataka_transit_sun.json';
@@ -90,9 +93,16 @@ for (let r = 0; r < 7; r++) {
   }
 }
 
-export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: { mainData: any, ayanamsha?: string, weights?: any }) {
+export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, showTransitVedha, showTransitLatta, chartStyle }: { mainData: any, ayanamsha?: string, weights?: any, showTransitVedha?: boolean, showTransitLatta?: boolean, chartStyle?: string }) {
   const [transitData, setTransitData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+    const [sbcShowNatalVedha, setSbcShowNatalVedha] = useState(false);
+  const [sbcShowTransitVedha, setSbcShowTransitVedha] = useState(false);
+  const [sbcShowNatalLatta, setSbcShowNatalLatta] = useState(false);
+  const [sbcShowTransitLatta, setSbcShowTransitLatta] = useState(false);
+    const [sbcEnabledPlanets, setSbcEnabledPlanets] = useState<Record<string, boolean>>({
+      Sun: true, Moon: true, Mars: true, Mercury: true, Jupiter: true, Venus: true, Saturn: true, Rahu: true, Ketu: true
+    });
   const [subTab, setSubTab] = useState<'Overview' | 'SBC' | 'Sahamas' | 'Finder' | 'YogResult' | 'TaraNDF' | 'TaraNDFNatal'>('Overview');
   const [selectedNdfPlanet, setSelectedNdfPlanet] = useState('Sun');
 
@@ -334,7 +344,15 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
           <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%', maxWidth: '600px' }}>
              <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--primary)' }}>Transit D-1 Chart</h3>
-             <KundliChart data={{ lagna: transitData.lagna, houses: transitData.houses }} />
+             {(() => {
+                let arrows: Arrow[] = [];
+                if (showTransitVedha) arrows = [...arrows, ...calculateVedha(transitData.positions, Math.floor((mainData.positions.find((p: any) => p.name === 'Moon')?.longitude || mainData.lagna.longitude) / 30))];
+                if (showTransitLatta) arrows = [...arrows, ...calculateLatta(transitData.positions)];
+                
+                return chartStyle === 'South' 
+                  ? <SouthIndianChart data={{ lagna: transitData.lagna, houses: transitData.houses }} arrows={arrows} />
+                  : <KundliChart data={{ lagna: transitData.lagna, houses: transitData.houses }} arrows={arrows} />;
+              })()}
           </div>
           <div style={{ overflowX: 'auto', background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%' }}>
              <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>Transit Info</h3>
@@ -386,8 +404,36 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: {
               <span style={{ color: '#ef4444' }}>Red</span> = Natal Planets | <span style={{ color: '#3b82f6' }}>Blue</span> = Transit Planets
             </p>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '2px', background: 'var(--border)', border: '2px solid var(--border)', width: 'fit-content', margin: '0 auto' }}>
-              {SBC_CELLS.flat().map((cell, idx) => {
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1.5rem', background: 'var(--card-bg)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={sbcShowNatalVedha} onChange={e => setSbcShowNatalVedha(e.target.checked)} />
+                  <span style={{ color: 'var(--text)' }}>Natal Vedha (Red)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={sbcShowNatalLatta} onChange={e => setSbcShowNatalLatta(e.target.checked)} />
+                  <span style={{ color: 'var(--text)' }}>Natal Latta (Purple)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={sbcShowTransitVedha} onChange={e => setSbcShowTransitVedha(e.target.checked)} />
+                  <span style={{ color: 'var(--text)' }}>Transit Vedha</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={sbcShowTransitLatta} onChange={e => setSbcShowTransitLatta(e.target.checked)} />
+                  <span style={{ color: 'var(--text)' }}>Transit Latta</span>
+                  </label>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1.5rem', background: 'var(--card-bg)', padding: '0.5rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                  {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'].map(pName => (
+                    <label key={pName} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', fontSize: '0.8rem' }}>
+                      <input type="checkbox" checked={sbcEnabledPlanets[pName]} onChange={e => setSbcEnabledPlanets({...sbcEnabledPlanets, [pName]: e.target.checked})} />
+                      <span style={{ color: 'var(--text)' }}>{pName}</span>
+                    </label>
+                  ))}
+                </div>
+
+              <div style={{ position: 'relative', width: 'fit-content', margin: '0 auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '2px', background: 'var(--border)', border: '2px solid var(--border)', width: '736px' }}>
+                  {SBC_CELLS.flat().map((cell, idx) => {
                 const isNak = NAKSHATRAS_28.includes(cell);
                 const isRasi = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'].includes(cell);
                 const tPlanets = transitMap[cell] || [];
@@ -407,6 +453,107 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights }: {
                 )
               })}
             </div>
+
+              {/* SBC ARROWS LOGIC */}
+              {(() => {
+                const sbcArrows: any[] = [];
+                
+                const getCellIdx = (name: string) => {
+                  const flat = SBC_CELLS.flat();
+                  return flat.findIndex(c => c === name);
+                };
+
+                const calcArrows = (positions: any[], isTransit: boolean) => {
+                    positions.forEach(p => {
+                      if (['Uranus', 'Neptune', 'Pluto'].includes(p.name)) return;
+                      if (!sbcEnabledPlanets[p.name]) return;
+                    
+                    const pLong = p.longitude !== undefined ? p.longitude : p.long;
+                      const nakIndex = get28Index(pLong);
+                      const nakName = NAKSHATRAS_28[nakIndex];
+                      const fromIdx = getCellIdx(nakName);
+                      if (fromIdx === -1) return;
+                      
+                      const arrColor = isTransit ? '#3b82f6' : '#ef4444'; // Blue for Transit, Red for Natal
+
+                    // Latta
+                    if ((isTransit && sbcShowTransitLatta) || (!isTransit && sbcShowNatalLatta)) {
+                      const lattaNak = getLatta(p.name, p.longitude);
+                        if (lattaNak) {
+                          const toIdx = getCellIdx(lattaNak);
+                          if (toIdx !== -1) {
+                            sbcArrows.push({ from: fromIdx, to: toIdx, color: arrColor, label: 'L', isLatta: true });
+                          }
+                        }
+                    }
+
+                    // Vedha
+                    if ((isTransit && sbcShowTransitVedha) || (!isTransit && sbcShowNatalVedha)) {
+                      const speed = isTransit ? (p.speed || 1) : 1;
+                      const isRetro = isTransit ? (p.retrograde || false) : false;
+                      const vedhas = getVedhaNakshatras(p.name, p.longitude, speed, isRetro);
+                      
+                      vedhas.forEach(line => {
+                          const vNak = line[line.length - 1];
+                          const toIdx = getCellIdx(vNak);
+                          if (toIdx !== -1) {
+                            sbcArrows.push({ from: fromIdx, to: toIdx, color: arrColor, label: 'V', isLatta: false });
+                          }
+                        });
+                    }
+                  });
+                };
+
+                if (sbcShowNatalLatta || sbcShowNatalVedha) calcArrows(mainData.positions, false);
+                if (sbcShowTransitLatta || sbcShowTransitVedha) calcArrows(transitData.positions, true);
+
+                if (sbcArrows.length === 0) return null;
+
+                return (
+                  <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                    <defs>
+                      <marker id="sbc-arrowhead-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                        <polygon points="0 0, 6 3, 0 6" fill="#ef4444" />
+                      </marker>
+                      <marker id="sbc-arrowhead-purple" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                          <polygon points="0 0, 6 3, 0 6" fill="#a855f7" />
+                        </marker>
+                        <marker id="sbc-arrowhead-blue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                          <polygon points="0 0, 6 3, 0 6" fill="#3b82f6" />
+                        </marker>
+                    </defs>
+                    {sbcArrows.map((a, i) => {
+                      const r1 = Math.floor(a.from / 9);
+                      const c1 = a.from % 9;
+                      const r2 = Math.floor(a.to / 9);
+                      const c2 = a.to % 9;
+                      const x1 = c1 * 82 + 40;
+                      const y1 = r1 * 82 + 40;
+                      const x2 = c2 * 82 + 40;
+                      const y2 = r2 * 82 + 40;
+                      
+                      const dx = x2 - x1;
+                      const dy = y2 - y1;
+                      const len = Math.sqrt(dx*dx + dy*dy);
+                      if (len === 0) return null;
+                      
+                      const shrink = 30; // Shrink to not obscure text
+                      const sx = (dx/len) * shrink;
+                      const sy = (dy/len) * shrink;
+                      
+                      const marker = a.color === '#ef4444' ? 'url(#sbc-arrowhead-red)' : (a.color === '#3b82f6' ? 'url(#sbc-arrowhead-blue)' : 'url(#sbc-arrowhead-purple)');
+                        const dash = a.isLatta ? "6,6" : "none";
+                        return (
+                          <g key={`sbc-arr-${i}`}>
+                            <line x1={x1 + sx} y1={y1 + sy} x2={x2 - sx} y2={y2 - sy} stroke={a.color} strokeWidth="2" strokeDasharray={dash} opacity="0.7" markerEnd={marker} />
+                        </g>
+                      );
+                    })}
+                  </svg>
+                );
+              })()}
+
+</div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>

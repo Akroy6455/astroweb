@@ -108,7 +108,7 @@ export default function NavamshaChakra({ data }: ChakraProps) {
     allPos.push({ name: 'Ascendant', short: 'ASD', longitude: data.lagna.longitude });
   }
 
-  const specialNames = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'];
+  const specialNames = ['Mandi', 'Gulika', 'Yamaghantak', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'];
 
   allPos.forEach((p, idx) => {
     const angle = p.longitude;

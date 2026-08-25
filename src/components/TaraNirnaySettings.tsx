@@ -31,6 +31,8 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   rahuKetuYogKaraka: "Applied to Rahu/Ketu if placed in Kendra and aspected/conjoined by Trikon lord, or in Trikon and aspected/conjoined by Kendra lord.",
   advancedJupSatConjunctPoints: "When Jupiter is conjuct Saturn and difference is less than 10 degree and no planet is between them.",
   advanced8th9thLordPoints: "When 8th lord is conjuct 9th lord and no planet is between them and difference is less than 10 degrees OR they exchange rasis OR they aspect each other.",
+  advancedYamaDispositorPoints: "Points added to the Dasha scores if the planet is the Dispositor of Yamaghantak.",
+  advancedGulikaDispositorPoints: "Points added to the Dasha scores if the planet is the Dispositor of Gulika.",
   
   exaltation: "Percentage modifier applied if the planet is Exalted or in Moolatrikona.",
   ownSign: "Percentage modifier applied if the planet is in its Own Sign.",

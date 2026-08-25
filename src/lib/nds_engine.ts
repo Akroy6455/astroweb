@@ -53,6 +53,8 @@ export interface NDSWeights {
   maleficShastiamsaPoints?: number;
   advancedJupSatConjunctPoints?: number;
   advanced8th9thLordPoints?: number;
+  advancedYamaDispositorPoints?: number;
+  advancedGulikaDispositorPoints?: number;
   rahuKetuMoonConjunct?: number;
   version?: number;
   timingOptions?: TimingOptions;
@@ -180,6 +182,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   rahuKetuMoonConjunct: -50,
   advancedJupSatConjunctPoints: 100,
   advanced8th9thLordPoints: 100,
+  advancedYamaDispositorPoints: 100,
+  advancedGulikaDispositorPoints: -100,
   version: 4,
   timingOptions: {
     job: {
@@ -1137,6 +1141,35 @@ export function getAdvancedModifiers(planet: Planet, positions: any[], w: NDSWei
       const pts = planet === 'Saturn' ? w.advancedJupSatConjunctPoints : -w.advancedJupSatConjunctPoints;
       score += pts;
       conditions.push({ key: 'advancedJupSatConjunctPoints', name: 'Jup/Sat Close Conjunction', value: pts });
+    }
+  }
+
+
+  // Advanced Yamaghantak Dispositor Rule
+  if (w.advancedYamaDispositorPoints) {
+    const yama = positions.find(p => p.name === 'Yamaghantak');
+    if (yama) {
+      const ZODIAC_LORDS = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
+      const signIdx = Math.floor(yama.longitude / 30);
+      const disp = ZODIAC_LORDS[signIdx];
+      if (planet === disp) {
+        score += w.advancedYamaDispositorPoints;
+        conditions.push({ key: 'advancedYamaDispositorPoints', name: 'Yamaghantak Dispositor', value: w.advancedYamaDispositorPoints });
+      }
+    }
+  }
+
+  // Advanced Gulika Dispositor Rule
+  if (w.advancedGulikaDispositorPoints) {
+    const gulika = positions.find(p => p.name === 'Gulika');
+    if (gulika) {
+      const ZODIAC_LORDS = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
+      const signIdx = Math.floor(gulika.longitude / 30);
+      const disp = ZODIAC_LORDS[signIdx];
+      if (planet === disp) {
+        score += w.advancedGulikaDispositorPoints;
+        conditions.push({ key: 'advancedGulikaDispositorPoints', name: 'Gulika Dispositor', value: w.advancedGulikaDispositorPoints });
+      }
     }
   }
 

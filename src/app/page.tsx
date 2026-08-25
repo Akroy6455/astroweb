@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { getKundliData, getTaraNirnayData } from './actions';
 import KundliChart from '@/components/KundliChart';
+import SouthIndianChart from '@/components/SouthIndianChart';
+import { calculateVedha, calculateLatta, Arrow } from '@/lib/vedhaLatta';
 import NavamshaChakra from '@/components/NavamshaChakra';
 import AshtakavargaChart from '@/components/AshtakavargaChart';
 import AshtakavargaTable from '@/components/AshtakavargaTable';
@@ -82,6 +84,11 @@ export default function Home() {
   const [referencePlanetRight, setReferencePlanetRight] = useState('Lagna');
   const [formLocation, setFormLocation] = useState({ lat: 25.78, lon: 87.48, ianaTz: 'Asia/Kolkata', label: 'Purnia, BR, IN' });
   const [ayanamsha, setAyanamsha] = useState<'Raman' | 'Lahiri'>('Raman');
+    const [showNatalVedha, setShowNatalVedha] = useState(false);
+  const [showNatalLatta, setShowNatalLatta] = useState(false);
+  const [showTransitVedha, setShowTransitVedha] = useState(false);
+  const [showTransitLatta, setShowTransitLatta] = useState(false);
+  const [chartStyle, setChartStyle] = useState<'North' | 'South'>('North');
   const [ndsWeights, setNdsWeights] = useState<NDSWeights>(DEFAULT_NDS_WEIGHTS);
   const [taraNirnayData, setTaraNirnayData] = useState<{ dashaTimeSeries: any[], transitTimeSeries: any[] } | null>(null);
   const [timingQuestion, setTimingQuestion] = useState<'job' | 'wealth' | 'marriage' | 'abroad' | 'health' | 'goodTime' | null>(null);
@@ -212,6 +219,7 @@ export default function Home() {
           if (doc.exists()) {
             const pref = doc.data();
             if (pref.ayanamsha) setAyanamsha(pref.ayanamsha);
+            if (pref.chartStyle) setChartStyle(pref.chartStyle);
             if (pref.ndsWeights && pref.ndsWeights.version === 4) setNdsWeights(pref.ndsWeights);
           }
         });
@@ -267,6 +275,8 @@ export default function Home() {
         
         const savedAyanamsha = localStorage.getItem('ayanamshaPref');
         if (savedAyanamsha) setAyanamsha(savedAyanamsha as 'Raman' | 'Lahiri');
+        const savedChartStyle = localStorage.getItem('chartStylePref');
+        if (savedChartStyle) setChartStyle(savedChartStyle as 'North' | 'South');
         const savedWeights = localStorage.getItem('ndsWeightsPref');
         if (savedWeights) {
           try {
@@ -458,6 +468,21 @@ export default function Home() {
     }
   };
 
+  const toggleChartStyle = async () => {
+    const newVal = chartStyle === 'North' ? 'South' : 'North';
+    setChartStyle(newVal);
+    if (user) {
+      try {
+        const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences');
+        await setDoc(settingsRef, { chartStyle: newVal }, { merge: true });
+      } catch (err) {
+        console.error("Failed to sync chartStyle setting:", err);
+      }
+    } else {
+      localStorage.setItem('chartStylePref', newVal);
+    }
+  };
+
   const handleSaveNdsWeights = async (newWeights: NDSWeights) => {
     setNdsWeights(newWeights);
     
@@ -527,6 +552,17 @@ export default function Home() {
                 flexDirection: 'column',
                 gap: '1rem'
               }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 600 }}>Chart Style</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card-bg)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: chartStyle === 'North' ? 600 : 400, color: chartStyle === 'North' ? 'var(--primary)' : 'var(--text-muted)' }}>North</span>
+                    <div onClick={toggleChartStyle} style={{ width: '40px', height: '22px', background: chartStyle === 'North' ? 'var(--primary)' : '#8b5cf6', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease' }}>
+                      <div style={{ position: 'absolute', top: '2px', left: chartStyle === 'North' ? '2px' : '20px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', transition: 'left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                    </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: chartStyle === 'South' ? 600 : 400, color: chartStyle === 'South' ? '#8b5cf6' : 'var(--text-muted)' }}>South</span>
+                  </div>
+                </div>
+
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 600 }}>Ayanamsha</div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card-bg)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
@@ -729,6 +765,7 @@ export default function Home() {
                                 <option key={c.key} value={c.key}>{c.key} - {c.name}</option>
                               ))}
                               <option value="Chakra">Chakra - Navamsha Chakra</option>
+                                <option value="Chalit">Bhav Chalit</option>
                             </select>
                             <select
                               value={referencePlanetLeft}
@@ -769,11 +806,17 @@ export default function Home() {
                             let chartData = null;
                             if (activeChartLeft === 'Chakra') return <NavamshaChakra data={data} />;
                             if (activeChartLeft === 'D1') chartData = { lagna: data.lagna, houses: data.houses };
+                            else if (activeChartLeft === 'Chalit') chartData = { lagna: data.lagna, houses: data.chalitHouses };
                             else if (activeChartLeft === 'D9' && (!data.divisionalCharts || !data.divisionalCharts['D9'])) chartData = { lagna: data.d9Lagna, houses: data.d9Houses };
                             else if (data.divisionalCharts && data.divisionalCharts[activeChartLeft]) chartData = { lagna: data.divisionalCharts[activeChartLeft].lagna, houses: data.divisionalCharts[activeChartLeft].houses };
 
                             if (!chartData) return <div style={{textAlign:'center', padding:'2rem'}}>Chart data not available</div>;
-                            return <KundliChart data={{ lagna: chartData.lagna, houses: rotateHouses(chartData.houses, referencePlanetLeft) }} />;
+                            const dataToRender = { lagna: chartData.lagna, houses: rotateHouses(chartData.houses, referencePlanetLeft) };
+                            let arrows: Arrow[] = [];
+                            if (showNatalVedha && (activeChartLeft === 'D1' || activeChartLeft === 'Chalit')) arrows = [...arrows, ...calculateVedha(data.positions, Math.floor((data.positions.find((p: any) => p.name === 'Moon')?.longitude || data.lagna.longitude) / 30))];
+                            if (showNatalLatta && (activeChartLeft === 'D1' || activeChartLeft === 'Chalit')) arrows = [...arrows, ...calculateLatta(data.positions)];
+                            
+                            return chartStyle === 'South' ? <SouthIndianChart data={dataToRender} arrows={arrows} /> : <KundliChart data={dataToRender} arrows={arrows} />;
                           })()}
                        </div>
                        {/* Right Chart (Desktop Only) */}
@@ -788,6 +831,7 @@ export default function Home() {
                                 <option key={c.key} value={c.key}>{c.key} - {c.name}</option>
                               ))}
                               <option value="Chakra">Chakra - Navamsha Chakra</option>
+                                <option value="Chalit">Bhav Chalit</option>
                             </select>
                             <select
                               value={referencePlanetRight}
@@ -828,18 +872,25 @@ export default function Home() {
                             let chartData = null;
                             if (activeChartRight === 'Chakra') return <NavamshaChakra data={data} />;
                             if (activeChartRight === 'D1') chartData = { lagna: data.lagna, houses: data.houses };
+                            else if (activeChartRight === 'Chalit') chartData = { lagna: data.lagna, houses: data.chalitHouses };
                             else if (activeChartRight === 'D9' && (!data.divisionalCharts || !data.divisionalCharts['D9'])) chartData = { lagna: data.d9Lagna, houses: data.d9Houses };
                             else if (data.divisionalCharts && data.divisionalCharts[activeChartRight]) chartData = { lagna: data.divisionalCharts[activeChartRight].lagna, houses: data.divisionalCharts[activeChartRight].houses };
 
                             if (!chartData) return <div style={{textAlign:'center', padding:'2rem'}}>Chart data not available</div>;
-                            return <KundliChart data={{ lagna: chartData.lagna, houses: rotateHouses(chartData.houses, referencePlanetRight) }} />;
+                            const dataToRender = { lagna: chartData.lagna, houses: rotateHouses(chartData.houses, referencePlanetRight) };
+                            let arrows: Arrow[] = [];
+                            if (showNatalVedha && (activeChartRight === 'D1' || activeChartRight === 'Chalit')) arrows = [...arrows, ...calculateVedha(data.positions, Math.floor((data.positions.find((p: any) => p.name === 'Moon')?.longitude || data.lagna.longitude) / 30))];
+                            if (showNatalLatta && (activeChartRight === 'D1' || activeChartRight === 'Chalit')) arrows = [...arrows, ...calculateLatta(data.positions)];
+                            
+                            return chartStyle === 'South' ? <SouthIndianChart data={dataToRender} arrows={arrows} /> : <KundliChart data={dataToRender} arrows={arrows} />;
                           })()}
                        </div>
                     </div>
                                     {(() => {
-                    const info = DIVISIONAL_CHARTS_INFO.find(c => c.key === activeChartLeft);
-                    if (!info || !data.positions) return null;
-                    const div = info.division;
+                    const isChalit = activeChartLeft === 'Chalit';
+                      const info = DIVISIONAL_CHARTS_INFO.find(c => c.key === activeChartLeft);
+                      if ((!info && !isChalit) || !data.positions) return null;
+                      const div = isChalit ? 1 : (info as any).division;
 
                     const allEntries: any[] = [];
                     if (data.lagna) {
@@ -873,8 +924,8 @@ export default function Home() {
                               <th style={{ color: 'var(--background)' }}>Nak Devta</th>
                               <th style={{ color: 'var(--background)' }}>Nak Lord</th>
                               <th style={{ color: 'var(--background)' }}>Sub Lord</th>
-                              <th style={{ color: 'var(--background)' }}>{info.key} Sign</th>
-                              <th style={{ color: 'var(--background)' }}>{div === 1 ? 'Chara Karaka' : `${info.key} Devta`}</th>
+                              <th style={{ color: 'var(--background)' }}>{(info?.key || 'Chalit')} Sign</th>
+                              <th style={{ color: 'var(--background)' }}>{div === 1 ? 'Chara Karaka' : `${(info?.key || 'Chalit')} Devta`}</th>
                               {div === 60 && <th style={{ color: 'var(--background)' }}>Nature</th>}
                             </tr>
                           </thead>
@@ -884,7 +935,7 @@ export default function Home() {
                               const deg = p.rasi.degreesInSign;
                               const divSign = getDivisionalSign(sIdx, deg, div);
                               const devta = getVargaDevta(sIdx, deg, div);
-                              const isSpecial = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'].includes(p.name);
+                              const isSpecial = ['Mandi', 'Gulika', 'Yamaghantak', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'].includes(p.name);
                               
                               return (
                                 <tr key={p.id || p.name} style={{ background: p.isLagna ? 'rgba(232, 220, 203, 0.5)' : (i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)') }}>
@@ -938,7 +989,7 @@ export default function Home() {
               )}
               <div style={{ display: (activeTab === 'Transit' || isPrinting) ? 'block' : 'none' }} className={isPrinting ? 'print-section' : ''}>
                 {isPrinting && <h2 className="print-only-heading">Transit</h2>}
-                <TransitTab mainData={data} ayanamsha={ayanamsha} weights={ndsWeights} />
+                <TransitTab mainData={data} ayanamsha={ayanamsha} weights={ndsWeights} showTransitVedha={showTransitVedha} showTransitLatta={showTransitLatta} chartStyle={chartStyle} />
               </div>
               {(activeTab === 'Awasthas' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>

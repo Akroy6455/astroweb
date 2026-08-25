@@ -1,10 +1,11 @@
 import React from 'react';
+import { Arrow } from '@/lib/vedhaLatta';
 
 type Planet = { short: string, name: string, retrograde?: boolean };
 type House = { house: number, signIndex: number, planets: Planet[] };
 type KundliData = { lagna: any, houses: House[] };
 
-export default function KundliChart({ data }: { data: KundliData | null }) {
+export default function KundliChart({ data, arrows = [] }: { data: KundliData | null, arrows?: Arrow[] }) {
   if (!data) return <div className="kundli-placeholder">Fill the form to generate Kundli</div>;
 
   // The 12 house positions in a North Indian chart (X, Y for text rendering)
@@ -24,7 +25,7 @@ export default function KundliChart({ data }: { data: KundliData | null }) {
     12: { x: 75, y: 10 },
   };
 
-  const specialNames = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'];
+  const specialNames = ['Mandi', 'Gulika', 'Yamaghantak', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indrachapa', 'Upaketu', 'Uranus', 'Neptune', 'Pluto'];
 
   const renderPlanets = (planets: Planet[], x: number, y: number) => {
     if (!planets || planets.length === 0) return null;

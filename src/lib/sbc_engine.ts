@@ -115,23 +115,25 @@ export function getLatta(planetName: string, planetLong: number): string | null 
 }
 
 // VEDHA
-export function getVedhaNakshatras(planetName: string, planetLong: number, speed: number, isRetrograde: boolean): string[] {
+export function getVedhaNakshatras(planetName: string, planetLong: number, speed: number, isRetrograde: boolean): string[][] {
   const nakName = NAKSHATRAS_28[getNak28Index(planetLong)];
   const pos = NAK_TO_POS[nakName];
   if (!pos) return [];
   
   const [r, c] = pos;
-  const vedhas: string[] = [];
+  const vedhas: string[][] = [];
   
   const addLine = (dr: number, dc: number) => {
     let currR = r + dr;
     let currC = c + dc;
+    const line: string[] = [];
     while (currR >= 0 && currR <= 8 && currC >= 0 && currC <= 8) {
       const val = SBC_GRID[currR][currC];
-      if (val) vedhas.push(val);
+      if (val) line.push(val);
       currR += dr;
       currC += dc;
     }
+    if (line.length > 0) vedhas.push(line);
   };
   
   // Front Vedha
@@ -144,41 +146,43 @@ export function getVedhaNakshatras(planetName: string, planetLong: number, speed
 
   // Right/Left Vedha (Diagonals)
   const addRight = () => {
-    if (r === 0) addLine(1, -1);
-    else if (r === 8) addLine(-1, 1);
-    else if (c === 0) addLine(-1, 1);
+    if (r === 0) addLine(1, 1);
     else if (c === 8) addLine(1, -1);
+    else if (r === 8) addLine(-1, -1);
+    else if (c === 0) addLine(-1, 1);
   };
   
   const addLeft = () => {
-    if (r === 0) addLine(1, 1);
-    else if (r === 8) addLine(-1, -1);
-    else if (c === 0) addLine(1, 1);
+    if (r === 0) addLine(1, -1);
     else if (c === 8) addLine(-1, -1);
+    else if (r === 8) addLine(-1, 1);
+    else if (c === 0) addLine(1, 1);
   };
   
-  if (['Sun', 'Moon', 'Rahu', 'Ketu'].includes(planetName)) {
-    addFront();
-    addRight();
-    addLeft();
-  } else {
-    // Tara Grahas
-    const isFast = Math.abs(speed) > (
-      planetName === 'Mars' ? 0.6 :
-      planetName === 'Mercury' ? 1.5 :
-      planetName === 'Jupiter' ? 0.2 :
-      planetName === 'Venus' ? 1.2 :
-      planetName === 'Saturn' ? 0.1 : 99
-    );
-    
-    if (isRetrograde) {
-      addLeft();
-    } else if (isFast) {
-      addRight();
-    } else {
+  if (['Sun', 'Moon'].includes(planetName)) {
+      // Luminaries are always direct/normal motion
       addFront();
+    } else if (['Rahu', 'Ketu'].includes(planetName)) {
+      // Nodes are always retrograde
+      addLeft();
+    } else {
+      // Tara Grahas
+      const isFast = Math.abs(speed) > (
+        planetName === 'Mars' ? 0.6 :
+        planetName === 'Mercury' ? 1.5 :
+        planetName === 'Jupiter' ? 0.2 :
+        planetName === 'Venus' ? 1.2 :
+        planetName === 'Saturn' ? 0.1 : 99
+      );
+      
+      if (isRetrograde) {
+        addLeft(); // Vakri (Retrograde) -> Hind/Left Vedha
+      } else if (isFast) {
+        addRight(); // Atichari (Fast) -> Fore/Right Vedha
+      } else {
+        addFront(); // Sama (Normal) -> Across/Front Vedha
+      }
     }
-  }
   
   return vedhas;
 }

@@ -48,7 +48,8 @@ const PLANETS = [
   { id: 'KETU', name: 'Ketu', short: 'Ke' }, // Ketu is always 180 deg from Rahu
   { id: 'MANDI', name: 'Mandi', short: 'Md' },
   { id: 'GULIKA', name: 'Gulika', short: 'Gl' },
-  { id: 'DHOOMA', name: 'Dhooma', short: 'Dh' },
+    { id: 'YAMAGHANTAK', name: 'Yamaghantak', short: 'Ym' },
+    { id: 'DHOOMA', name: 'Dhooma', short: 'Dh' },
   { id: 'VYATIPATA', name: 'Vyatipata', short: 'Vy' },
   { id: 'PARIVESHA', name: 'Parivesha', short: 'Pa' },
   { id: 'INDRACHAPA', name: 'Indrachapa', short: 'In' },
@@ -298,59 +299,66 @@ export function calculateChart(year: number, month: number, day: number, hour: n
   const rsmiRise = sweph.constants.SE_CALC_RISE | sweph.constants.SE_BIT_DISC_CENTER | sweph.constants.SE_BIT_NO_REFRACTION;
   const rsmiSet = sweph.constants.SE_CALC_SET | sweph.constants.SE_BIT_DISC_CENTER | sweph.constants.SE_BIT_NO_REFRACTION;
   
-  const midnightJd = Math.floor(jd - 0.5) + 0.5;
-  const resRise = sweph.rise_trans(midnightJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiRise, [lon, lat, 0], 0, 0);
-  const sunriseJd = resRise.data;
-  const resSet = sweph.rise_trans(sunriseJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiSet, [lon, lat, 0], 0, 0);
-  const sunsetJd = resSet.data;
+  // Find the most recent sunrise before birth time
+    let scanJd = jd - 1.0;
+    let prevSunriseJd = sweph.rise_trans(scanJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiRise, [lon, lat, 0], 0, 0).data;
+    let nextSunriseJd = sweph.rise_trans(prevSunriseJd + 0.1, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiRise, [lon, lat, 0], 0, 0).data;
+    
+    while (nextSunriseJd < jd) {
+        prevSunriseJd = nextSunriseJd;
+        nextSunriseJd = sweph.rise_trans(prevSunriseJd + 0.1, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiRise, [lon, lat, 0], 0, 0).data;
+    }
+
+    // Now prevSunriseJd is the precise Vedic day start. Find the sunset for this Vedic day.
+    const sunsetJd = sweph.rise_trans(prevSunriseJd + 0.1, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiSet, [lon, lat, 0], 0, 0).data;
+
+    let isDayTime = false;
+    let segmentDuration = 0;
+    let startJd = 0;
+
+    if (jd < sunsetJd) {
+       isDayTime = true;
+       segmentDuration = (sunsetJd - prevSunriseJd) / 8;
+       startJd = prevSunriseJd;
+    } else {
+       isDayTime = false;
+       segmentDuration = (nextSunriseJd - sunsetJd) / 8;
+       startJd = sunsetJd;
+    }
+
+    // Calculate exact local day of week at prevSunriseJd to ensure correct Vedic Day
+    // Local Time at sunrise is approx prevSunriseJd + (lon / 15) / 24
+    const approxLocalSunriseJd = prevSunriseJd + (lon / 360.0);
+    // JD 0 was Monday (1.5 days offset to get 0=Sunday)
+    const vedicDayOfWeek = Math.floor(approxLocalSunriseJd + 1.5) % 7;
   
-  let isDayTime = false;
-  let segmentDuration = 0;
-  let startJd = 0;
+    const gulikaDayIndex = [6, 5, 4, 3, 2, 1, 0];
+    const gulikaNightIndex = [2, 1, 0, 6, 5, 4, 3];
+    
+    const yamaghantakDayIndex = [4, 3, 2, 1, 0, 6, 5];
+    const yamaghantakNightIndex = [0, 6, 5, 4, 3, 2, 1];
 
-  if (jd >= sunriseJd && jd < sunsetJd) {
-     isDayTime = true;
-     segmentDuration = (sunsetJd - sunriseJd) / 8;
-     startJd = sunriseJd;
-  } else {
-     isDayTime = false;
-     let nightStartJd, nightEndJd;
-     if (jd < sunriseJd) {
-         const prevMidJd = midnightJd - 1;
-         const resPrevSet = sweph.rise_trans(prevMidJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiSet, [lon, lat, 0], 0, 0);
-         nightStartJd = resPrevSet.data;
-         nightEndJd = sunriseJd;
-     } else {
-         nightStartJd = sunsetJd;
-         const nextMidJd = midnightJd + 1;
-         const resNextRise = sweph.rise_trans(nextMidJd, sweph.constants.SE_SUN, "", sweph.constants.SEFLG_SWIEPH, rsmiRise, [lon, lat, 0], 0, 0);
-         nightEndJd = resNextRise.data;
-     }
-     segmentDuration = (nightEndJd - nightStartJd) / 8;
-     startJd = nightStartJd;
-  }
+    // Mandi is calculated at the middle of Saturn's segment (Gulika is the beginning)
+    const gIndex = isDayTime ? gulikaDayIndex[vedicDayOfWeek] : gulikaNightIndex[vedicDayOfWeek];
+    const yIndex = isDayTime ? yamaghantakDayIndex[vedicDayOfWeek] : yamaghantakNightIndex[vedicDayOfWeek];
+    
+    const gulikaJd = startJd + (gIndex * segmentDuration);
+    const yamaghantakJd = startJd + (yIndex * segmentDuration);
+    const mandiJd = startJd + ((gIndex + 0.5) * segmentDuration);
+  
+    const housesGulika = sweph.houses_ex(gulikaJd, flag, lat, lon, 'P');
+    const gulikaLong = (housesGulika as any).points ? (housesGulika as any).points[0] : (housesGulika as any).data?.points[0] || 0;
 
-  const gulikaDayIndex = [6, 5, 4, 3, 2, 1, 0];
-  const gulikaNightIndex = [2, 1, 0, 6, 5, 4, 3];
-  const mandiDayIndex = [5, 4, 3, 2, 1, 0, 6];
-  const mandiNightIndex = [1, 0, 6, 5, 4, 3, 2];
-
-  const gIndex = isDayTime ? gulikaDayIndex[localDayOfWeek] : gulikaNightIndex[localDayOfWeek];
-  const mIndex = isDayTime ? mandiDayIndex[localDayOfWeek] : mandiNightIndex[localDayOfWeek];
-
-  const gulikaJd = startJd + (gIndex * segmentDuration);
-  const mandiJd = startJd + (mIndex * segmentDuration);
-
-  const housesGulika = sweph.houses_ex(gulikaJd, flag, lat, lon, 'P');
-  const gulikaLong = (housesGulika as any).points ? (housesGulika as any).points[0] : (housesGulika as any).data?.points[0] || 0;
-
-  const housesMandi = sweph.houses_ex(mandiJd, flag, lat, lon, 'P');
-  const mandiLong = (housesMandi as any).points ? (housesMandi as any).points[0] : (housesMandi as any).data?.points[0] || 0;
+    const housesYama = sweph.houses_ex(yamaghantakJd, flag, lat, lon, 'P');
+    const yamaLong = (housesYama as any).points ? (housesYama as any).points[0] : (housesYama as any).data?.points[0] || 0;
+  
+    const housesMandi = sweph.houses_ex(mandiJd, flag, lat, lon, 'P');
+    const mandiLong = (housesMandi as any).points ? (housesMandi as any).points[0] : (housesMandi as any).data?.points[0] || 0;
 
   const positions: any[] = [];
 
   for (const p of PLANETS) {
-    if (['KETU', 'MANDI', 'GULIKA', 'DHOOMA', 'VYATIPATA', 'PARIVESHA', 'INDRACHAPA', 'UPAKETU'].includes(p.id as string)) {
+    if (['KETU', 'MANDI', 'GULIKA', 'YAMAGHANTAK', 'DHOOMA', 'VYATIPATA', 'PARIVESHA', 'INDRACHAPA', 'UPAKETU'].includes(p.id as string)) {
       let calcLong = 0;
       let speed = 0;
       let retrograde = false;
@@ -365,8 +373,10 @@ export function calculateChart(year: number, month: number, day: number, hour: n
       } else if (p.id === 'MANDI') {
         calcLong = mandiLong;
       } else if (p.id === 'GULIKA') {
-        calcLong = gulikaLong;
-      } else {
+          calcLong = gulikaLong;
+        } else if (p.id === 'YAMAGHANTAK') {
+          calcLong = yamaLong;
+        } else {
         const sun = positions.find(pos => pos.name === 'Sun');
         if (sun) {
           const dhooma = (sun.longitude + 133.333333) % 360;
@@ -590,13 +600,34 @@ export function calculateChart(year: number, month: number, day: number, hour: n
   // NDS and Transit time series are now computed on-demand via calculateTaraNirnayData()
   // to avoid expensive computation on initial chart generation.
 
-  return {
-    jd,
+  
+    // Map planets to Chalit Houses (Equal House system where Asc is mid-point of 1st house)
+    const chalitHousesMap = Array.from({length: 12}, (_, i) => ({
+      house: i + 1,
+      signIndex: lagna ? (lagna.rasi.index + i) % 12 : i,
+      planets: [] as any[]
+    }));
+    
+    for (const pos of positions) {
+      if (lagna) {
+        let diff = (pos.longitude - ascLongitude + 360) % 360;
+        diff = (diff + 15) % 360;
+        const chalitHouse = Math.floor(diff / 30) + 1; // 1 to 12
+        const houseIndex = chalitHousesMap.findIndex(h => h.house === chalitHouse);
+        if (houseIndex !== -1) {
+          chalitHousesMap[houseIndex].planets.push(pos);
+        }
+      }
+    }
+    
+    return {
+      jd,
     lagna,
     d9Lagna,
     positions,
     houses: housesMap,
     d9Houses: d9HousesMap,
+      chalitHouses: chalitHousesMap,
     ashtakavarga,
     shadbala,
     vimshopakBala,

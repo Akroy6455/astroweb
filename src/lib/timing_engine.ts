@@ -202,7 +202,7 @@ function calculateJobTiming(
 
       const isRetro = tp.speed < 0;
       const vedhas = getVedhaNakshatras(tp.name, tp.long, tp.speed, isRetro);
-      if (vedhas.includes(karmaNakName)) {
+      if (vedhas.some((line: string[]) => line.includes(karmaNakName))) {
         const mult = isBenefic(tp.name) ? options.job.vedha_benefic_multiplier : options.job.vedha_malefic_multiplier;
         transitBonus += (mult - 1.0);
         newBreakdown.push({ key: 'Job: SBC Vedha', name: `Job: ${tp.name} Vedha to Karma Nak.`, value: mult });
@@ -324,7 +324,7 @@ function calculateWealthTiming(
       // Rule 5: 1.2x for every planet giving Vedha to Aadhana Nakshatra
       const isRetro = tp.speed < 0;
       const vedhas = getVedhaNakshatras(tp.name, tp.long, tp.speed, isRetro);
-      if (vedhas.includes(aadhanaNakName)) {
+      if (vedhas.some((line: string[]) => line.includes(aadhanaNakName))) {
         const mult = isBenefic(tp.name) ? wo.vedha_aadhana_benefic_multiplier : wo.vedha_aadhana_malefic_multiplier;
         transitBonus += (mult - 1.0);
         newBreakdown.push({ key: 'Wealth: Vedha Aadhana', name: `Wealth: ${tp.name} Vedha to Aadhana`, value: mult });
@@ -484,7 +484,7 @@ function calculateGoodTiming(
       const isRetro = tp.speed < 0;
       const vedhas = getVedhaNakshatras(tp.name, tp.longitude, tp.speed, isRetro);
       const goodTimeNaks = [karmaNakName, aadhanaNakName, abhishekaNakName, naidhanaNakName, vainasikaNakName];
-      if (vedhas.some(v => goodTimeNaks.includes(v))) {
+      if (vedhas.some((line: string[]) => line.some(v => goodTimeNaks.includes(v)))) {
         const mult = isBenefic(tp.name) ? go.vedha_benefic_multiplier : go.vedha_malefic_multiplier;
         vedhaBonus += (mult - 1.0);
         newBreakdown.push({ key: `GoodTime: Vedha`, name: `${tp.name} Vedha to Key Nak.`, value: mult });
