@@ -1003,7 +1003,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
   };
 
   const flag = sweph.constants.SEFLG_SIDEREAL;
-  const ayanamsha = sweph.get_ayanamsa_ut(sweph.julday(startDate.getUTCFullYear(), startDate.getUTCMonth() + 1, startDate.getUTCDate(), 0));
+  const ayanamsha = sweph.get_ayanamsa_ut(sweph.julday(startDate.getUTCFullYear(), startDate.getUTCMonth() + 1, startDate.getUTCDate(), 0, sweph.constants.SE_GREG_CAL));
 
   while (currentDateTs <= endDateTs) {
     const date = new Date(currentDateTs);
@@ -1011,7 +1011,8 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
       date.getUTCFullYear(),
       date.getUTCMonth() + 1,
       date.getUTCDate(),
-      date.getUTCHours() + date.getUTCMinutes() / 60
+      date.getUTCHours() + date.getUTCMinutes() / 60,
+      sweph.constants.SE_GREG_CAL
     );
 
     let totalScore = 0;
@@ -1019,7 +1020,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
 
     for (const p of transitPlanets) {
       const calc = sweph.calc_ut(jd, planetIds[p], flag);
-      const long = calc.longitude;
+      const long = calc.data[0];
       const rasiIndex = Math.floor(long / 30);
       
       let bavPoints = chartData.ashtakavarga.bav[p][rasiIndex] || 0;
@@ -1038,13 +1039,9 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
     }
 
     // Lagna transit calculation
-    const eps = sweph.calc_ut(jd, sweph.constants.SE_ECL_NUT, 0);
-    const eps_true = eps.data[0];
-    const armc = sweph.calc_ut(jd, sweph.constants.SE_ARMC, 0).data[0]; // actually, we need houses...
-    const hsys = sweph.houses(jd, lat, lon, 'P');
-    
-    // Applying ayanamsha for sidereal lagna
-    let ascLongitude = (hsys.data[0] - ayanamsha + 360) % 360;
+        const houses = sweph.houses_ex(jd, flag, lat, lon, 'P');
+    const points = (houses as any).points || (houses as any).data?.points;
+    const ascLongitude = points ? points[0] : 0;
     const lagnaRasiIndex = Math.floor(ascLongitude / 30);
     const lagnaBavPoints = chartData.ashtakavarga.bav['Lagna'][lagnaRasiIndex] || 0;
     const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
