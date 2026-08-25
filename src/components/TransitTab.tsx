@@ -389,19 +389,23 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
 
           {ausData.length > 0 && (
             <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', height: '500px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={ausData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="formattedTime" stroke="var(--text-muted)" tick={{ fontSize: 12 }} interval={100} />
-                  <YAxis stroke="var(--text-muted)" />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px' }}
-                    labelStyle={{ color: 'var(--primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}
-                    formatter={(value: any, name: any) => [value, name === 'score' ? 'Total Auspicious Score' : name]}
-                  />
-                  <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+              <div style={{ overflowX: 'auto', width: '100%', height: '100%' }}>
+                <div style={{ width: `${Math.max(1200, ausData.length * 8)}px`, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={ausData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                      <XAxis dataKey="formattedTime" stroke="var(--text-muted)" tick={{ fontSize: 12 }} interval={48} />
+                      <YAxis stroke="var(--text-muted)" />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}
+                        formatter={(value: any, name: any) => [value, name === 'score' ? 'Total Auspicious Score' : name]}
+                      />
+                      <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           )}
         </div>
