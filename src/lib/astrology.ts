@@ -959,3 +959,110 @@ const signLords: Record<string, string> = {
 
   return points;
 }
+
+export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any) {
+  if (!chartData?.ashtakavarga?.bav) return [];
+
+  const points: any[] = [];
+  const startDate = new Date(startDateISO);
+  let currentDateTs = startDate.getTime();
+  const endDateTs = currentDateTs + (60 * 24 * 60 * 60 * 1000); // 60 days
+
+  const transitPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+  const planetIds: Record<string, number> = {
+    'Sun': sweph.constants.SE_SUN,
+    'Moon': sweph.constants.SE_MOON,
+    'Mars': sweph.constants.SE_MARS,
+    'Mercury': sweph.constants.SE_MERCURY,
+    'Jupiter': sweph.constants.SE_JUPITER,
+    'Venus': sweph.constants.SE_VENUS,
+    'Saturn': sweph.constants.SE_SATURN
+  };
+
+  const natalMoonPos = chartData.positions.find((p: any) => p.name === 'Moon');
+  const natalLagnaPos = chartData.lagna;
+
+  const natalMoonNakIndex = natalMoonPos?.nakshatra?.index ?? 0;
+  const natalLagnaNakIndex = natalLagnaPos?.nakshatra?.index ?? 0;
+
+  const getNavataraMultiplier = (transitNakIndex: number, natalNakIndex: number) => {
+    const dist = (transitNakIndex - natalNakIndex + 27) % 27;
+    const navatara = dist % 9;
+    switch(navatara) {
+      case 0: return 1;    // Janma
+      case 1: return 1.8;  // Sampat
+      case 2: return 0.8;  // Vipat
+      case 3: return 1.4;  // Kshema
+      case 4: return 0.6;  // Pratyari
+      case 5: return 1.6;  // Sadhak
+      case 6: return 0.1;  // Naidhana
+      case 7: return 1.8;  // Mitra
+      case 8: return 2.2;  // Parama Mitra
+      default: return 1;
+    }
+  };
+
+  const flag = sweph.constants.SEFLG_SIDEREAL;
+  const ayanamsha = sweph.get_ayanamsa_ut(sweph.julday(startDate.getUTCFullYear(), startDate.getUTCMonth() + 1, startDate.getUTCDate(), 0));
+
+  while (currentDateTs <= endDateTs) {
+    const date = new Date(currentDateTs);
+    const jd = sweph.julday(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      date.getUTCDate(),
+      date.getUTCHours() + date.getUTCMinutes() / 60
+    );
+
+    let totalScore = 0;
+    const breakdown: any = {};
+
+    for (const p of transitPlanets) {
+      const calc = sweph.calc_ut(jd, planetIds[p], flag);
+      const long = calc.longitude;
+      const rasiIndex = Math.floor(long / 30);
+      
+      let bavPoints = chartData.ashtakavarga.bav[p][rasiIndex] || 0;
+      let score = bavPoints;
+
+      if (p === 'Moon') {
+        const nakIndex = Math.floor(long / (360 / 27));
+        const mult = getNavataraMultiplier(nakIndex, natalMoonNakIndex);
+        score = bavPoints * 2 * mult;
+        breakdown['Moon'] = { bav: bavPoints, mult, score, rasiIndex, nakIndex };
+      } else {
+        breakdown[p] = { bav: bavPoints, score, rasiIndex };
+      }
+
+      totalScore += score;
+    }
+
+    // Lagna transit calculation
+    const eps = sweph.calc_ut(jd, sweph.constants.SE_ECL_NUT, 0);
+    const eps_true = eps.data[0];
+    const armc = sweph.calc_ut(jd, sweph.constants.SE_ARMC, 0).data[0]; // actually, we need houses...
+    const hsys = sweph.houses(jd, lat, lon, 'P');
+    
+    // Applying ayanamsha for sidereal lagna
+    let ascLongitude = (hsys.data[0] - ayanamsha + 360) % 360;
+    const lagnaRasiIndex = Math.floor(ascLongitude / 30);
+    const lagnaBavPoints = chartData.ashtakavarga.bav['Lagna'][lagnaRasiIndex] || 0;
+    const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
+    const lagnaMult = getNavataraMultiplier(lagnaNakIndex, natalLagnaNakIndex);
+    
+    const lagnaScore = lagnaBavPoints * 2 * lagnaMult;
+    breakdown['Lagna'] = { bav: lagnaBavPoints, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
+    
+    totalScore += lagnaScore;
+
+    points.push({
+      time: date.toISOString(),
+      score: Number(totalScore.toFixed(2)),
+      breakdown
+    });
+
+    currentDateTs += 60 * 60 * 1000; // +1 hour
+  }
+
+  return points;
+}

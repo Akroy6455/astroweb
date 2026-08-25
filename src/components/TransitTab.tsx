@@ -6,7 +6,8 @@ import SouthIndianChart from './SouthIndianChart';
 import { calculateVedha, calculateLatta, Arrow } from '@/lib/vedhaLatta';
 import { getLatta, getVedhaNakshatras } from '@/lib/sbc_engine';
 import { formatDMS } from '@/lib/utils';
-import { getKundliData, findNextTransitEvent } from '@/app/actions';
+import { getKundliData, findNextTransitEvent, getAuspiciousTimeData } from '@/app/actions';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import yavanajatakaTransitSun from '@/data/yavanajataka_transit_sun.json';
 import yavanajatakaTransitSaturn from '@/data/yavanajataka_transit_saturn.json';
 import yavanajatakaTransitJupiter from '@/data/yavanajataka_transit_jupiter.json';
@@ -103,7 +104,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
     const [sbcEnabledPlanets, setSbcEnabledPlanets] = useState<Record<string, boolean>>({
       Sun: true, Moon: true, Mars: true, Mercury: true, Jupiter: true, Venus: true, Saturn: true, Rahu: true, Ketu: true
     });
-  const [subTab, setSubTab] = useState<'Overview' | 'SBC' | 'Sahamas' | 'Finder' | 'YogResult' | 'TaraNDF' | 'TaraNDFNatal'>('Overview');
+  const [subTab, setSubTab] = useState<'Overview' | 'SBC' | 'Sahamas' | 'Finder' | 'YogResult' | 'TaraNDF' | 'TaraNDFNatal' | 'AuspiciousTime'>('Overview');
   const [selectedNdfPlanet, setSelectedNdfPlanet] = useState('Sun');
 
   // Finder State
@@ -116,6 +117,31 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [fDirection, setFDirection] = useState<number>(1);
   const [fResult, setFResult] = useState<any>(null);
   const [fLoading, setFLoading] = useState(false);
+
+  // Auspicious Time State
+  const [ausStartDate, setAusStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [ausData, setAusData] = useState<any[]>([]);
+  const [ausLoading, setAusLoading] = useState(false);
+
+  const handleCalculateAuspicious = async () => {
+    setAusLoading(true);
+    try {
+      const startISO = new Date(ausStartDate).toISOString();
+      const result = await getAuspiciousTimeData(startISO, parseFloat(tLat), parseFloat(tLon), mainData);
+      
+      const formatted = result.map((r: any) => ({
+        ...r,
+        formattedTime: new Date(r.time).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })
+      }));
+      setAusData(formatted);
+    } catch(e) {
+      console.error(e);
+      alert("Failed to calculate Auspicious Time");
+    } finally {
+      setAusLoading(false);
+    }
+  };
+
 
   // Form State
   const [tDate, setTDate] = useState(new Date().toISOString().split('T')[0]);
@@ -338,7 +364,48 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
         <button onClick={() => setSubTab('YogResult')} className={`tab ${subTab === 'YogResult' ? 'active' : ''}`}>Transit Yog Result</button>
         <button onClick={() => setSubTab('TaraNDF')} className={`tab ${subTab === 'TaraNDF' ? 'active' : ''}`}>Tara Nirnay NDF Transit</button>
         <button onClick={() => setSubTab('TaraNDFNatal')} className={`tab ${subTab === 'TaraNDFNatal' ? 'active' : ''}`}>Tara Nirnay NDF Natal</button>
+        <button onClick={() => setSubTab('AuspiciousTime')} className={`tab ${subTab === 'AuspiciousTime' ? 'active' : ''}`}>Auspicious Time Calculator</button>
       </div>
+
+      
+      {subTab === 'AuspiciousTime' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Auspicious Time Calculator</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.95rem' }}>
+              Calculates overall auspiciousness for a 2-month period based on Ashtakavarga transit scores and Navatara adjustments.
+              Positions are evaluated every 1 hour.
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label>Start Date</label>
+                <input type="date" value={ausStartDate} onChange={e => setAusStartDate(e.target.value)} className="input" />
+              </div>
+              <button onClick={handleCalculateAuspicious} className="submit-btn" style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', height: 'fit-content' }}>
+                {ausLoading ? 'Calculating...' : 'Generate 2-Month Chart'}
+              </button>
+            </div>
+          </div>
+
+          {ausData.length > 0 && (
+            <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', height: '500px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={ausData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="formattedTime" stroke="var(--text-muted)" tick={{ fontSize: 12 }} interval={100} />
+                  <YAxis stroke="var(--text-muted)" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                    labelStyle={{ color: 'var(--primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}
+                    formatter={(value: any, name: any) => [value, name === 'score' ? 'Total Auspicious Score' : name]}
+                  />
+                  <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
 
       {subTab === 'Overview' && transitData && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>

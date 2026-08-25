@@ -1,6 +1,6 @@
 'use server';
 
-import { calculateChart, calculateTaraNirnayData } from '@/lib/astrology';
+import { calculateChart, calculateTaraNirnayData, generateAuspiciousTimeSeries } from '@/lib/astrology';
 import { DateTime } from 'luxon';
 import fs from 'fs';
 import path from 'path';
@@ -117,4 +117,8 @@ export async function findNextTransitEvent(
   );
   
   return await findNextTransit(planetName, offsetDeg, ranges, jd, isPoint, direction, ayanamsha);
+}
+
+export async function getAuspiciousTimeData(startDateISO: string, lat: number, lon: number, chartData: any) {
+  return generateAuspiciousTimeSeries(startDateISO, lat, lon, chartData);
 }
