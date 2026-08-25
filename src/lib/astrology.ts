@@ -1029,7 +1029,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
       if (p === 'Moon') {
         const nakIndex = Math.floor(long / (360 / 27));
         const mult = getNavataraMultiplier(nakIndex, natalMoonNakIndex);
-        score = bavPoints * 2 * mult;
+        score = bavPoints * mult;
         breakdown['Moon'] = { bav: bavPoints, mult, score, rasiIndex, nakIndex };
       } else {
         breakdown[p] = { bav: bavPoints, score, rasiIndex };
@@ -1047,7 +1047,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
     const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
     const lagnaMult = getNavataraMultiplier(lagnaNakIndex, natalLagnaNakIndex);
     
-    const lagnaScore = lagnaBavPoints * 2 * lagnaMult;
+    const lagnaScore = lagnaBavPoints * lagnaMult;
     breakdown['Lagna'] = { bav: lagnaBavPoints, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
     
     totalScore += lagnaScore;
