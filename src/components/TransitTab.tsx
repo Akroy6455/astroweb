@@ -443,7 +443,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
           {ausData.length > 0 && (
             <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', height: '500px' }}>
               <div style={{ overflowX: 'auto', width: '100%', height: '100%' }}>
-                <div style={{ width: ausZoom === 'Hourly' ? `${Math.max(1200, ausData.length * 8)}px` : '100%', minWidth: '1000px', height: '100%' }}>
+                <div style={{ width: `${Math.max(1200, chartData.length * (ausZoom === 'Hourly' ? 8 : (ausZoom === 'Daily' ? 20 : 50)))}px`, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -454,7 +454,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                         labelStyle={{ color: 'var(--primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}
                         formatter={(value: any, name: any, props: any) => [value, name === 'score' ? (ausZoom === 'Hourly' ? 'Total Auspicious Score' : 'Average Auspicious Score') : name]}
                       />
-                      <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={false} isAnimationActive={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
