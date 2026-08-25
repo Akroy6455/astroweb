@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import KundliChart from './KundliChart';
 import SouthIndianChart from './SouthIndianChart';
 import { calculateVedha, calculateLatta, Arrow } from '@/lib/vedhaLatta';
@@ -145,29 +145,30 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
 
 
   
-    const getChartData = () => {
-      if (ausZoom === 'Hourly') return ausData;
-      
-      const aggregated: any[] = [];
-      const interval = ausZoom === 'Daily' ? 24 : 168;
-      
-      for (let i = 0; i < ausData.length; i += interval) {
-        const chunk = ausData.slice(i, i + interval);
-        const avgScore = chunk.reduce((sum: number, p: any) => sum + p.score, 0) / chunk.length;
-        aggregated.push({
-          ...chunk[0],
-          score: Number(avgScore.toFixed(2)),
-          formattedTime: ausZoom === 'Daily' 
-            ? new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })
-            : `Week of ${new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })}`,
-          breakdown: null 
-        });
-      }
-      return aggregated;
-    };
+  const chartData = useMemo(() => {
+    if (ausZoom === 'Hourly') return ausData;
+    
+    const aggregated: any[] = [];
+    const interval = ausZoom === 'Daily' ? 24 : 168;
+    
+    for (let i = 0; i < ausData.length; i += interval) {
+      const chunk = ausData.slice(i, i + interval);
+      const avgScore = chunk.reduce((sum: number, p: any) => sum + p.score, 0) / chunk.length;
+      aggregated.push({
+        ...chunk[0],
+        score: Number(avgScore.toFixed(2)),
+        formattedTime: ausZoom === 'Daily' 
+          ? new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })
+          : `Week of ${new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })}`,
+        breakdown: null 
+      });
+    }
+    return aggregated;
+  }, [ausData, ausZoom]);
 
-    const top11Auspicious = [...ausData].sort((a, b) => b.score - a.score).slice(0, 11);
-    const chartData = getChartData();
+  const top52Auspicious = useMemo(() => {
+    return [...ausData].sort((a, b) => b.score - a.score).slice(0, 52);
+  }, [ausData]);
 
     // Form State
   const [tDate, setTDate] = useState(new Date().toISOString().split('T')[0]);
@@ -462,7 +463,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
           )}
           {ausData.length > 0 && (
             <div style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', marginTop: '2rem' }}>
-              <h4 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Top 11 Most Auspicious Hours</h4>
+              <h4 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Top 52 Most Auspicious Hours</h4>
               <div style={{ overflowX: 'auto' }}>
                 <table className="data-table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                   <thead>
@@ -473,7 +474,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                     </tr>
                   </thead>
                   <tbody>
-                    {top11Auspicious.map((point: any, idx: number) => (
+                    {top52Auspicious.map((point: any, idx: number) => (
                       <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ padding: '0.75rem' }}>#{idx + 1}</td>
                         <td style={{ padding: '0.75rem', fontWeight: 600 }}>{new Date(point.time).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
