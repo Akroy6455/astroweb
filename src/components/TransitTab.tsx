@@ -122,13 +122,16 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausStartDate, setAusStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [ausData, setAusData] = useState<any[]>([]);
   const [ausLoading, setAusLoading] = useState(false);
-    const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly'>('Hourly');
+  const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly'>('Hourly');
+  const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(true);
+  const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
+  const [showNavtaraMoonSettings, setShowNavtaraMoonSettings] = useState(false);
 
   const handleCalculateAuspicious = async () => {
     setAusLoading(true);
     try {
       const startISO = new Date(ausStartDate).toISOString();
-      const result = await getAuspiciousTimeData(startISO, parseFloat(tLat), parseFloat(tLon), mainData);
+      const result = await getAuspiciousTimeData(startISO, parseFloat(tLat), parseFloat(tLon), mainData, { enabled: navtaraMoonMultiplierEnabled, weights: navtaraMoonWeights });
       
       const formatted = result.map((r: any) => ({
         ...r,
@@ -411,6 +414,60 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
               <button onClick={handleCalculateAuspicious} className="submit-btn" style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', height: 'fit-content' }}>
                 {ausLoading ? 'Calculating...' : 'Generate 3-Month Chart'}
               </button>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <button 
+                onClick={() => setShowNavtaraMoonSettings(!showNavtaraMoonSettings)}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem', padding: 0 }}
+              >
+                {showNavtaraMoonSettings ? 'Hide Navtara Moon Settings' : 'Show Navtara Moon Settings'}
+              </button>
+              
+              {showNavtaraMoonSettings && (
+                <div style={{ marginTop: '1rem', padding: '1.5rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <label style={{ fontWeight: 'bold' }}>Enable Navtara Moon Multiplier</label>
+                    <input 
+                      type="checkbox" 
+                      checked={navtaraMoonMultiplierEnabled}
+                      onChange={e => setNavtaraMoonMultiplierEnabled(e.target.checked)}
+                      style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                    />
+                  </div>
+                  
+                  {navtaraMoonMultiplierEnabled && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                      {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
+                        <div key={tara} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>{idx + 1}. {tara}</label>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 'bold' }}>x{navtaraMoonWeights[idx].toFixed(1)}</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="-5" 
+                            max="5" 
+                            step="0.1" 
+                            value={navtaraMoonWeights[idx]}
+                            onChange={e => {
+                              const newW = [...navtaraMoonWeights];
+                              newW[idx] = parseFloat(e.target.value);
+                              setNavtaraMoonWeights(newW);
+                            }}
+                            style={{ width: '100%', cursor: 'pointer' }}
+                          />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            <span>-5x</span>
+                            <span>0</span>
+                            <span>+5x</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {ausData.length > 0 && (

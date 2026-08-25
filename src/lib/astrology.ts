@@ -960,7 +960,7 @@ const signLords: Record<string, string> = {
   return points;
 }
 
-export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any) {
+export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[] }) {
   if (!chartData?.ashtakavarga?.bav) return [];
 
   const points: any[] = [];
@@ -986,8 +986,12 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
   const natalLagnaNakIndex = natalLagnaPos?.nakshatra?.index ?? 0;
 
   const getNavataraMultiplier = (transitNakIndex: number, natalNakIndex: number) => {
+    if (navtaraMoonSettings && !navtaraMoonSettings.enabled) return 1;
     const dist = (transitNakIndex - natalNakIndex + 27) % 27;
     const navatara = dist % 9;
+    if (navtaraMoonSettings && navtaraMoonSettings.enabled && navtaraMoonSettings.weights) {
+      return navtaraMoonSettings.weights[navatara];
+    }
     switch(navatara) {
       case 0: return 1;    // Janma
       case 1: return 1.8;  // Sampat
