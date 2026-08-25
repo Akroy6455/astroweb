@@ -69,6 +69,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'D1' | 'Panchang' | 'Divisional' | 'Chakra' | 'Ashtakavarga' | 'Strength' | 'Transit' | 'Awasthas' | 'Dasha' | 'TaraNirnay' | 'Uttar' | 'Yog' | 'JsonData'>('D1');
   const [isPrinting, setIsPrinting] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
+  const [savedTuningSettings, setSavedTuningSettings] = useState<{name: string, weights: NDSWeights}[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showKundliListModal, setShowKundliListModal] = useState(false);
   const [saveName, setSaveName] = useState('');
@@ -213,6 +214,17 @@ export default function Home() {
           setSavedProfiles(profiles);
         });
 
+        // Listen to tuning settings
+        const tuningRef = collection(db, 'users', currentUser.uid, 'tuning_settings');
+        const unsubscribeTuning = onSnapshot(tuningRef, (snapshot) => {
+          const tunings: {name: string, weights: NDSWeights}[] = [];
+          snapshot.forEach((doc) => {
+            tunings.push(doc.data() as {name: string, weights: NDSWeights});
+          });
+          tunings.sort((a, b) => a.name.localeCompare(b.name));
+          setSavedTuningSettings(tunings);
+        });
+        
         // Listen to settings
         const settingsRef = doc(db, 'users', currentUser.uid, 'settings', 'preferences');
         const unsubscribeSettings = onSnapshot(settingsRef, (doc) => {
@@ -257,6 +269,7 @@ export default function Home() {
         return () => {
           unsubscribeProfiles();
           unsubscribeSettings();
+          unsubscribeTuning();
         };
       } else {
         // User is signed out. Fall back to local storage
@@ -277,6 +290,17 @@ export default function Home() {
         if (savedAyanamsha) setAyanamsha(savedAyanamsha as 'Raman' | 'Lahiri');
         const savedChartStyle = localStorage.getItem('chartStylePref');
         if (savedChartStyle) setChartStyle(savedChartStyle as 'North' | 'South');
+        
+        const savedTuning = localStorage.getItem('tuningSettings');
+        if (savedTuning) {
+          try {
+            const localTunings = JSON.parse(savedTuning);
+            localTunings.sort((a: any, b: any) => a.name.localeCompare(b.name));
+            setSavedTuningSettings(localTunings);
+          } catch(e) { setSavedTuningSettings([]); }
+        } else {
+          setSavedTuningSettings([]);
+        }
         const savedWeights = localStorage.getItem('ndsWeightsPref');
         if (savedWeights) {
           try {
@@ -483,6 +507,35 @@ export default function Home() {
     }
   };
 
+  const saveTuningSetting = async (name: string, weights: NDSWeights) => {
+    if (user) {
+      try {
+        await setDoc(doc(db, 'users', user.uid, 'tuning_settings', name), { name, weights });
+      } catch (err) {
+        console.error("Failed to save tuning setting to Cloud:", err);
+      }
+    } else {
+      const updated = [...savedTuningSettings.filter(s => s.name !== name), { name, weights }];
+      updated.sort((a, b) => a.name.localeCompare(b.name));
+      setSavedTuningSettings(updated);
+      localStorage.setItem('tuningSettings', JSON.stringify(updated));
+    }
+  };
+
+  const deleteTuningSetting = async (name: string) => {
+    if (user) {
+      try {
+        await deleteDoc(doc(db, 'users', user.uid, 'tuning_settings', name));
+      } catch (err) {
+        console.error("Failed to delete tuning setting from Cloud:", err);
+      }
+    } else {
+      const updated = savedTuningSettings.filter(s => s.name !== name);
+      setSavedTuningSettings(updated);
+      localStorage.setItem('tuningSettings', JSON.stringify(updated));
+    }
+  };
+  
   const handleSaveNdsWeights = async (newWeights: NDSWeights) => {
     setNdsWeights(newWeights);
     
@@ -1085,6 +1138,9 @@ export default function Home() {
                           <TaraNirnaySettings 
                             weights={ndsWeights} 
                             onSave={handleSaveNdsWeights}
+                            savedProfiles={savedTuningSettings}
+                            onSaveProfile={saveTuningSetting}
+                            onDeleteProfile={deleteTuningSetting}
                           />
                         </DashaChart>
                       </>

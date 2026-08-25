@@ -7,6 +7,9 @@ import { Settings } from 'lucide-react';
 interface Props {
   weights: NDSWeights;
   onSave: (weights: NDSWeights) => void;
+  savedProfiles?: {name: string, weights: NDSWeights}[];
+  onSaveProfile?: (name: string, weights: NDSWeights) => void;
+  onDeleteProfile?: (name: string) => void;
 }
 
 const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
@@ -95,8 +98,9 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   navamshaMalefic: "Penalty applied if the Navamsha sign lord is a natural Malefic.",
 };
 
-export default function TaraNirnaySettings({ weights, onSave }: Props) {
+export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onSaveProfile, onDeleteProfile }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [currentProfileName, setCurrentProfileName] = useState<string>('V1 Setting (Default)');
   const [localWeights, setLocalWeights] = useState<NDSWeights>(weights);
   const [selectedNdfSettingsPlanet, setSelectedNdfSettingsPlanet] = useState('Sun');
   const [selectedNdfNatalSettingsPlanet, setSelectedNdfNatalSettingsPlanet] = useState('Sun');
@@ -258,47 +262,126 @@ export default function TaraNirnaySettings({ weights, onSave }: Props) {
     <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem', marginTop: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
         <h3 style={{ margin: 0, color: 'var(--foreground)' }}>Engine Tuning Variables</h3>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button 
-            onClick={() => {
-              setLocalWeights(DEFAULT_NDS_WEIGHTS);
-            }}
-            style={{ 
-              padding: '0.4rem 1rem', borderRadius: '6px', 
-              background: 'transparent', color: 'var(--text-muted)', 
-              border: '1px solid var(--border)', cursor: 'pointer',
-              fontSize: '0.8rem', fontWeight: 500
-            }}
-          >
-            Reset
-          </button>
-          <button 
-            onClick={() => setIsOpen(false)}
-            style={{ 
-              padding: '0.4rem 1rem', borderRadius: '6px', 
-              background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', 
-              border: '1px solid rgba(239, 68, 68, 0.2)', cursor: 'pointer',
-              fontSize: '0.8rem', fontWeight: 600
-            }}
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={() => {
-              onSave(localWeights);
-              setIsOpen(false);
-            }}
-            style={{ 
-              padding: '0.4rem 1.2rem', borderRadius: '6px', 
-              background: 'var(--primary)', color: '#fff', 
-              border: 'none', cursor: 'pointer',
-              fontSize: '0.8rem', fontWeight: 600,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            Save & Apply
-          </button>
-        </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select 
+              value={currentProfileName}
+              onChange={(e) => {
+                const name = e.target.value;
+                setCurrentProfileName(name);
+                if (name === 'V1 Setting (Default)') {
+                  setLocalWeights(DEFAULT_NDS_WEIGHTS);
+                  onSave(DEFAULT_NDS_WEIGHTS);
+                } else if (savedProfiles) {
+                  const p = savedProfiles.find(s => s.name === name);
+                  if (p) {
+                    setLocalWeights(p.weights);
+                    onSave(p.weights);
+                  }
+                }
+              }}
+              style={{
+                padding: '0.4rem 0.5rem', borderRadius: '6px', background: 'var(--bg)', color: 'var(--foreground)', border: '1px solid var(--border)', fontSize: '0.8rem', outline: 'none'
+              }}
+            >
+              <option value="V1 Setting (Default)">V1 Setting (Default)</option>
+              {savedProfiles?.map(p => (
+                <option key={p.name} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+            
+            <button 
+              onClick={() => {
+                if (currentProfileName === 'V1 Setting (Default)') {
+                   alert("Cannot overwrite the Default Setting. Please use 'Save As' to create a new profile.");
+                } else {
+                   if (onSaveProfile) onSaveProfile(currentProfileName, localWeights);
+                   onSave(localWeights);
+                   setIsOpen(false);
+                }
+              }}
+              style={{ 
+                padding: '0.4rem 1rem', borderRadius: '6px', 
+                background: 'var(--primary)', color: 'white', 
+                border: 'none', cursor: 'pointer',
+                fontSize: '0.8rem', fontWeight: 600,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+              title="Save changes to current profile"
+            >
+              Save & Apply
+            </button>
+            <button 
+              onClick={() => {
+                const name = prompt("Enter a name for this new Tuning Setting profile:", `Copy of ${currentProfileName}`);
+                if (name) {
+                  if (name === 'V1 Setting (Default)') {
+                    alert("Reserved name. Please choose another.");
+                    return;
+                  }
+                  if (onSaveProfile) onSaveProfile(name, localWeights);
+                  setCurrentProfileName(name);
+                  onSave(localWeights);
+                }
+              }}
+              style={{ 
+                padding: '0.4rem 1rem', borderRadius: '6px', 
+                background: 'var(--border)', color: 'var(--foreground)', 
+                border: 'none', cursor: 'pointer',
+                fontSize: '0.8rem', fontWeight: 600,
+              }}
+              title="Save as a new profile"
+            >
+              Save As...
+            </button>
+            
+            {currentProfileName !== 'V1 Setting (Default)' && (
+              <button 
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete profile: ${currentProfileName}?`)) {
+                    if (onDeleteProfile) onDeleteProfile(currentProfileName);
+                    setCurrentProfileName('V1 Setting (Default)');
+                    setLocalWeights(DEFAULT_NDS_WEIGHTS);
+                    onSave(DEFAULT_NDS_WEIGHTS);
+                  }
+                }}
+                style={{ 
+                  padding: '0.4rem 1rem', borderRadius: '6px', 
+                  background: '#ef4444', color: 'white', 
+                  border: 'none', cursor: 'pointer',
+                  fontSize: '0.8rem', fontWeight: 600,
+                }}
+                title="Delete this profile"
+              >
+                Delete
+              </button>
+            )}
+            
+            <button 
+              onClick={() => {
+                setLocalWeights(DEFAULT_NDS_WEIGHTS);
+              }}
+              style={{ 
+                padding: '0.4rem 1rem', borderRadius: '6px', 
+                background: 'transparent', color: 'var(--text-muted)', 
+                border: '1px solid var(--border)', cursor: 'pointer',
+                fontSize: '0.8rem', fontWeight: 500, marginLeft: '0.5rem'
+              }}
+              title="Reset sliders locally without saving"
+            >
+              Reset Inputs
+            </button>
+            <button 
+              onClick={() => setIsOpen(false)}
+              style={{ 
+                padding: '0.4rem 1rem', borderRadius: '6px', 
+                background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', 
+                border: '1px solid rgba(239, 68, 68, 0.2)', cursor: 'pointer',
+                fontSize: '0.8rem', fontWeight: 600
+              }}
+            >
+              Cancel
+            </button>
+          </div>
       </div>
 
       <div>
