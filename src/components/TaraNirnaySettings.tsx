@@ -195,15 +195,15 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
       ]
     },
     {
-      title: 'Module 4: Arudha Overlay (-100 to +100)',
+      title: 'Module 4: Arudha and Karakamsa multipliers (-100 to +100)',
       keys: [
-        'arudha11thAny', 'arudha11thBenefic', 'arudha12thAny', 'papaKartari', 'shubhaKartari'
+        'arudha11thAny', 'arudha11thBenefic', 'arudha12thAny'
       ]
     },
     {
       title: 'Module 5: Awasthas (-100 to +100)',
       keys: [
-        'lajita', 'garvita', 'kshudita', 'trushita', 'mudita', 'kshobita'
+        'lajita', 'garvita', 'kshudita', 'trushita', 'mudita', 'kshobita', 'papaKartari', 'shubhaKartari'
       ]
     },
     {

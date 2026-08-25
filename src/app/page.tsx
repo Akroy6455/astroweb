@@ -508,30 +508,36 @@ export default function Home() {
   };
 
   const saveTuningSetting = async (name: string, weights: NDSWeights) => {
+    // Optimistic UI Update
+    const updated = [...savedTuningSettings.filter(s => s.name !== name), { name, weights }];
+    updated.sort((a, b) => a.name.localeCompare(b.name));
+    setSavedTuningSettings(updated);
+
     if (user) {
       try {
         await setDoc(doc(db, 'users', user.uid, 'tuning_settings', name), { name, weights });
       } catch (err) {
         console.error("Failed to save tuning setting to Cloud:", err);
+        localStorage.setItem('tuningSettings', JSON.stringify(updated));
       }
     } else {
-      const updated = [...savedTuningSettings.filter(s => s.name !== name), { name, weights }];
-      updated.sort((a, b) => a.name.localeCompare(b.name));
-      setSavedTuningSettings(updated);
       localStorage.setItem('tuningSettings', JSON.stringify(updated));
     }
   };
 
   const deleteTuningSetting = async (name: string) => {
+    // Optimistic UI Update
+    const updated = savedTuningSettings.filter(s => s.name !== name);
+    setSavedTuningSettings(updated);
+
     if (user) {
       try {
         await deleteDoc(doc(db, 'users', user.uid, 'tuning_settings', name));
       } catch (err) {
         console.error("Failed to delete tuning setting from Cloud:", err);
+        localStorage.setItem('tuningSettings', JSON.stringify(updated));
       }
     } else {
-      const updated = savedTuningSettings.filter(s => s.name !== name);
-      setSavedTuningSettings(updated);
       localStorage.setItem('tuningSettings', JSON.stringify(updated));
     }
   };
