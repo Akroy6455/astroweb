@@ -25,7 +25,7 @@ import { generateDashaTimeSeries, DEFAULT_NDS_WEIGHTS, NDSWeights } from '@/lib/
 import { DashaTab } from '@/components/DashaTab';
 import PanchangTab from '@/components/PanchangTab';
 import { getVargaDevta, getDivisionalSign, getDivPart, getDivSignName, getDivSignShort, getD60Nature } from '@/lib/vargaDevtas';
-import { Settings, Save, LayoutTemplate, Aperture, Grid3X3, BarChart, Clock, Moon, Sparkles, Database, TrendingUp, List } from 'lucide-react';
+import { Settings, Save, LayoutTemplate, Aperture, Grid3X3, BarChart, Clock, Moon, Sparkles, Database, TrendingUp, List, X, Trash2 } from 'lucide-react';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import ThemeSwitcher from '@/components/ThemeSwitcher';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -692,7 +692,7 @@ export default function Home() {
       <div style={{ background: 'var(--background)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0, color: 'var(--primary)' }}>Saved Kundlis</h3>
-          <button type="button" onClick={() => setShowKundliListModal(false)} style={{ background: 'none', border: 'none', color: 'var(--foreground)', fontSize: '1.2rem', cursor: 'pointer' }}>Ã¢Å“â€¢</button>
+          <button type="button" onClick={() => setShowKundliListModal(false)} style={{ background: 'none', border: 'none', color: 'var(--foreground)', fontSize: '1.2rem', cursor: 'pointer' }}><X size={24} /></button>
         </div>
         <input 
           type="text" 
@@ -711,7 +711,7 @@ export default function Home() {
                 <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--primary)' }}>{p.name}</h4>
                 {p.query && <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}><strong>Query:</strong> {p.query}</p>}
               </div>
-              <button type="button" onClick={(e) => { e.stopPropagation(); deleteProfile(p.name); }} className="profile-delete" title="Delete Profile" style={{ padding: '0.4rem', marginLeft: '1rem', cursor: 'pointer', zIndex: 10 }}>Ã¢Å“â€¢</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); deleteProfile(p.name); }} className="profile-delete" title="Delete Profile" style={{ padding: '0.4rem', marginLeft: '1rem', cursor: 'pointer', zIndex: 10 }}><Trash2 size={18} /></button>
             </div>
           ))}
           {savedProfiles.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No saved Kundlis found.</p>}
