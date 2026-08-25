@@ -865,9 +865,19 @@ export function getArudhaModifiers(planet: Planet, yogaState: YogaState, alSignI
   const isPlaced11th = planetSignIndex === sign11th;
   const isAspecting11th = hasVedicAspect(planet, (planetSignIndex + 1) as House, (sign11th + 1) as House);
 
-  if (isPlaced11th || isAspecting11th) {
+  // 11th from KL
+  const kl11 = (klSignIndex + 10) % 12;
+  const isPlaced11thKL = planetSignIndex === kl11;
+  const isAspecting11thKL = hasVedicAspect(planet, (planetSignIndex + 1) as House, (kl11 + 1) as House);
+
+  if (isPlaced11th || isAspecting11th || isPlaced11thKL || isAspecting11thKL) {
     score += w.arudha11thAspectOrPosition;
-    const desc = isPlaced11th ? 'Posited in 11th from AL' : 'Aspects 11th from AL';
+    let desc = 'Influences 11th from AL or KL';
+    if (isPlaced11th) desc = 'Posited in 11th from AL';
+    else if (isAspecting11th) desc = 'Aspects 11th from AL';
+    else if (isPlaced11thKL) desc = 'Posited in 11th from KL';
+    else if (isAspecting11thKL) desc = 'Aspects 11th from KL';
+    
     conditions.push({ key: 'arudha11thAspectOrPosition', name: desc, value: w.arudha11thAspectOrPosition });
   }
 

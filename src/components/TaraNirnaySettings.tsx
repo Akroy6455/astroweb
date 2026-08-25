@@ -60,7 +60,7 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   mutualDistance11: "Applied to Antardasha if the AD lord is in the 11th house from MD lord.",
   mutualDistance12: "Applied to Antardasha if the AD lord is in the 12th house from MD lord.",
 
-  arudha11thAspectOrPosition: "Applied if the planet aspects or is posited in the 11th house from Arudha Lagna (AL).",
+  arudha11thAspectOrPosition: "Applied if the planet aspects or is posited in the 11th house from Arudha Lagna (AL) or Karakamsa Lagna (KL).",
   arudhaKarakamsa12thAspectOrPosition: "Applied if the planet aspects or is posited in the 12th house from Arudha Lagna (AL) or Karakamsa Lagna (KL).",
   papaKartari: "Applied if the planet is hemmed between Malefics on both sides within 30Ã‚Â°, OR conjunct Saturn within 5Ã‚Â° (Papa Kartari Yoga).",
   shubhaKartari: "Applied if the planet is hemmed between Benefics on both sides within 30Ã‚Â°, OR conjunct Jupiter within 5Ã‚Â° (Shubha Kartari Yoga).",
