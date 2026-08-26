@@ -1040,17 +1040,21 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
         }
 
         if (matrices?.moonMatrixEnabled && matrices.moonMatrix && matrices.moonMatrix[p]) {
-           const dist = (nakIndex - natalMoonNakIndex + 27) % 27;
-           const navatara = dist % 9;
-           mult *= matrices.moonMatrix[p][navatara];
+           if (!matrices.moonMatrixPlanetsEnabled || matrices.moonMatrixPlanetsEnabled[p]) {
+              const dist = (nakIndex - natalMoonNakIndex + 27) % 27;
+              const navatara = dist % 9;
+              mult *= matrices.moonMatrix[p][navatara];
+           }
         }
 
         if (matrices?.ownMatrixEnabled && matrices.ownMatrix) {
-           const natalPos = chartData.positions.find((pos: any) => pos.name === p);
-           const natalNakIndex = natalPos?.nakshatra?.index ?? 0;
-           const dist = (nakIndex - natalNakIndex + 27) % 27;
-           const navatara = dist % 9;
-           mult *= matrices.ownMatrix[p][navatara];
+           if (!matrices.ownMatrixPlanetsEnabled || matrices.ownMatrixPlanetsEnabled[p]) {
+              const natalPos = chartData.positions.find((pos: any) => pos.name === p);
+              const natalNakIndex = natalPos?.nakshatra?.index ?? 0;
+              const dist = (nakIndex - natalNakIndex + 27) % 27;
+              const navatara = dist % 9;
+              mult *= matrices.ownMatrix[p][navatara];
+           }
         }
 
         score = bavPoints * mult;
@@ -1070,15 +1074,19 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
       let lagnaMult = 1;
       
       if (matrices?.moonMatrixEnabled && matrices.moonMatrix) {
-         const dist = (lagnaNakIndex - natalMoonNakIndex + 27) % 27;
-         const navatara = dist % 9;
-         lagnaMult *= matrices.moonMatrix['Lagna'][navatara];
+         if (!matrices.moonMatrixPlanetsEnabled || matrices.moonMatrixPlanetsEnabled['Lagna']) {
+            const dist = (lagnaNakIndex - natalMoonNakIndex + 27) % 27;
+            const navatara = dist % 9;
+            lagnaMult *= matrices.moonMatrix['Lagna'][navatara];
+         }
       }
 
       if (matrices?.ownMatrixEnabled && matrices.ownMatrix) {
-         const dist = (lagnaNakIndex - natalLagnaNakIndex + 27) % 27;
-         const navatara = dist % 9;
-         lagnaMult *= matrices.ownMatrix['Lagna'][navatara];
+         if (!matrices.ownMatrixPlanetsEnabled || matrices.ownMatrixPlanetsEnabled['Lagna']) {
+            const dist = (lagnaNakIndex - natalLagnaNakIndex + 27) % 27;
+            const navatara = dist % 9;
+            lagnaMult *= matrices.ownMatrix['Lagna'][navatara];
+         }
       }
 
       const lagnaScore = lagnaBavPoints * lagnaMult;

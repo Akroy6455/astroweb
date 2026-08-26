@@ -123,7 +123,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausData, setAusData] = useState<any[]>([]);
   const [ausLoading, setAusLoading] = useState(false);
   const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly'>('Hourly');
-  const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(true);
+  const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(false);
   const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
   const [showNavtaraMoonSettings, setShowNavtaraMoonSettings] = useState(false);
 
@@ -141,6 +141,19 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
     return init;
   });
 
+  const [moonMatrixPlanetsEnabled, setMoonMatrixPlanetsEnabled] = useState<Record<string, boolean>>(() => {
+    const init: any = {};
+    ['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = true);
+    return init;
+  });
+
+  const [ownMatrixPlanetsEnabled, setOwnMatrixPlanetsEnabled] = useState<Record<string, boolean>>(() => {
+    const init: any = {};
+    ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = true);
+    return init;
+  });
+
+
   const handleCalculateAuspicious = async () => {
     setAusLoading(true);
     try {
@@ -148,8 +161,10 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
       const result = await getAuspiciousTimeData(startISO, parseFloat(tLat), parseFloat(tLon), mainData, { enabled: navtaraMoonMultiplierEnabled, weights: navtaraMoonWeights }, {
         moonMatrixEnabled: moonNavtaraMatrixEnabled,
         moonMatrix: moonNavtaraMatrix,
+        moonMatrixPlanetsEnabled: moonMatrixPlanetsEnabled,
         ownMatrixEnabled: ownNavtaraMatrixEnabled,
-        ownMatrix: ownNavtaraMatrix
+        ownMatrix: ownNavtaraMatrix,
+        ownMatrixPlanetsEnabled: ownMatrixPlanetsEnabled
       });
       
       const formatted = result.map((r: any) => ({
@@ -507,7 +522,17 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                             <tr>
                               <th style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'left' }}>Moon's Tara</th>
                               {['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
-                                <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>{p}</th>
+                                <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                                    <span>{p}</span>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={moonMatrixPlanetsEnabled[p]} 
+                                      onChange={e => setMoonMatrixPlanetsEnabled({...moonMatrixPlanetsEnabled, [p]: e.target.checked})}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                  </div>
+                                </th>
                               ))}
                             </tr>
                           </thead>
@@ -516,7 +541,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                               <tr key={tara}>
                                 <td style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold' }}>{tara}</td>
                                 {['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
-                                  <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)' }}>
+                                  <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', opacity: moonMatrixPlanetsEnabled[p] ? 1 : 0.5, pointerEvents: moonMatrixPlanetsEnabled[p] ? 'auto' : 'none' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                                       <span style={{ fontWeight: 600 }}>x{moonNavtaraMatrix[p][idx].toFixed(1)}</span>
                                       <input 
@@ -559,7 +584,17 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                             <tr>
                               <th style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'left' }}>Own Tara</th>
                               {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
-                                <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>{p}</th>
+                                <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                                    <span>{p}</span>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={ownMatrixPlanetsEnabled[p]} 
+                                      onChange={e => setOwnMatrixPlanetsEnabled({...ownMatrixPlanetsEnabled, [p]: e.target.checked})}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                  </div>
+                                </th>
                               ))}
                             </tr>
                           </thead>
@@ -568,7 +603,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                               <tr key={tara}>
                                 <td style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold' }}>{tara}</td>
                                 {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
-                                  <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)' }}>
+                                  <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', opacity: ownMatrixPlanetsEnabled[p] ? 1 : 0.5, pointerEvents: ownMatrixPlanetsEnabled[p] ? 'auto' : 'none' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                                       <span style={{ fontWeight: 600 }}>x{ownNavtaraMatrix[p][idx].toFixed(1)}</span>
                                       <input 
