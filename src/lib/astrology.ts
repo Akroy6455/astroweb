@@ -960,7 +960,7 @@ const signLords: Record<string, string> = {
   return points;
 }
 
-export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[] }, matrices?: any) {
+export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any) {
   if (!chartData?.ashtakavarga?.bav) return [];
 
   const points: any[] = [];
@@ -1036,14 +1036,18 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
         if (p === 'Moon' && navtaraMoonSettings?.enabled && navtaraMoonSettings.weights) {
            const dist = (nakIndex - natalMoonNakIndex + 27) % 27;
            const navatara = dist % 9;
-           mult *= navtaraMoonSettings.weights[navatara];
+           if (!navtaraMoonSettings.taraEnabled || navtaraMoonSettings.taraEnabled[navatara]) {
+               mult *= navtaraMoonSettings.weights[navatara];
+           }
         }
 
         if (matrices?.moonMatrixEnabled && matrices.moonMatrix && matrices.moonMatrix[p]) {
            if (!matrices.moonMatrixPlanetsEnabled || matrices.moonMatrixPlanetsEnabled[p]) {
               const dist = (nakIndex - natalMoonNakIndex + 27) % 27;
               const navatara = dist % 9;
-              mult *= matrices.moonMatrix[p][navatara];
+              if (!matrices.moonMatrixTaraEnabled || matrices.moonMatrixTaraEnabled[navatara]) {
+                  mult *= matrices.moonMatrix[p][navatara];
+              }
            }
         }
 
@@ -1053,7 +1057,9 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
               const natalNakIndex = natalPos?.nakshatra?.index ?? 0;
               const dist = (nakIndex - natalNakIndex + 27) % 27;
               const navatara = dist % 9;
-              mult *= matrices.ownMatrix[p][navatara];
+              if (!matrices.ownMatrixTaraEnabled || matrices.ownMatrixTaraEnabled[navatara]) {
+                  mult *= matrices.ownMatrix[p][navatara];
+              }
            }
         }
 
@@ -1077,7 +1083,9 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
          if (!matrices.moonMatrixPlanetsEnabled || matrices.moonMatrixPlanetsEnabled['Lagna']) {
             const dist = (lagnaNakIndex - natalMoonNakIndex + 27) % 27;
             const navatara = dist % 9;
-            lagnaMult *= matrices.moonMatrix['Lagna'][navatara];
+            if (!matrices.moonMatrixTaraEnabled || matrices.moonMatrixTaraEnabled[navatara]) {
+                lagnaMult *= matrices.moonMatrix['Lagna'][navatara];
+            }
          }
       }
 
@@ -1085,7 +1093,9 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
          if (!matrices.ownMatrixPlanetsEnabled || matrices.ownMatrixPlanetsEnabled['Lagna']) {
             const dist = (lagnaNakIndex - natalLagnaNakIndex + 27) % 27;
             const navatara = dist % 9;
-            lagnaMult *= matrices.ownMatrix['Lagna'][navatara];
+            if (!matrices.ownMatrixTaraEnabled || matrices.ownMatrixTaraEnabled[navatara]) {
+                lagnaMult *= matrices.ownMatrix['Lagna'][navatara];
+            }
          }
       }
 
