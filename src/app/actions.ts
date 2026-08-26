@@ -119,6 +119,6 @@ export async function findNextTransitEvent(
   return await findNextTransit(planetName, offsetDeg, ranges, jd, isPoint, direction, ayanamsha);
 }
 
-export async function getAuspiciousTimeData(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[] }, matrices?: any) {
+export async function getAuspiciousTimeData(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any) {
   return generateAuspiciousTimeSeries(startDateISO, lat, lon, chartData, navtaraMoonSettings, matrices);
 }
