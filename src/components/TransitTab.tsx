@@ -130,7 +130,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [moonNavtaraMatrixEnabled, setMoonNavtaraMatrixEnabled] = useState(false);
   const [moonNavtaraMatrix, setMoonNavtaraMatrix] = useState<Record<string, number[]>>(() => {
     const init: any = {};
-    ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = [1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
+    ['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = [1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
     return init;
   });
 
@@ -506,7 +506,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                           <thead>
                             <tr>
                               <th style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'left' }}>Moon's Tara</th>
-                              {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                              {['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
                                 <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>{p}</th>
                               ))}
                             </tr>
@@ -515,7 +515,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                             {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
                               <tr key={tara}>
                                 <td style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold' }}>{tara}</td>
-                                {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                                {['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
                                   <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                                       <span style={{ fontWeight: 600 }}>x{moonNavtaraMatrix[p][idx].toFixed(1)}</span>

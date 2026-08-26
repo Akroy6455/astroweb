@@ -1039,7 +1039,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
            mult *= navtaraMoonSettings.weights[navatara];
         }
 
-        if (matrices?.moonMatrixEnabled && matrices.moonMatrix) {
+        if (matrices?.moonMatrixEnabled && matrices.moonMatrix && matrices.moonMatrix[p]) {
            const dist = (nakIndex - natalMoonNakIndex + 27) % 27;
            const navatara = dist % 9;
            mult *= matrices.moonMatrix[p][navatara];
