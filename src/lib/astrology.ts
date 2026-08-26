@@ -960,7 +960,7 @@ const signLords: Record<string, string> = {
   return points;
 }
 
-export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[] }) {
+export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[] }, matrices?: any) {
   if (!chartData?.ashtakavarga?.bav) return [];
 
   const points: any[] = [];
@@ -1020,41 +1020,71 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
     );
 
     let totalScore = 0;
-    const breakdown: any = {};
+      const breakdown: any = {};
 
-    for (const p of transitPlanets) {
-      const calc = sweph.calc_ut(jd, planetIds[p], flag);
-      const long = calc.data[0];
-      const rasiIndex = Math.floor(long / 30);
-      
-      let bavPoints = chartData.ashtakavarga.bav[p][rasiIndex] || 0;
-      let score = bavPoints;
-
-      if (p === 'Moon') {
+      for (const p of transitPlanets) {
+        const calc = sweph.calc_ut(jd, planetIds[p], flag);
+        const long = calc.data[0];
+        const rasiIndex = Math.floor(long / 30);
+        
+        let bavPoints = chartData.ashtakavarga.bav[p][rasiIndex] || 0;
+        let score = bavPoints;
         const nakIndex = Math.floor(long / (360 / 27));
-        const mult = getNavataraMultiplier(nakIndex, natalMoonNakIndex);
+
+        let mult = 1;
+
+        if (p === 'Moon' && navtaraMoonSettings?.enabled && navtaraMoonSettings.weights) {
+           const dist = (nakIndex - natalMoonNakIndex + 27) % 27;
+           const navatara = dist % 9;
+           mult *= navtaraMoonSettings.weights[navatara];
+        }
+
+        if (matrices?.moonMatrixEnabled && matrices.moonMatrix) {
+           const dist = (nakIndex - natalMoonNakIndex + 27) % 27;
+           const navatara = dist % 9;
+           mult *= matrices.moonMatrix[p][navatara];
+        }
+
+        if (matrices?.ownMatrixEnabled && matrices.ownMatrix) {
+           const natalPos = chartData.positions.find((pos: any) => pos.name === p);
+           const natalNakIndex = natalPos?.nakshatra?.index ?? 0;
+           const dist = (nakIndex - natalNakIndex + 27) % 27;
+           const navatara = dist % 9;
+           mult *= matrices.ownMatrix[p][navatara];
+        }
+
         score = bavPoints * mult;
-        breakdown['Moon'] = { bav: bavPoints, mult, score, rasiIndex, nakIndex };
-      } else {
-        breakdown[p] = { bav: bavPoints, score, rasiIndex };
+        breakdown[p] = { bav: bavPoints, mult, score, rasiIndex, nakIndex };
+
+        totalScore += score;
       }
 
-      totalScore += score;
-    }
+      // Lagna transit calculation
+      const houses = sweph.houses_ex(jd, flag, lat, lon, 'P');
+      const housePoints = (houses as any).points || (houses as any).data?.points;
+      const ascLongitude = housePoints ? housePoints[0] : 0;
+      const lagnaRasiIndex = Math.floor(ascLongitude / 30);
+      const lagnaBavPoints = chartData.ashtakavarga.bav['Lagna'][lagnaRasiIndex] || 0;
+      const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
+      
+      let lagnaMult = 1;
+      
+      if (matrices?.moonMatrixEnabled && matrices.moonMatrix) {
+         const dist = (lagnaNakIndex - natalMoonNakIndex + 27) % 27;
+         const navatara = dist % 9;
+         lagnaMult *= matrices.moonMatrix['Lagna'][navatara];
+      }
 
-    // Lagna transit calculation
-        const houses = sweph.houses_ex(jd, flag, lat, lon, 'P');
-    const housePoints = (houses as any).points || (houses as any).data?.points;
-    const ascLongitude = housePoints ? housePoints[0] : 0;
-    const lagnaRasiIndex = Math.floor(ascLongitude / 30);
-    const lagnaBavPoints = chartData.ashtakavarga.bav['Lagna'][lagnaRasiIndex] || 0;
-    const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
-    const lagnaMult = 1;
-    
-    const lagnaScore = lagnaBavPoints * lagnaMult;
-    breakdown['Lagna'] = { bav: lagnaBavPoints, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
-    
-    totalScore += lagnaScore;
+      if (matrices?.ownMatrixEnabled && matrices.ownMatrix) {
+         const dist = (lagnaNakIndex - natalLagnaNakIndex + 27) % 27;
+         const navatara = dist % 9;
+         lagnaMult *= matrices.ownMatrix['Lagna'][navatara];
+      }
+
+      const lagnaScore = lagnaBavPoints * lagnaMult;
+      breakdown['Lagna'] = { bav: lagnaBavPoints, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
+      
+      totalScore += lagnaScore;
 
     points.push({
       time: date.toISOString(),

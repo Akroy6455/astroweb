@@ -127,11 +127,30 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
   const [showNavtaraMoonSettings, setShowNavtaraMoonSettings] = useState(false);
 
+  const [moonNavtaraMatrixEnabled, setMoonNavtaraMatrixEnabled] = useState(false);
+  const [moonNavtaraMatrix, setMoonNavtaraMatrix] = useState<Record<string, number[]>>(() => {
+    const init: any = {};
+    ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = [1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
+    return init;
+  });
+
+  const [ownNavtaraMatrixEnabled, setOwnNavtaraMatrixEnabled] = useState(false);
+  const [ownNavtaraMatrix, setOwnNavtaraMatrix] = useState<Record<string, number[]>>(() => {
+    const init: any = {};
+    ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = [1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
+    return init;
+  });
+
   const handleCalculateAuspicious = async () => {
     setAusLoading(true);
     try {
       const startISO = new Date(ausStartDate).toISOString();
-      const result = await getAuspiciousTimeData(startISO, parseFloat(tLat), parseFloat(tLon), mainData, { enabled: navtaraMoonMultiplierEnabled, weights: navtaraMoonWeights });
+      const result = await getAuspiciousTimeData(startISO, parseFloat(tLat), parseFloat(tLon), mainData, { enabled: navtaraMoonMultiplierEnabled, weights: navtaraMoonWeights }, {
+        moonMatrixEnabled: moonNavtaraMatrixEnabled,
+        moonMatrix: moonNavtaraMatrix,
+        ownMatrixEnabled: ownNavtaraMatrixEnabled,
+        ownMatrix: ownNavtaraMatrix
+      });
       
       const formatted = result.map((r: any) => ({
         ...r,
@@ -421,51 +440,158 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 onClick={() => setShowNavtaraMoonSettings(!showNavtaraMoonSettings)}
                 style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem', padding: 0 }}
               >
-                {showNavtaraMoonSettings ? 'Hide Navtara Moon Settings' : 'Show Navtara Moon Settings'}
+                {showNavtaraMoonSettings ? 'Hide Advanced Navtara Multiplier Settings' : 'Show Advanced Navtara Multiplier Settings'}
               </button>
               
               {showNavtaraMoonSettings && (
                 <div style={{ marginTop: '1rem', padding: '1.5rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <label style={{ fontWeight: 'bold' }}>Enable Navtara Moon Multiplier</label>
-                    <input 
-                      type="checkbox" 
-                      checked={navtaraMoonMultiplierEnabled}
-                      onChange={e => setNavtaraMoonMultiplierEnabled(e.target.checked)}
-                      style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
-                    />
-                  </div>
                   
-                  {navtaraMoonMultiplierEnabled && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                      {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
-                        <div key={tara} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>{idx + 1}. {tara}</label>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 'bold' }}>x{navtaraMoonWeights[idx].toFixed(1)}</span>
-                          </div>
-                          <input 
-                            type="range" 
-                            min="-5" 
-                            max="5" 
-                            step="0.1" 
-                            value={navtaraMoonWeights[idx]}
-                            onChange={e => {
-                              const newW = [...navtaraMoonWeights];
-                              newW[idx] = parseFloat(e.target.value);
-                              setNavtaraMoonWeights(newW);
-                            }}
-                            style={{ width: '100%', cursor: 'pointer' }}
-                          />
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                            <span>-5x</span>
-                            <span>0</span>
-                            <span>+5x</span>
-                          </div>
-                        </div>
-                      ))}
+                  {/* Basic Moon Settings */}
+                  <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <label style={{ fontWeight: 'bold' }}>Enable Basic Moon Navtara Multiplier</label>
+                      <input 
+                        type="checkbox" 
+                        checked={navtaraMoonMultiplierEnabled}
+                        onChange={e => setNavtaraMoonMultiplierEnabled(e.target.checked)}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                      />
                     </div>
-                  )}
+                    {navtaraMoonMultiplierEnabled && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                        {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
+                          <div key={tara} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>{idx + 1}. {tara}</label>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 'bold' }}>x{navtaraMoonWeights[idx].toFixed(1)}</span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="-5" 
+                              max="5" 
+                              step="0.1" 
+                              value={navtaraMoonWeights[idx]}
+                              onChange={e => {
+                                const newW = [...navtaraMoonWeights];
+                                newW[idx] = parseFloat(e.target.value);
+                                setNavtaraMoonWeights(newW);
+                              }}
+                              style={{ width: '100%', cursor: 'pointer' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                              <span>-5x</span>
+                              <span>0</span>
+                              <span>+5x</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Matrix 1: All Planets wrt Moon Navtara */}
+                  <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <label style={{ fontWeight: 'bold' }}>Matrix 1: Planets/Lagna vs Moon's Navtara</label>
+                      <input 
+                        type="checkbox" 
+                        checked={moonNavtaraMatrixEnabled}
+                        onChange={e => setMoonNavtaraMatrixEnabled(e.target.checked)}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                      />
+                    </div>
+                    {moonNavtaraMatrixEnabled && (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'left' }}>Moon's Tara</th>
+                              {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                                <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>{p}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
+                              <tr key={tara}>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold' }}>{tara}</td>
+                                {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                                  <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{ fontWeight: 600 }}>x{moonNavtaraMatrix[p][idx].toFixed(1)}</span>
+                                      <input 
+                                        type="range" min="-5" max="5" step="0.1" 
+                                        value={moonNavtaraMatrix[p][idx]}
+                                        onChange={e => {
+                                          const newM = { ...moonNavtaraMatrix };
+                                          newM[p] = [...newM[p]];
+                                          newM[p][idx] = parseFloat(e.target.value);
+                                          setMoonNavtaraMatrix(newM);
+                                        }}
+                                        style={{ width: '60px', cursor: 'pointer' }}
+                                      />
+                                    </div>
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Matrix 2: All Planets wrt Own Natal Navtara */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <label style={{ fontWeight: 'bold' }}>Matrix 2: Planets/Lagna vs Their Own Natal Navtara</label>
+                      <input 
+                        type="checkbox" 
+                        checked={ownNavtaraMatrixEnabled}
+                        onChange={e => setOwnNavtaraMatrixEnabled(e.target.checked)}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                      />
+                    </div>
+                    {ownNavtaraMatrixEnabled && (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'left' }}>Own Tara</th>
+                              {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                                <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>{p}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
+                              <tr key={tara}>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold' }}>{tara}</td>
+                                {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                                  <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{ fontWeight: 600 }}>x{ownNavtaraMatrix[p][idx].toFixed(1)}</span>
+                                      <input 
+                                        type="range" min="-5" max="5" step="0.1" 
+                                        value={ownNavtaraMatrix[p][idx]}
+                                        onChange={e => {
+                                          const newM = { ...ownNavtaraMatrix };
+                                          newM[p] = [...newM[p]];
+                                          newM[p][idx] = parseFloat(e.target.value);
+                                          setOwnNavtaraMatrix(newM);
+                                        }}
+                                        style={{ width: '60px', cursor: 'pointer' }}
+                                      />
+                                    </div>
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
