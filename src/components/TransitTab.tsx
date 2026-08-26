@@ -123,6 +123,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausData, setAusData] = useState<any[]>([]);
   const [ausLoading, setAusLoading] = useState(false);
   const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly'>('Hourly');
+  const [selectedChartPoint, setSelectedChartPoint] = useState<any>(null);
   const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(false);
   const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
   const [showNavtaraMoonSettings, setShowNavtaraMoonSettings] = useState(false);
@@ -710,7 +711,14 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
               <div style={{ overflowX: 'auto', width: '100%', height: '100%' }}>
                 <div style={{ width: `${Math.max(1200, chartData.length * (ausZoom === 'Hourly' ? 8 : (ausZoom === 'Daily' ? 20 : 50)))}px`, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
+                    <LineChart 
+                      data={chartData}
+                      onClick={(e: any) => {
+                        if (e && e.activePayload && e.activePayload.length > 0 && ausZoom === 'Hourly') {
+                          setSelectedChartPoint(e.activePayload[0].payload);
+                        }
+                      }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                       <XAxis dataKey="formattedTime" stroke="var(--text-muted)" tick={{ fontSize: 12 }} interval={ausZoom === "Hourly" ? 48 : "preserveStartEnd"} />
                       <YAxis stroke="var(--text-muted)" />
@@ -723,6 +731,41 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {selectedChartPoint && ausZoom === 'Hourly' && (
+            <div style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', marginTop: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h4 style={{ color: 'var(--primary)', margin: 0 }}>Score Breakdown for {selectedChartPoint.formattedTime}</h4>
+                <button 
+                  onClick={() => setSelectedChartPoint(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}
+                >×</button>
+              </div>
+              <p style={{ marginBottom: '1rem', fontWeight: 600, fontSize: '1.1rem' }}>Total Score: {selectedChartPoint.score.toFixed(2)}</p>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>Planet</th>
+                      <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>Base BAV</th>
+                      <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>Multiplier</th>
+                      <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'right' }}>Final Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedChartPoint.breakdown && Object.entries(selectedChartPoint.breakdown).map(([planet, details]: [string, any]) => (
+                      <tr key={planet}>
+                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 500 }}>{planet}</td>
+                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>{details.bav}</td>
+                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>x{details.mult.toFixed(2)}</td>
+                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'right', fontWeight: 600 }}>{details.score.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
