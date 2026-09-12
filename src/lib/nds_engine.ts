@@ -752,9 +752,13 @@ export function getDignityScore(planet: Planet, yogaState: YogaState, _positions
 
   if (planet === 'Sun' && w.enableCombustionTradeoff) {
     let absorbedPoints = 0;
-    const ascendantPos = _positions.find(p => p.name === 'Ascendant');
-    const ascendantSignIndex = ascendantPos ? ascendantPos.rasi.index : 0;
-    const sunLordOfHouse = (4 - ascendantSignIndex + 12) % 12 + 1;
+    let sunLordOfHouse = 5;
+    for (let i = 1; i <= 12; i++) {
+      if (yogaState.houses[i as House].lord === 'Sun') {
+        sunLordOfHouse = i;
+        break;
+      }
+    }
     const isSunBadLord = [2, 3, 6, 7, 8, 12].includes(sunLordOfHouse);
     const combustionVal = isSunBadLord ? (w.combustionBadLord ?? w.combustion) : (w.combustionGoodLord ?? w.combustion);
 
@@ -773,9 +777,13 @@ export function getDignityScore(planet: Planet, yogaState: YogaState, _positions
   }
 
   if (info.isCombust && planet !== 'Sun' && planet !== 'Rahu' && planet !== 'Ketu') {
-    const ascendantPos = _positions.find(p => p.name === 'Ascendant');
-    const ascendantSignIndex = ascendantPos ? ascendantPos.rasi.index : 0;
-    const sunLordOfHouse = (4 - ascendantSignIndex + 12) % 12 + 1;
+    let sunLordOfHouse = 5;
+    for (let i = 1; i <= 12; i++) {
+      if (yogaState.houses[i as House].lord === 'Sun') {
+        sunLordOfHouse = i;
+        break;
+      }
+    }
     const isSunBadLord = [2, 3, 6, 7, 8, 12].includes(sunLordOfHouse);
     const combustionVal = isSunBadLord ? (w.combustionBadLord ?? w.combustion) : (w.combustionGoodLord ?? w.combustion);
 
