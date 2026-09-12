@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NDSWeights, DEFAULT_NDS_WEIGHTS } from '@/lib/nds_engine';
-import { Settings } from 'lucide-react';
+import { Settings, Info } from 'lucide-react';
 
 interface Props {
   weights: NDSWeights;
@@ -1145,6 +1145,11 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
                       <div style={{ position: 'absolute', top: '2px', left: !isDisabled ? '18px' : '2px', width: '12px', height: '12px', background: '#fff', borderRadius: '50%', transition: 'left 0.3s' }} />
                     </div>
                     <span style={{ color: 'var(--foreground)', fontWeight: 500 }}>{k}</span>
+                    {DESCRIPTIONS[k] && (
+                      <span title={DESCRIPTIONS[k]} style={{ display: 'inline-flex', cursor: 'help', color: 'var(--text-muted)' }}>
+                        <Info size={14} />
+                      </span>
+                    )}
                   </div>
                   <input
                     type="number"
@@ -1181,9 +1186,6 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
                       accentColor: (localWeights[k] as number) > 0 ? '#10b981' : (localWeights[k] as number) < 0 ? '#ef4444' : '#94a3b8'
                     }}
                   />
-                </div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: 1.2, marginTop: '0.15rem', paddingLeft: '40px' }}>
-                  {DESCRIPTIONS[k]}
                 </div>
               </div>
             )})}
