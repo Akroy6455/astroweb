@@ -44,7 +44,6 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   enemySign: "Percentage modifier applied if the planet is in an Enemy Sign.",
   debilitation: "Percentage modifier applied if the planet is Debilitated.",
   vargottama: "Added to the dignity percentage if the planet is in the same sign in D1 (Rasi) and D9 (Navamsha).",
-  combustion: "Percentage modifier applied if the planet is Combust (too close to the Sun). Overrides base dignity.",
   neechaBhanga: "Replaces debilitation percentage if Neecha Bhanga Raja Yoga conditions are met (cancellation of debilitation).",
 
   mutualDistance1: "Applied to Antardasha if the AD lord is conjunct the MD lord (1st house from MD).",
@@ -65,8 +64,9 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   papaKartari: "Applied if the planet is hemmed between Malefics on both sides within 30Ã‚Â°, OR conjunct Saturn within 5Ã‚Â° (Papa Kartari Yoga).",
   shubhaKartari: "Applied if the planet is hemmed between Benefics on both sides within 30Ã‚Â°, OR conjunct Jupiter within 5Ã‚Â° (Shubha Kartari Yoga).",
 
-  combustionBadLord: "Applied to combusted planets if Sun rules houses 2, 3, 6, 7, 8, or 12.",
-  combustionGoodLord: "Applied to combusted planets if Sun rules houses 1, 4, 5, 9, 10, or 11.",
+  combustSunAbsorbsPercent: "When Sun combusts any planet, this % of the combusted planet's lordship points are transferred to the Sun. Example: If 1st lord has +90 and is combust, at 50%, the 1st lord loses 45 points, and Sun gains +45.",
+  combustSunRetainsPercent: "When Sun combusts any planet, this % determines how much of the Sun's OWN lordship points it retains. Example: If Sun is 9th lord with +100 base, at 50%, the Sun retains +50 points.",
+  combustPlanetAbsorbsPercent: "When Sun combusts any planet, the combusted planet absorbs this % of the Sun's lordship points, and loses this % of its own. Example: Sun (10th lord) is +100 and combusts 6th lord (-90). At 50%, 6th lord loses 50% of -90 and absorbs 50% of +100.",
   lajita: "Applied if the planet is in Lajjitadi Avastha: Lajjita (Humiliated - e.g. placed in 5th with Rahu/Ketu/Sun/Saturn/Mars).",
   garvita: "Applied if the planet is in Lajjitadi Avastha: Garvita (Proud - placed in Exaltation or Moolatrikona).",
   kshudita: "Applied if the planet is in Lajjitadi Avastha: Kshudhita (Starved - in enemy sign, aspected by enemy, or conjunct Saturn).",
@@ -182,7 +182,7 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
       title: 'Module 2: Dignity (-100% to +100%)',
       keys: [
         'exaltation', 'ownSign', 'friendlySign', 'neutralSign', 'enemySign', 'debilitation', 
-        'vargottama', 'combustionBadLord', 'combustionGoodLord', 'neechaBhanga'
+        'vargottama', 'neechaBhanga', 'combustSunAbsorbsPercent', 'combustSunRetainsPercent', 'combustPlanetAbsorbsPercent'
       ]
     },
     {
@@ -1019,20 +1019,7 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
               </div>
             </div>
           </div>    
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <div>
-              <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--foreground)' }}>Enable Sun Combustion Tradeoff</span>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sun absorbs the exact points that are added or reduced from combusted planets.</p>
-            </div>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={localWeights.enableCombustionTradeoff ?? false} 
-                onChange={(e) => setLocalWeights(prev => ({ ...prev, enableCombustionTradeoff: e.target.checked }))}
-                style={{ accentColor: 'var(--primary)', transform: 'scale(1.2)' }}
-              />
-            </label>
-          </div>
+
 
         <div style={{ 
           marginBottom: '2rem',

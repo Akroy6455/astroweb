@@ -89,10 +89,9 @@ export interface NDSWeights {
   enemySign: number;          
   debilitation: number;       
   vargottama: number;         
-  combustion: number;
-  combustionBadLord?: number;
-  combustionGoodLord?: number;
-  enableCombustionTradeoff?: boolean;         
+  combustSunAbsorbsPercent?: number;
+  combustSunRetainsPercent?: number;
+  combustPlanetAbsorbsPercent?: number;
   neechaBhanga: number;       
 
   // Module 3: Mutual Placement Distance
@@ -311,10 +310,9 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   enemySign: -50,
   debilitation: -100,
   vargottama: 50,
-  combustion: -80,
-  combustionBadLord: -80,
-  combustionGoodLord: -40,
-  enableCombustionTradeoff: false,
+  combustSunAbsorbsPercent: 50,
+  combustSunRetainsPercent: 50,
+  combustPlanetAbsorbsPercent: 50,
   neechaBhanga: 60,
   mutualDistance1: 50,
   mutualDistance2: 20,
@@ -750,45 +748,84 @@ export function getDignityScore(planet: Planet, yogaState: YogaState, _positions
     conditions.push({ key: 'vargottama', name: 'Vargottama (D1=D9)', value: w.vargottama });
   }
 
-  if (planet === 'Sun' && w.enableCombustionTradeoff) {
-    let absorbedPoints = 0;
-    let sunLordOfHouse = 5;
-    for (let i = 1; i <= 12; i++) {
-      if (yogaState.houses[i as House].lord === 'Sun') {
-        sunLordOfHouse = i;
-        break;
-      }
-    }
-    const isSunBadLord = [2, 3, 6, 7, 8, 12].includes(sunLordOfHouse);
-    const combustionVal = isSunBadLord ? (w.combustionBadLord ?? w.combustion) : (w.combustionGoodLord ?? w.combustion);
+  const sunAbsorbs = w.combustSunAbsorbsPercent ?? 50;
+  const sunRetains = w.combustSunRetainsPercent ?? 50;
+  const planetAbsorbs = w.combustPlanetAbsorbsPercent ?? 50;
 
-    for (const otherP of Object.keys(yogaState.planets)) {
-      if (otherP === 'Sun' || otherP === 'Rahu' || otherP === 'Ketu') continue;
-      const otherInfo = yogaState.planets[otherP as keyof typeof yogaState.planets];
-      if (otherInfo.isCombust) {
-         absorbedPoints += -(combustionVal);
-      }
-    }
-    
-    if (absorbedPoints !== 0) {
-      score += absorbedPoints;
-      conditions.push({ key: 'combustion', name: `Tradeoff: Absorbed points from combust planets`, value: absorbedPoints });
+  // Find out if Sun is combusting anything
+  const combustedPlanets: Planet[] = [];
+  for (const p of PLANETS) {
+    if (p === 'Sun' || p === 'Rahu' || p === 'Ketu') continue;
+    if (yogaState.planets[p as Planet]?.isCombust) {
+      combustedPlanets.push(p as Planet);
     }
   }
 
-  if (info.isCombust && planet !== 'Sun' && planet !== 'Rahu' && planet !== 'Ketu') {
-    let sunLordOfHouse = 5;
-    for (let i = 1; i <= 12; i++) {
-      if (yogaState.houses[i as House].lord === 'Sun') {
-        sunLordOfHouse = i;
-        break;
+  if (planet === 'Sun' && combustedPlanets.length > 0) {
+    // Rule 2: Sun retains % of its own lordship points
+    const sunBase = getBaseLordshipScore('Sun', yogaState, w).score;
+    const lostOwnScore = Math.round(sunBase * (1 - sunRetains / 100));
+    if (lostOwnScore !== 0) {
+      score -= lostOwnScore;
+      conditions.push({ 
+        key: 'combustSunRetainsPercent' as keyof NDSWeights, 
+        name: `Combustion: Sun retains ${sunRetains}% of own Lordship`, 
+        value: -lostOwnScore 
+      });
+    }
+
+    // Rule 1: Sun absorbs % of combusted planet's lordship points
+    let absorbedTotal = 0;
+    for (const cp of combustedPlanets) {
+      const cpBase = getBaseLordshipScore(cp, yogaState, w).score;
+      const absorbed = Math.round(cpBase * (sunAbsorbs / 100));
+      if (absorbed !== 0) {
+        absorbedTotal += absorbed;
+        conditions.push({ 
+          key: 'combustSunAbsorbsPercent' as keyof NDSWeights, 
+          name: `Combustion: Sun absorbed ${sunAbsorbs}% from ${cp}`, 
+          value: absorbed 
+        });
       }
     }
-    const isSunBadLord = [2, 3, 6, 7, 8, 12].includes(sunLordOfHouse);
-    const combustionVal = isSunBadLord ? (w.combustionBadLord ?? w.combustion) : (w.combustionGoodLord ?? w.combustion);
+    score += absorbedTotal;
+  }
 
-    score += combustionVal;
-    conditions.push({ key: 'combustion', name: `Combust (Sun is Lord of ${sunLordOfHouse})`, value: combustionVal });
+  if (info.isCombust && planet !== 'Sun' && planet !== 'Rahu' && planet !== 'Ketu') {
+    const cpBase = getBaseLordshipScore(planet, yogaState, w).score;
+    const sunBase = getBaseLordshipScore('Sun', yogaState, w).score;
+    
+    // Rule 1: Planet loses % of its lordship to Sun
+    const lostToSun = Math.round(cpBase * (sunAbsorbs / 100));
+    if (lostToSun !== 0) {
+      score -= lostToSun;
+      conditions.push({ 
+        key: 'combustSunAbsorbsPercent' as keyof NDSWeights, 
+        name: `Combustion: Lost ${sunAbsorbs}% to Sun`, 
+        value: -lostToSun 
+      });
+    }
+
+    // Rule 3: Planet absorbs % of Sun's lordship, and loses another % of its own
+    const lostFromOwn = Math.round(cpBase * (planetAbsorbs / 100));
+    const gainedFromSun = Math.round(sunBase * (planetAbsorbs / 100));
+    
+    if (lostFromOwn !== 0) {
+      score -= lostFromOwn;
+      conditions.push({
+        key: 'combustPlanetAbsorbsPercent' as keyof NDSWeights,
+        name: `Combustion: Removed ${planetAbsorbs}% of own Lordship`,
+        value: -lostFromOwn
+      });
+    }
+    if (gainedFromSun !== 0) {
+      score += gainedFromSun;
+      conditions.push({
+        key: 'combustPlanetAbsorbsPercent' as keyof NDSWeights,
+        name: `Combustion: Absorbed ${planetAbsorbs}% of Sun's Lordship`,
+        value: gainedFromSun
+      });
+    }
   }
 
   return { score, conditions };
