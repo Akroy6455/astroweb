@@ -28,25 +28,26 @@ function calculateArudha(baseHouse: number, lagnaSignIndex: number, housesMap: a
   
   const lordSignIndex = lordPos.rasi.index;
   
-  // Count from base to lord (inclusive, 0-indexed)
+  // Count from base to lord (0-indexed, so 0 to 11)
   const dist = (lordSignIndex - baseSignIndex + 12) % 12;
   
-  // Exceptions for Arudha calculation based on user request:
-  // 1. If the lord of the house is in itself (dist = 0), count 10 houses from it.
-  if (dist === 0) {
-    return (baseSignIndex + 9) % 12; // 10th house is 9 signs away
-  } 
-  // 2. If the lord of the house is in 7th from itself (dist = 6), Arudha is 10th from itself which means 4th house from base.
-  else if (dist === 6) {
-    return (baseSignIndex + 3) % 12; // 4th house is 3 signs away
+  // Normal Arudha sign index
+  let arudhaSignIndex = (lordSignIndex + dist) % 12;
+  
+  // Distance of normal Arudha from base sign (0-indexed)
+  const arudhaDistFromBase = (arudhaSignIndex - baseSignIndex + 12) % 12;
+
+  // Exception rules relative to the base house:
+  // If Arudha falls in the 1st house from base (dist = 0), it moves to 10th house from base (+9 signs)
+  if (arudhaDistFromBase === 0) {
+    arudhaSignIndex = (baseSignIndex + 9) % 12;
   }
-  // 3. If the lord of the house is in the 4th house (dist = 3), Arudha is 4th house itself.
-  else if (dist === 3) {
-    return (baseSignIndex + 3) % 12;
+  // If Arudha falls in the 7th house from base (dist = 6), it moves to 4th house from base (+3 signs)
+  else if (arudhaDistFromBase === 6) {
+    arudhaSignIndex = (baseSignIndex + 3) % 12;
   }
   
-  // Default: Arudha is same distance from lord
-  return (lordSignIndex + dist) % 12;
+  return arudhaSignIndex;
 }
 
 export function calculateSpecialLagnas(jd: number, lat: number, lon: number, positions: any[], lagna: any, housesMap: any[]) {
@@ -141,6 +142,32 @@ export function calculateSpecialLagnas(jd: number, lat: number, lon: number, pos
     });
   }
 
+  // H. Karakamsa Lagna (KL)
+  let klSignIndex = 0;
+  const sevenPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+  let ak = null;
+  let maxDeg = -1;
+  for (const p of positions) {
+    if (sevenPlanets.includes(p.name)) {
+      if (p.rasi.degreesInSign > maxDeg) {
+        maxDeg = p.rasi.degreesInSign;
+        ak = p;
+      }
+    }
+  }
+  if (ak) {
+    klSignIndex = Math.floor(ak.longitude * 3 / 10) % 12;
+  }
+
+  // I. Shree Lagna (SL)
+  let slLong = lagna.longitude;
+  if (moon) {
+    const nakLength = 360 / 27; // 13.3333 degrees
+    const moonDistInNak = moon.longitude % nakLength;
+    const fraction = moonDistInNak / nakLength;
+    slLong = norm(lagna.longitude + fraction * 360);
+  }
+
   // Formatting output
   return {
     bhavaLagna: { longitude: blLong, rasi: getRasi(blLong) },
@@ -150,6 +177,8 @@ export function calculateSpecialLagnas(jd: number, lat: number, lon: number, pos
     induLagna: { rasi: { name: SIGNS[induSignIndex], index: induSignIndex } },
     arudhaLagna: alSignIndex !== null ? { rasi: { name: SIGNS[alSignIndex], index: alSignIndex } } : null,
     upapadaLagna: ulSignIndex !== null ? { rasi: { name: SIGNS[ulSignIndex], index: ulSignIndex } } : null,
+    karakamsaLagna: { rasi: { name: SIGNS[klSignIndex], index: klSignIndex } },
+    shreeLagna: { longitude: slLong, rasi: getRasi(slLong) },
     arudhaPadas
   };
 }

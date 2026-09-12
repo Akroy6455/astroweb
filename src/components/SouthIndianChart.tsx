@@ -40,7 +40,7 @@ export default function SouthIndianChart({ data, arrows = [] }: { data: KundliDa
             key={p.name} 
             x={`${x}%`} 
             dy={lines.length > 0 ? "1.2em" : (isAscendant ? "1.2em" : "0")} 
-            fill={isSpecial ? '#3b82f6' : 'currentColor'} 
+            fill={(p as any).color ? (p as any).color : (isSpecial ? '#3b82f6' : 'currentColor')} 
             style={isSpecial ? { fontSize: '0.75em' } : {}}
           >
             {pStr}

@@ -77,7 +77,7 @@ export function getAadhanaNakshatra(moonLong: number): string {
 
 export function getAbhishekaNakshatra(moonLong: number): string {
   const moonIndex = getNak28Index(moonLong);
-  const abhishekaIndex = (moonIndex + 26) % 28; // 27th nakshatra from Moon
+  const abhishekaIndex = (moonIndex + 27) % 28; // 28th nakshatra from Moon
   return NAKSHATRAS_28[abhishekaIndex];
 }
 
@@ -89,7 +89,7 @@ export function getNaidhanaNakshatra(moonLong: number): string {
 
 export function getVainasikaNakshatra(moonLong: number): string {
   const moonIndex = getNak28Index(moonLong);
-  const vainasikaIndex = (moonIndex + 21) % 28; // 22nd nakshatra from Moon
+  const vainasikaIndex = (moonIndex + 22) % 28; // 23rd nakshatra from Moon
   return NAKSHATRAS_28[vainasikaIndex];
 }
 

@@ -8,6 +8,7 @@ import { getLatta, getVedhaNakshatras } from '@/lib/sbc_engine';
 import { formatDMS } from '@/lib/utils';
 import { getKundliData, findNextTransitEvent, getAuspiciousTimeData } from '@/app/actions';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { toPng, toSvg } from 'html-to-image';
 import yavanajatakaTransitSun from '@/data/yavanajataka_transit_sun.json';
 import yavanajatakaTransitSaturn from '@/data/yavanajataka_transit_saturn.json';
 import yavanajatakaTransitJupiter from '@/data/yavanajataka_transit_jupiter.json';
@@ -94,7 +95,7 @@ for (let r = 0; r < 7; r++) {
   }
 }
 
-export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, showTransitVedha, showTransitLatta, chartStyle }: { mainData: any, ayanamsha?: string, weights?: any, showTransitVedha?: boolean, showTransitLatta?: boolean, chartStyle?: string }) {
+export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, showTransitVedha, showTransitLatta, chartStyle, isPremium }: { mainData: any, ayanamsha?: string, weights?: any, showTransitVedha?: boolean, showTransitLatta?: boolean, chartStyle?: string, isPremium?: boolean }) {
   const [transitData, setTransitData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
     const [sbcShowNatalVedha, setSbcShowNatalVedha] = useState(false);
@@ -122,7 +123,8 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausStartDate, setAusStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [ausData, setAusData] = useState<any[]>([]);
   const [ausLoading, setAusLoading] = useState(false);
-  const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly'>('Hourly');
+  const [ausDuration, setAusDuration] = useState<number>(90);
+  const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly' | 'Monthly'>('Hourly');
   const [selectedChartPoint, setSelectedChartPoint] = useState<any>(null);
   const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(false);
   const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
@@ -154,9 +156,23 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
     return init;
   });
 
+  const [lagnaNavtaraMatrixEnabled, setLagnaNavtaraMatrixEnabled] = useState(false);
+  const [lagnaNavtaraMatrix, setLagnaNavtaraMatrix] = useState<Record<string, number[]>>(() => {
+    const init: any = {};
+    ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = [1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
+    return init;
+  });
+
+  const [lagnaMatrixPlanetsEnabled, setLagnaMatrixPlanetsEnabled] = useState<Record<string, boolean>>(() => {
+    const init: any = {};
+    ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = true);
+    return init;
+  });
+
   const [basicTaraEnabled, setBasicTaraEnabled] = useState<boolean[]>(Array(9).fill(true));
   const [moonMatrixTaraEnabled, setMoonMatrixTaraEnabled] = useState<boolean[]>(Array(9).fill(true));
   const [ownMatrixTaraEnabled, setOwnMatrixTaraEnabled] = useState<boolean[]>(Array(9).fill(true));
+  const [lagnaMatrixTaraEnabled, setLagnaMatrixTaraEnabled] = useState<boolean[]>(Array(9).fill(true));
 
 
 
@@ -172,12 +188,16 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
         ownMatrixEnabled: ownNavtaraMatrixEnabled,
         ownMatrix: ownNavtaraMatrix,
         ownMatrixPlanetsEnabled: ownMatrixPlanetsEnabled,
-        ownMatrixTaraEnabled: ownMatrixTaraEnabled
-      });
+        ownMatrixTaraEnabled: ownMatrixTaraEnabled,
+        lagnaMatrixEnabled: lagnaNavtaraMatrixEnabled,
+        lagnaMatrix: lagnaNavtaraMatrix,
+        lagnaMatrixPlanetsEnabled: lagnaMatrixPlanetsEnabled,
+        lagnaMatrixTaraEnabled: lagnaMatrixTaraEnabled
+      }, ausDuration);
       
       const formatted = result.map((r: any) => ({
         ...r,
-        formattedTime: new Date(r.time).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })
+        formattedTime: new Date(r.time).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit' })
       }));
       setAusData(formatted);
     } catch(e) {
@@ -194,7 +214,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
     if (ausZoom === 'Hourly') return ausData;
     
     const aggregated: any[] = [];
-    const interval = ausZoom === 'Daily' ? 24 : 168;
+    const interval = ausZoom === 'Daily' ? 24 : (ausZoom === 'Weekly' ? 168 : 720);
     
     for (let i = 0; i < ausData.length; i += interval) {
       const chunk = ausData.slice(i, i + interval);
@@ -203,8 +223,10 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
         ...chunk[0],
         score: Number(avgScore.toFixed(2)),
         formattedTime: ausZoom === 'Daily' 
-          ? new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })
-          : `Week of ${new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', day: 'numeric' })}`,
+          ? new Date(chunk[0].time).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+          : ausZoom === 'Weekly'
+          ? `Week of ${new Date(chunk[0].time).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`
+          : new Date(chunk[0].time).toLocaleString(undefined, { month: 'short', year: 'numeric' }),
         breakdown: null 
       });
     }
@@ -398,6 +420,49 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
     return `${signs[Math.floor(long / 30)]} ${formatDMS(long % 30)}`;
   };
   
+  const auspiciousChartRef = useRef<HTMLDivElement>(null);
+
+  const handleExportImage = async () => {
+    if (!auspiciousChartRef.current) return;
+    try {
+      const dataUrl = await toPng(auspiciousChartRef.current, { backgroundColor: '#1e1e1e' });
+      const link = document.createElement('a');
+      link.download = `auspicious_time_${ausZoom.toLowerCase()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to export image', err);
+    }
+  };
+
+  const handleExportSVG = async () => {
+    if (!auspiciousChartRef.current) return;
+    try {
+      const dataUrl = await toSvg(auspiciousChartRef.current, { backgroundColor: '#1e1e1e' });
+      const link = document.createElement('a');
+      link.download = `auspicious_time_${ausZoom.toLowerCase()}.svg`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to export SVG', err);
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!chartData || chartData.length === 0) return;
+    const header = ['Date/Time', 'Score'];
+    const rows = chartData.map((d: any) => [`"${d.formattedTime}"`, d.score]);
+    const csvContent = [header, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `auspicious_time_${ausZoom.toLowerCase()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
@@ -441,11 +506,37 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
 
       
       {subTab === 'AuspiciousTime' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', position: 'relative' }}>
+
+          {/* Full overlay loading screen */}
+          {ausLoading && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.85)', zIndex: 9999,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: '1.5rem'
+            }}>
+              <div style={{
+                width: '60px', height: '60px', border: '4px solid rgba(255,255,255,0.1)',
+                borderTop: '4px solid var(--primary)', borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              <h2 style={{ color: 'var(--primary)', fontFamily: 'var(--font-serif)', fontSize: '1.5rem', margin: 0 }}>
+                Calculating Auspicious Times...
+              </h2>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', maxWidth: '400px', textAlign: 'center' }}>
+                {ausDuration > 90
+                  ? 'Analyzing planetary positions for 5 years. This may take a few minutes...'
+                  : 'Evaluating hourly transit scores for 3 months...'}
+              </p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          )}
+
           <div style={{ background: 'var(--card-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Auspicious Time Calculator</h3>
             <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.95rem' }}>
-              Calculates overall auspiciousness for a 3-month period based on Ashtakavarga transit scores and Navatara adjustments.
+              Calculates overall auspiciousness based on Ashtakavarga transit scores and Navatara adjustments.
               Positions are evaluated every 1 hour.
             </p>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -453,8 +544,39 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 <label>Start Date</label>
                 <input type="date" value={ausStartDate} onChange={e => setAusStartDate(e.target.value)} className="input" />
               </div>
-              <button onClick={handleCalculateAuspicious} className="submit-btn" style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', height: 'fit-content' }}>
-                {ausLoading ? 'Calculating...' : 'Generate 3-Month Chart'}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label>Duration</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => setAusDuration(90)}
+                    style={{
+                      padding: '0.4rem 1rem', borderRadius: '6px', border: '1px solid var(--border)',
+                      background: ausDuration === 90 ? 'var(--primary)' : 'transparent',
+                      color: ausDuration === 90 ? '#fff' : 'var(--text)',
+                      cursor: 'pointer', fontWeight: ausDuration === 90 ? 600 : 400, transition: 'all 0.2s'
+                    }}
+                  >
+                    3 Months
+                  </button>
+                  <button
+                    onClick={() => { if (isPremium) setAusDuration(1825); }}
+                    title={!isPremium ? 'Premium feature — contact admin to enable' : ''}
+                    style={{
+                      padding: '0.4rem 1rem', borderRadius: '6px', border: `1px solid ${isPremium ? 'var(--border)' : 'rgba(255,255,255,0.1)'}`,
+                      background: ausDuration === 1825 ? 'var(--primary)' : 'transparent',
+                      color: ausDuration === 1825 ? '#fff' : (isPremium ? 'var(--text)' : 'rgba(255,255,255,0.3)'),
+                      cursor: isPremium ? 'pointer' : 'not-allowed',
+                      fontWeight: ausDuration === 1825 ? 600 : 400, transition: 'all 0.2s',
+                      display: 'flex', alignItems: 'center', gap: '0.4rem'
+                    }}
+                  >
+                    5 Years
+                    {!isPremium && <span style={{ fontSize: '0.7rem', background: 'rgba(251,191,36,0.2)', color: '#fbbf24', padding: '1px 6px', borderRadius: '4px' }}>✨ Premium</span>}
+                  </button>
+                </div>
+              </div>
+              <button onClick={handleCalculateAuspicious} disabled={ausLoading} className="submit-btn" style={{ padding: '0.5rem 1rem', background: ausLoading ? 'var(--text-muted)' : 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: ausLoading ? 'not-allowed' : 'pointer', height: 'fit-content' }}>
+                {ausLoading ? 'Calculating...' : `Generate ${ausDuration === 1825 ? '5-Year' : '3-Month'} Chart`}
               </button>
             </div>
 
@@ -675,49 +797,136 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                       </div>
                     )}
                   </div>
+
+                  {/* Matrix 3: All Planets wrt Lagna Navtara */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <label style={{ fontWeight: 'bold' }}>Matrix 3: Planets/Lagna vs Lagna Nakshatra Navtara</label>
+                      <input 
+                        type="checkbox" 
+                        checked={lagnaNavtaraMatrixEnabled}
+                        onChange={e => setLagnaNavtaraMatrixEnabled(e.target.checked)}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                      />
+                    </div>
+                    {lagnaNavtaraMatrixEnabled && (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'left' }}>Lagna Tara</th>
+                              {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                                <th key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                                    <span>{p}</span>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={lagnaMatrixPlanetsEnabled[p]} 
+                                      onChange={e => setLagnaMatrixPlanetsEnabled({...lagnaMatrixPlanetsEnabled, [p]: e.target.checked})}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                  </div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
+                              <tr key={tara}>
+                                <td style={{ padding: '0.5rem', border: '1px solid var(--border)', fontWeight: 'bold' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={lagnaMatrixTaraEnabled[idx]} 
+                                      onChange={e => {
+                                        const newT = [...lagnaMatrixTaraEnabled];
+                                        newT[idx] = e.target.checked;
+                                        setLagnaMatrixTaraEnabled(newT);
+                                      }}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                    <span style={{ opacity: lagnaMatrixTaraEnabled[idx] ? 1 : 0.5 }}>{tara}</span>
+                                  </div>
+                                </td>
+                                {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].map(p => (
+                                  <td key={p} style={{ padding: '0.5rem', border: '1px solid var(--border)', opacity: (lagnaMatrixPlanetsEnabled[p] && lagnaMatrixTaraEnabled[idx]) ? 1 : 0.5, pointerEvents: (lagnaMatrixPlanetsEnabled[p] && lagnaMatrixTaraEnabled[idx]) ? 'auto' : 'none' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{ fontWeight: 600 }}>x{lagnaNavtaraMatrix[p][idx].toFixed(1)}</span>
+                                      <input 
+                                        type="range" min="-5" max="5" step="0.1" 
+                                        value={lagnaNavtaraMatrix[p][idx]}
+                                        onChange={e => {
+                                          const newM = { ...lagnaNavtaraMatrix };
+                                          newM[p] = [...newM[p]];
+                                          newM[p][idx] = parseFloat(e.target.value);
+                                          setLagnaNavtaraMatrix(newM);
+                                        }}
+                                        style={{ width: '60px', cursor: 'pointer' }}
+                                      />
+                                    </div>
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
             {ausData.length > 0 && (
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', alignItems: 'center' }}>
-                <label style={{ fontWeight: 600, color: 'var(--text)' }}>Chart Zoom:</label>
-                <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg)', padding: '0.25rem', borderRadius: '8px' }}>
-                  {['Hourly', 'Daily', 'Weekly'].map((zoom) => (
-                    <button 
-                      key={zoom}
-                      onClick={() => setAusZoom(zoom as any)}
-                      style={{
-                        padding: '0.25rem 1rem',
-                        borderRadius: '6px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: ausZoom === zoom ? 'var(--primary)' : 'transparent',
-                        color: ausZoom === zoom ? '#fff' : 'var(--text-muted)',
-                        fontWeight: ausZoom === zoom ? 600 : 400,
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {zoom}
-                    </button>
-                  ))}
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <label style={{ fontWeight: 600, color: 'var(--text)' }}>Chart Zoom:</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg)', padding: '0.25rem', borderRadius: '8px' }}>
+                    {['Hourly', 'Daily', 'Weekly', 'Monthly'].map((zoom) => (
+                      <button 
+                        key={zoom}
+                        onClick={() => setAusZoom(zoom as any)}
+                        style={{
+                          padding: '0.25rem 1rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: ausZoom === zoom ? 'var(--primary)' : 'transparent',
+                          color: ausZoom === zoom ? '#fff' : 'var(--text-muted)',
+                          fontWeight: ausZoom === zoom ? 600 : 400,
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {zoom}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <label style={{ fontWeight: 600, color: 'var(--text)', marginRight: '0.5rem' }}>Export Chart:</label>
+                  <button onClick={handleExportImage} style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer', fontSize: '0.85rem' }}>Image</button>
+                  <button onClick={handleExportSVG} style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer', fontSize: '0.85rem' }}>SVG</button>
+                  <button onClick={handleExportCSV} style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer', fontSize: '0.85rem' }}>CSV</button>
                 </div>
               </div>
             )}
           </div>
 
           {ausData.length > 0 && (
-            <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', height: '500px' }}>
+            <div ref={auspiciousChartRef} style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', height: '500px' }}>
               <div style={{ overflowX: 'auto', width: '100%', height: '100%' }}>
                 <div style={{ width: `${Math.max(1200, chartData.length * (ausZoom === 'Hourly' ? 8 : (ausZoom === 'Daily' ? 20 : 50)))}px`, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart 
                       data={chartData}
                       onClick={(e: any) => {
+                        console.log("Chart clicked:", e);
                         if (e && e.activePayload && e.activePayload.length > 0 && ausZoom === 'Hourly') {
                           setSelectedChartPoint(e.activePayload[0].payload);
                         }
                       }}
+                      style={{ cursor: ausZoom === 'Hourly' ? 'pointer' : 'default' }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                       <XAxis dataKey="formattedTime" stroke="var(--text-muted)" tick={{ fontSize: 12 }} interval={ausZoom === "Hourly" ? 48 : "preserveStartEnd"} />
@@ -727,7 +936,24 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                         labelStyle={{ color: 'var(--primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}
                         formatter={(value: any, name: any, props: any) => [value, name === 'score' ? (ausZoom === 'Hourly' ? 'Total Auspicious Score' : 'Average Auspicious Score') : name]}
                       />
-                      <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="score" 
+                        stroke="var(--primary)" 
+                        strokeWidth={2} 
+                        dot={false} 
+                        activeDot={{ 
+                          onClick: (event: any, payload: any) => {
+                            console.log("Active dot clicked", payload);
+                            if (ausZoom === 'Hourly' && payload && payload.payload) {
+                              setSelectedChartPoint(payload.payload);
+                            }
+                          },
+                          cursor: 'pointer',
+                          r: 8
+                        }}
+                        isAnimationActive={false} 
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -785,7 +1011,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                     {top52Auspicious.map((point: any, idx: number) => (
                       <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ padding: '0.75rem' }}>#{idx + 1}</td>
-                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>{new Date(point.time).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td style={{ padding: '0.75rem', fontWeight: 600 }}>{new Date(point.time).toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                         <td style={{ padding: '0.75rem', color: 'var(--primary)', fontWeight: 'bold' }}>{point.score}</td>
                       </tr>
                     ))}
@@ -806,9 +1032,25 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 if (showTransitVedha) arrows = [...arrows, ...calculateVedha(transitData.positions, Math.floor((mainData.positions.find((p: any) => p.name === 'Moon')?.longitude || mainData.lagna.longitude) / 30))];
                 if (showTransitLatta) arrows = [...arrows, ...calculateLatta(transitData.positions)];
                 
+                const housesWithSav = transitData.houses.map((h: any) => {
+                  const signIndex = h.signIndex;
+                  const natalSav = mainData?.ashtakavarga?.sav337?.[signIndex] ?? '-';
+                  const transitSav = transitData?.ashtakavarga?.sav337?.[signIndex] ?? '-';
+                  
+                  const savPlanets = [
+                    { id: `sav-n-${h.house}`, name: `Natal SAV: ${natalSav}`, short: `${natalSav}`, color: '#ef4444', retrograde: false },
+                    { id: `sav-t-${h.house}`, name: `Transit SAV: ${transitSav}`, short: `${transitSav}`, color: '#3b82f6', retrograde: false }
+                  ];
+
+                  return {
+                    ...h,
+                    planets: [...h.planets, ...savPlanets]
+                  };
+                });
+
                 return chartStyle === 'South' 
-                  ? <SouthIndianChart data={{ lagna: transitData.lagna, houses: transitData.houses }} arrows={arrows} />
-                  : <KundliChart data={{ lagna: transitData.lagna, houses: transitData.houses }} arrows={arrows} />;
+                  ? <SouthIndianChart data={{ lagna: transitData.lagna, houses: housesWithSav }} arrows={arrows} />
+                  : <KundliChart data={{ lagna: transitData.lagna, houses: housesWithSav }} arrows={arrows} />;
               })()}
           </div>
           <div style={{ overflowX: 'auto', background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%' }}>
@@ -822,10 +1064,12 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                     <th>Nakshatra</th>
                     <th>Navtara (Natal Moon)</th>
                     <th>Sahamas in Rasi</th>
+                    <th>Natal AV Score</th>
+                    <th>Transit AV Score</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {transitData.positions.map((p: any) => {
+                  {[transitData.lagna, ...transitData.positions].filter(Boolean).map((p: any) => {
                     const pNak27 = Math.floor(p.longitude / (360/27));
                     const taraIdx = (pNak27 - moon27 + 27) % 9;
                     const pTara = taraNames[taraIdx];
@@ -836,14 +1080,41 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                       .map(s => s.name.split(' ')[1])
                       .join(', ');
 
+                    let natalAvScore: React.ReactNode = '-';
+                    let transitAvScore: React.ReactNode = '-';
+                    
+                    if (mainData?.ashtakavarga) {
+                      const pName = p.name === 'Lagna' ? 'Lagna' : p.name;
+                      const bav = mainData.ashtakavarga.bav?.[pName]?.[pRasiIdx];
+                      const sav = mainData.ashtakavarga.sav337?.[pRasiIdx];
+                      if (bav !== undefined && sav !== undefined) {
+                        natalAvScore = <span>{bav} <span style={{ color: '#ef4444' }}>(SAV: {sav})</span></span>;
+                      } else if (sav !== undefined) {
+                        natalAvScore = <span style={{ color: '#ef4444' }}>SAV: {sav}</span>;
+                      }
+                    }
+
+                    if (transitData?.ashtakavarga) {
+                      const pName = p.name === 'Lagna' ? 'Lagna' : p.name;
+                      const bav = transitData.ashtakavarga.bav?.[pName]?.[pRasiIdx];
+                      const sav = transitData.ashtakavarga.sav337?.[pRasiIdx];
+                      if (bav !== undefined && sav !== undefined) {
+                        transitAvScore = <span>{bav} <span style={{ color: '#3b82f6' }}>(SAV: {sav})</span></span>;
+                      } else if (sav !== undefined) {
+                        transitAvScore = <span style={{ color: '#3b82f6' }}>SAV: {sav}</span>;
+                      }
+                    }
+
                     return (
                       <tr key={p.name}>
                         <td style={{ fontWeight: 'bold' }}>{p.name} {p.retrograde ? '(R)' : ''}</td>
-                        <td>{formatDMS(p.longitude)}</td>
+                        <td>{formatDMS(p.longitude % 30)}</td>
                         <td>{p.rasi.name}</td>
                         <td>{p.nakshatra.name}</td>
                         <td style={{ color: 'var(--primary)' }}>{pTara}</td>
                         <td style={{ color: '#8b5cf6', fontSize: '0.8rem' }}>{sahamasInRasi || '-'}</td>
+                        <td style={{ fontWeight: '500' }}>{natalAvScore}</td>
+                        <td style={{ fontWeight: '500' }}>{transitAvScore}</td>
                       </tr>
                     );
                   })}
@@ -1043,11 +1314,12 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                   <tr><td>Karma (10th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 10)}</td></tr>
                   <tr><td>Sanghatika (16th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 16)}</td></tr>
                   <tr><td>Samudaya (18th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 18)}</td></tr>
+                  <tr><td>Adhana (19th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 19)}</td></tr>
                   <tr><td>Vainashika (23rd)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 23)}</td></tr>
                   <tr><td>Manasa (25th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 25)}</td></tr>
                   <tr><td>Jati (26th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 26)}</td></tr>
-                  <tr><td>Abhisheka (27th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 27)}</td></tr>
-                  <tr><td>Desha (28th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 28)}</td></tr>
+                  <tr><td>Desha (27th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 27)}</td></tr>
+                  <tr><td>Abhisheka (28th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(moon28, 28)}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1058,11 +1330,12 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                   <tr><td>Karma (10th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 10)}</td></tr>
                   <tr><td>Sanghatika (16th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 16)}</td></tr>
                   <tr><td>Samudaya (18th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 18)}</td></tr>
+                  <tr><td>Adhana (19th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 19)}</td></tr>
                   <tr><td>Vainashika (23rd)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 23)}</td></tr>
                   <tr><td>Manasa (25th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 25)}</td></tr>
                   <tr><td>Jati (26th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 26)}</td></tr>
-                  <tr><td>Abhisheka (27th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 27)}</td></tr>
-                  <tr><td>Desha (28th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 28)}</td></tr>
+                  <tr><td>Desha (27th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 27)}</td></tr>
+                  <tr><td>Abhisheka (28th)</td><td style={{ fontWeight: 'bold' }}>{getSBCTara(lagna28, 28)}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1146,9 +1419,10 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 {(fEvent === 'NavtaraLagna' || fEvent === 'NavtaraMoon') && Array.from({length: 27}).map((_, i) => <option key={i} value={i}>{taraNames[i % 9]} ({Math.floor(i / 9) + 1})</option>)}
                 {(fEvent === 'SpecialTaraLagna' || fEvent === 'SpecialTaraMoon') && [
                   { name: 'Karma (10th)', val: 10 }, { name: 'Sanghatika (16th)', val: 16 },
-                  { name: 'Samudaya (18th)', val: 18 }, { name: 'Vainashika (23rd)', val: 23 },
-                  { name: 'Manasa (25th)', val: 25 }, { name: 'Jati (26th)', val: 26 },
-                  { name: 'Abhisheka (27th)', val: 27 }, { name: 'Desha (28th)', val: 28 }
+                  { name: 'Samudaya (18th)', val: 18 }, { name: 'Adhana (19th)', val: 19 },
+                  { name: 'Vainashika (23rd)', val: 23 }, { name: 'Manasa (25th)', val: 25 },
+                  { name: 'Jati (26th)', val: 26 }, { name: 'Desha (27th)', val: 27 },
+                  { name: 'Abhisheka (28th)', val: 28 }
                 ].map(o => <option key={o.val} value={o.val}>{o.name}</option>)}
                 {fEvent === 'Sahama' && sahamasList.map((s, i) => <option key={i} value={i}>{s.name} ({formatSahama(s.val)})</option>)}
               </select>
@@ -1233,7 +1507,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 The {fDirection === 1 ? 'next' : 'previous'} occurrence {fDirection === 1 ? 'happens' : 'happened'} on: <strong>{new Date(fResult.dateUTC).toLocaleString()}</strong>
               </p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                At this exact moment, {fPlanet}'s true longitude is {formatDMS(fResult.longitude)}.
+                At this exact moment, {fPlanet}'s longitude is {formatDMS(fResult.longitude % 30)} (in {fResult.rasi || 'Rasi'}).
               </p>
               <button 
                 onClick={() => setSubTab('Overview')} 

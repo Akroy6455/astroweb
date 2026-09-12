@@ -35,7 +35,7 @@ const DESCRIPTIONS: Record<string, Record<string, string>> = {
   goodTime: {
     transit_karma_multiplier: "Added 1.2x multiplier bonus when any planet transits Karma Nakshatra (10th from Moon).",
     transit_aadhana_multiplier: "Added 1.2x multiplier bonus when any planet transits Aadhana Nakshatra (19th from Moon).",
-    transit_abhisheka_multiplier: "Added 1.5x multiplier bonus when any planet transits Abhisheka Nakshatra (27th from Moon).",
+    transit_abhisheka_multiplier: "Added 1.5x multiplier bonus when any planet transits Abhisheka Nakshatra (28th from Moon).",
     latta_karma_multiplier: "Multiplier penalty (0.8x) when any planet applies Latta to Karma Nakshatra.",
     latta_aadhana_multiplier: "Multiplier penalty (0.8x) when any planet applies Latta to Aadhana Nakshatra.",
     latta_abhisheka_multiplier: "Multiplier penalty (0.6x) when any planet applies Latta to Abhisheka Nakshatra.",

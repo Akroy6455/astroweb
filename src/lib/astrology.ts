@@ -960,13 +960,14 @@ const signLords: Record<string, string> = {
   return points;
 }
 
-export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any) {
+export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any, durationDays?: number) {
   if (!chartData?.ashtakavarga?.bav) return [];
 
+  const days = durationDays || 90;
   const points: any[] = [];
   const startDate = new Date(startDateISO);
   let currentDateTs = startDate.getTime();
-  const endDateTs = currentDateTs + (90 * 24 * 60 * 60 * 1000); 
+  const endDateTs = currentDateTs + (days * 24 * 60 * 60 * 1000); 
 
   const transitPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   const planetIds: Record<string, number> = {
@@ -1063,6 +1064,17 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
            }
         }
 
+        // Matrix 3: Lagna Navatara — distance of transit planet from natal Lagna nakshatra
+        if (matrices?.lagnaMatrixEnabled && matrices.lagnaMatrix && matrices.lagnaMatrix[p]) {
+           if (!matrices.lagnaMatrixPlanetsEnabled || matrices.lagnaMatrixPlanetsEnabled[p]) {
+              const dist = (nakIndex - natalLagnaNakIndex + 27) % 27;
+              const navatara = dist % 9;
+              if (!matrices.lagnaMatrixTaraEnabled || matrices.lagnaMatrixTaraEnabled[navatara]) {
+                  mult *= matrices.lagnaMatrix[p][navatara];
+              }
+           }
+        }
+
         score = bavPoints * mult;
         breakdown[p] = { bav: bavPoints, mult, score, rasiIndex, nakIndex };
 
@@ -1095,6 +1107,17 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
             const navatara = dist % 9;
             if (!matrices.ownMatrixTaraEnabled || matrices.ownMatrixTaraEnabled[navatara]) {
                 lagnaMult *= matrices.ownMatrix['Lagna'][navatara];
+            }
+         }
+      }
+
+      // Matrix 3: Lagna Navatara for Lagna transit
+      if (matrices?.lagnaMatrixEnabled && matrices.lagnaMatrix) {
+         if (!matrices.lagnaMatrixPlanetsEnabled || matrices.lagnaMatrixPlanetsEnabled['Lagna']) {
+            const dist = (lagnaNakIndex - natalLagnaNakIndex + 27) % 27;
+            const navatara = dist % 9;
+            if (!matrices.lagnaMatrixTaraEnabled || matrices.lagnaMatrixTaraEnabled[navatara]) {
+                lagnaMult *= matrices.lagnaMatrix['Lagna'][navatara];
             }
          }
       }

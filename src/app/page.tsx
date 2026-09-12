@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { getKundliData, getTaraNirnayData } from './actions';
@@ -6,6 +6,8 @@ import KundliChart from '@/components/KundliChart';
 import SouthIndianChart from '@/components/SouthIndianChart';
 import { calculateVedha, calculateLatta, Arrow } from '@/lib/vedhaLatta';
 import NavamshaChakra from '@/components/NavamshaChakra';
+import AspectMatrix from '@/components/AspectMatrix';
+import ShadbalaAspectMatrix from '@/components/ShadbalaAspectMatrix';
 import AshtakavargaChart from '@/components/AshtakavargaChart';
 import AshtakavargaTable from '@/components/AshtakavargaTable';
 import ShadbalaTable from '@/components/ShadbalaTable';
@@ -78,6 +80,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadedProfileMetadata, setLoadedProfileMetadata] = useState<{query?: string, notes?: string}>({});
   const [user, setUser] = useState<User | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [activeChartLeft, setActiveChartLeft] = useState('D1');
   const [activeChartRight, setActiveChartRight] = useState('D9');
@@ -236,6 +239,13 @@ export default function Home() {
           }
         });
 
+        // Listen to user doc for premium status changes (admin can toggle anytime)
+        const unsubscribeUserDoc = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            setIsPremium(!!docSnap.data().isPremium);
+          }
+        });
+
         // Trigger local storage profile synchronization to cloud on sign-in
         const local = localStorage.getItem('kundliProfiles');
         if (local) {
@@ -270,9 +280,11 @@ export default function Home() {
           unsubscribeProfiles();
           unsubscribeSettings();
           unsubscribeTuning();
+          unsubscribeUserDoc();
         };
       } else {
         // User is signed out. Fall back to local storage
+        setIsPremium(false);
         const saved = localStorage.getItem('kundliProfiles');
         if (saved) {
           try {
@@ -825,6 +837,8 @@ export default function Home() {
                               ))}
                               <option value="Chakra">Chakra - Navamsha Chakra</option>
                                 <option value="Chalit">Bhav Chalit</option>
+                                <option value="AspectMatrix">Drishti (Aspect) Matrix</option>
+                                <option value="ShadbalaAspectMatrix">Shadbala Multiplied Drishti</option>
                             </select>
                             <select
                               value={referencePlanetLeft}
@@ -864,6 +878,8 @@ export default function Home() {
                             };
                             let chartData = null;
                             if (activeChartLeft === 'Chakra') return <NavamshaChakra data={data} />;
+                            if (activeChartLeft === 'AspectMatrix') return <AspectMatrix data={data} />;
+                            if (activeChartLeft === 'ShadbalaAspectMatrix') return <ShadbalaAspectMatrix data={data} />;
                             if (activeChartLeft === 'D1') chartData = { lagna: data.lagna, houses: data.houses };
                             else if (activeChartLeft === 'Chalit') chartData = { lagna: data.lagna, houses: data.chalitHouses };
                             else if (activeChartLeft === 'D9' && (!data.divisionalCharts || !data.divisionalCharts['D9'])) chartData = { lagna: data.d9Lagna, houses: data.d9Houses };
@@ -891,6 +907,8 @@ export default function Home() {
                               ))}
                               <option value="Chakra">Chakra - Navamsha Chakra</option>
                                 <option value="Chalit">Bhav Chalit</option>
+                                <option value="AspectMatrix">Drishti (Aspect) Matrix</option>
+                                <option value="ShadbalaAspectMatrix">Shadbala Multiplied Drishti</option>
                             </select>
                             <select
                               value={referencePlanetRight}
@@ -930,6 +948,8 @@ export default function Home() {
                             };
                             let chartData = null;
                             if (activeChartRight === 'Chakra') return <NavamshaChakra data={data} />;
+                            if (activeChartRight === 'AspectMatrix') return <AspectMatrix data={data} />;
+                            if (activeChartRight === 'ShadbalaAspectMatrix') return <ShadbalaAspectMatrix data={data} />;
                             if (activeChartRight === 'D1') chartData = { lagna: data.lagna, houses: data.houses };
                             else if (activeChartRight === 'Chalit') chartData = { lagna: data.lagna, houses: data.chalitHouses };
                             else if (activeChartRight === 'D9' && (!data.divisionalCharts || !data.divisionalCharts['D9'])) chartData = { lagna: data.d9Lagna, houses: data.d9Houses };
@@ -976,16 +996,31 @@ export default function Home() {
                             <tr>
                               <th style={{ color: 'var(--background)' }}>Planet</th>
                               <th style={{ color: 'var(--background)' }}>Longitude</th>
-                              <th style={{ color: 'var(--background)' }}>Speed</th>
-                              <th style={{ color: 'var(--background)' }}>Rasi (D-1)</th>
-                              <th style={{ color: 'var(--background)' }}>Nakshatra</th>
-                              <th style={{ color: 'var(--background)' }}>Pada</th>
-                              <th style={{ color: 'var(--background)' }}>Nak Devta</th>
-                              <th style={{ color: 'var(--background)' }}>Nak Lord</th>
-                              <th style={{ color: 'var(--background)' }}>Sub Lord</th>
-                              <th style={{ color: 'var(--background)' }}>{(info?.key || 'Chalit')} Sign</th>
-                              <th style={{ color: 'var(--background)' }}>{div === 1 ? 'Chara Karaka' : `${(info?.key || 'Chalit')} Devta`}</th>
-                              {div === 60 && <th style={{ color: 'var(--background)' }}>Nature</th>}
+                              {div === 1 ? (
+                                <>
+                                  <th style={{ color: 'var(--background)' }}>Speed</th>
+                                  <th style={{ color: 'var(--background)' }}>Rasi (D-1)</th>
+                                  <th style={{ color: 'var(--background)' }}>Nakshatra</th>
+                                  <th style={{ color: 'var(--background)' }}>Pada</th>
+                                  <th style={{ color: 'var(--background)' }}>Nak Devta</th>
+                                  <th style={{ color: 'var(--background)' }}>Nak Lord</th>
+                                  <th style={{ color: 'var(--background)' }}>Sub Lord</th>
+                                  <th style={{ color: 'var(--background)' }}>D9 Sign</th>
+                                  <th style={{ color: 'var(--background)' }}>Chara Karaka</th>
+                                </>
+                              ) : (
+                                <>
+                                  <th style={{ color: 'var(--background)' }}>{(info?.key || 'Chalit')} Sign</th>
+                                  <th style={{ color: 'var(--background)' }}>{(info?.key || 'Chalit')} Devta</th>
+                                  {div === 60 && <th style={{ color: 'var(--background)' }}>Nature</th>}
+                                  <th style={{ color: 'var(--background)' }}>Nakshatra</th>
+                                  <th style={{ color: 'var(--background)' }}>Pada</th>
+                                  <th style={{ color: 'var(--background)' }}>Nak Devta</th>
+                                  <th style={{ color: 'var(--background)' }}>Nak Lord</th>
+                                  <th style={{ color: 'var(--background)' }}>Rasi (D-1)</th>
+                                  <th style={{ color: 'var(--background)' }}>Sub Lord</th>
+                                </>
+                              )}
                             </tr>
                           </thead>
                           <tbody>
@@ -1000,18 +1035,31 @@ export default function Home() {
                                 <tr key={p.id || p.name} style={{ background: p.isLagna ? 'rgba(232, 220, 203, 0.5)' : (i % 2 === 0 ? 'transparent' : 'rgba(232, 220, 203, 0.3)') }}>
                                   <td style={isSpecial ? { color: '#3b82f6', fontSize: '0.85em' } : {}}><strong>{p.name}</strong> {p.retrograde ? <span style={{ color: '#cc0000' }}>(R)</span> : ''}</td>
                                   <td>{formatDMS(p.longitude)}</td>
-                                  <td>{p.isLagna ? '-' : (p.speed > 0 ? '+' : '') + p.speed.toFixed(3) + '°/d'}</td>
-                                  <td>{p.rasi.name} ({formatDMS(p.rasi.degreesInSign)})</td>
-                                  <td>{p.nakshatra.name}</td>
-                                  <td>{p.nakshatra.pada}</td>
-                                  <td style={{ color: '#C9A86A' }}>{p.nakshatra.devta}</td>
-                                  <td>{p.nakshatra.lord}</td>
-                                  <td>{p.nakshatra.subLord}</td>
-                                  <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getDivSignName(divSign)}</td>
-                                  <td style={{ color: div === 1 ? 'var(--primary)' : (devta === '—' ? 'var(--text-muted)' : '#C9A86A'), fontWeight: (div === 1 || devta !== '—') ? 600 : 400 }}>
-                                    {div === 1 ? (karakaMap[p.name] || '—') : devta}
-                                  </td>
-                                  {div === 60 && <td style={{ color: getD60Nature(sIdx, deg) === 'Benefic' ? '#10b981' : '#ef4444', fontWeight: 600 }}>{getD60Nature(sIdx, deg)}</td>}
+                                  {div === 1 ? (
+                                    <>
+                                      <td>{p.isLagna ? '-' : (p.speed > 0 ? '+' : '') + p.speed.toFixed(3) + '°/d'}</td>
+                                      <td>{p.rasi.name} ({formatDMS(p.rasi.degreesInSign)})</td>
+                                      <td>{p.nakshatra.name}</td>
+                                      <td>{p.nakshatra.pada}</td>
+                                      <td style={{ color: '#C9A86A' }}>{p.nakshatra.devta}</td>
+                                      <td>{p.nakshatra.lord}</td>
+                                      <td>{p.nakshatra.subLord}</td>
+                                      <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getDivSignName(getDivisionalSign(sIdx, deg, 9))}</td>
+                                      <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{karakaMap[p.name] || '—'}</td>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getDivSignName(divSign)}</td>
+                                      <td style={{ color: devta === '—' ? 'var(--text-muted)' : '#C9A86A', fontWeight: devta !== '—' ? 600 : 400 }}>{devta}</td>
+                                      {div === 60 && <td style={{ color: getD60Nature(sIdx, deg) === 'Benefic' ? '#10b981' : '#ef4444', fontWeight: 600 }}>{getD60Nature(sIdx, deg)}</td>}
+                                      <td>{p.nakshatra.name}</td>
+                                      <td>{p.nakshatra.pada}</td>
+                                      <td style={{ color: '#C9A86A' }}>{p.nakshatra.devta}</td>
+                                      <td>{p.nakshatra.lord}</td>
+                                      <td>{p.rasi.name} ({formatDMS(p.rasi.degreesInSign)})</td>
+                                      <td>{p.nakshatra.subLord}</td>
+                                    </>
+                                  )}
                                 </tr>
                               );
                             })}
@@ -1028,7 +1076,7 @@ export default function Home() {
               {(activeTab === 'Panchang' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>
                   {isPrinting && <h2 className="print-only-heading">Panchang</h2>}
-                  <PanchangTab data={data} />
+                  <PanchangTab data={data} lat={formLocation.lat} lon={formLocation.lon} ayanamsha={ayanamsha} />
                 </div>
               )}
               
@@ -1048,7 +1096,7 @@ export default function Home() {
               )}
               <div style={{ display: (activeTab === 'Transit' || isPrinting) ? 'block' : 'none' }} className={isPrinting ? 'print-section' : ''}>
                 {isPrinting && <h2 className="print-only-heading">Transit</h2>}
-                <TransitTab mainData={data} ayanamsha={ayanamsha} weights={ndsWeights} showTransitVedha={showTransitVedha} showTransitLatta={showTransitLatta} chartStyle={chartStyle} />
+                <TransitTab mainData={data} ayanamsha={ayanamsha} weights={ndsWeights} showTransitVedha={showTransitVedha} showTransitLatta={showTransitLatta} chartStyle={chartStyle} isPremium={isPremium} />
               </div>
               {(activeTab === 'Awasthas' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>

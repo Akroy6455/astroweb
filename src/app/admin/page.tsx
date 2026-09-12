@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { auth, db, googleProvider } from '@/lib/firebaseClient';
 import { signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, query, orderBy } from 'firebase/firestore';
-import { ShieldAlert, Users, Activity, LogIn, Clock, Eye, LayoutDashboard, FileText } from 'lucide-react';
+import { collection, doc, getDoc, getDocs, query, orderBy, updateDoc } from 'firebase/firestore';
+import { ShieldAlert, Users, Activity, LogIn, Clock, Eye, LayoutDashboard, FileText, Sparkles } from 'lucide-react';
 import { DateTime } from 'luxon';
 import BlogManager from '@/components/admin/BlogManager';
 
@@ -17,6 +17,7 @@ interface UserData {
   photoURL: string;
   createdAt: string;
   lastLogin: any;
+  isPremium?: boolean;
 }
 
 export default function AdminDashboard() {
@@ -118,12 +119,23 @@ export default function AdminDashboard() {
     );
   }
 
+  const handleTogglePremium = async (uid: string, currentVal: boolean) => {
+    try {
+      await updateDoc(doc(db, 'users', uid), { isPremium: !currentVal });
+      setUsersList(prev => prev.map(u => u.uid === uid ? { ...u, isPremium: !currentVal } : u));
+    } catch (err) {
+      console.error("Failed to toggle premium:", err);
+    }
+  };
+
   const oneWeekAgo = DateTime.now().minus({ days: 7 });
   const newUsersCount = usersList.filter(u => {
     if (!u.createdAt) return false;
     const dt = DateTime.fromJSDate(new Date(u.createdAt));
     return dt >= oneWeekAgo;
   }).length;
+
+  const premiumCount = usersList.filter(u => u.isPremium).length;
 
   return (
     <div className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
@@ -152,7 +164,7 @@ export default function AdminDashboard() {
 
       {activeTab === 'dashboard' ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden">
               <div className="text-white/60 text-sm font-medium mb-1">Total Users</div>
               <div className="text-4xl font-serif text-primary">{usersList.length}</div>
@@ -176,6 +188,12 @@ export default function AdminDashboard() {
               <div className="text-4xl font-serif text-blue-400">{todayVisitors}</div>
               <Eye className="absolute bottom-4 right-4 w-12 h-12 text-blue-400/10" />
             </div>
+
+            <div className="glass-panel p-6 rounded-xl flex flex-col relative overflow-hidden border border-amber-500/20">
+              <div className="text-amber-400/80 text-sm font-medium mb-1">Premium Users</div>
+              <div className="text-4xl font-serif text-amber-400">{premiumCount}</div>
+              <Sparkles className="absolute bottom-4 right-4 w-12 h-12 text-amber-400/10" />
+            </div>
           </div>
 
           <div className="glass-panel rounded-xl overflow-hidden mt-8 border border-white/10">
@@ -190,6 +208,7 @@ export default function AdminDashboard() {
                     <th className="px-6 py-3 font-medium">Email</th>
                     <th className="px-6 py-3 font-medium">Joined</th>
                     <th className="px-6 py-3 font-medium">Last Login</th>
+                    <th className="px-6 py-3 font-medium text-center">Premium</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -208,17 +227,37 @@ export default function AdminDashboard() {
                             </div>
                           )}
                           <span className="font-medium text-white">{u.displayName || 'Unknown User'}</span>
+                          {u.isPremium && <Sparkles className="w-4 h-4 text-amber-400" />}
                         </td>
                         <td className="px-6 py-4">{u.email}</td>
                         <td className="px-6 py-4">{joined}</td>
                         <td className="px-6 py-4 text-primary/80">{lastLog}</td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => handleTogglePremium(u.uid, !!u.isPremium)}
+                            style={{
+                              position: 'relative', display: 'inline-flex', alignItems: 'center',
+                              width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
+                              border: u.isPremium ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.3)',
+                              background: u.isPremium ? '#f59e0b' : 'rgba(255,255,255,0.15)',
+                              transition: 'all 0.2s', padding: 0
+                            }}
+                          >
+                            <span style={{
+                              display: 'inline-block', width: '18px', height: '18px', borderRadius: '50%',
+                              background: '#fff', transition: 'transform 0.2s',
+                              transform: u.isPremium ? 'translateX(23px)' : 'translateX(3px)',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                            }} />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
                   
                   {usersList.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-white/40">
+                      <td colSpan={5} className="px-6 py-8 text-center text-white/40">
                         No users found.
                       </td>
                     </tr>

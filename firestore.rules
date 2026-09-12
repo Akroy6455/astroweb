@@ -8,6 +8,10 @@ service cloud.firestore {
         request.auth.token.email == 'akroy6455@gmail.com'
       );
     }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
     
     match /ml_datasets/{datasetId} {
       allow create: if request.auth != null;
@@ -15,16 +19,27 @@ service cloud.firestore {
     }
     
     match /stats/{statId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if request.auth != null;
     }
     
+    // Users: admin can read/write ANY user doc, user can read/write their own
     match /users/{userId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isAdmin() || isOwner(userId);
+    }
+
+    // User subcollections (profiles, settings, tuning_settings)
+    match /users/{userId}/{document=**} {
+      allow read, write: if isAdmin() || isOwner(userId);
     }
 
     match /blogs/{blogId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /blogs/{blogId}/{document=**} {
+      allow read, write: if request.auth != null;
     }
     
     match /{document=**} {

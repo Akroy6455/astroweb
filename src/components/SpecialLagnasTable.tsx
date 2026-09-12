@@ -28,7 +28,9 @@ export default function SpecialLagnasTable({ data }: { data: any }) {
     { name: 'Pranapada Lagna (PL)', rasi: specialLagnas.pranapadaLagna?.rasi?.name, deg: specialLagnas.pranapadaLagna?.longitude },
     { name: 'Indu Lagna (IL)', rasi: specialLagnas.induLagna?.rasi?.name, deg: null },
     { name: 'Arudha Lagna (AL)', rasi: specialLagnas.arudhaLagna?.rasi?.name, deg: null },
-    { name: 'Upapada Lagna (UL)', rasi: specialLagnas.upapadaLagna?.rasi?.name, deg: null }
+    { name: 'Upapada Lagna (UL)', rasi: specialLagnas.upapadaLagna?.rasi?.name, deg: null },
+    { name: 'Karakamsa Lagna (KL)', rasi: specialLagnas.karakamsaLagna?.rasi?.name, deg: null },
+    { name: 'Shree Lagna (SL)', rasi: specialLagnas.shreeLagna?.rasi?.name, deg: specialLagnas.shreeLagna?.longitude }
   ];
 
   return (

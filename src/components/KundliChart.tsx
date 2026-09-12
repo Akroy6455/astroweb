@@ -35,7 +35,7 @@ export default function KundliChart({ data, arrows = [] }: { data: KundliData | 
           const isSpecial = specialNames.includes(p.name);
           const textStr = p.short + (p.retrograde ? '(R)' : '') + (index < planets.length - 1 ? ', ' : '');
           return (
-            <tspan key={p.name} fill={isSpecial ? '#3b82f6' : 'currentColor'} style={isSpecial ? { fontSize: '0.65em' } : {}}>
+            <tspan key={p.name} fill={(p as any).color ? (p as any).color : (isSpecial ? '#3b82f6' : 'currentColor')} style={isSpecial ? { fontSize: '0.65em' } : {}}>
               {textStr}
             </tspan>
           );

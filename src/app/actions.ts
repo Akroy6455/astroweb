@@ -119,6 +119,26 @@ export async function findNextTransitEvent(
   return await findNextTransit(planetName, offsetDeg, ranges, jd, isPoint, direction, ayanamsha);
 }
 
-export async function getAuspiciousTimeData(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any) {
-  return generateAuspiciousTimeSeries(startDateISO, lat, lon, chartData, navtaraMoonSettings, matrices);
+export async function getAuspiciousTimeData(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any, durationDays?: number) {
+  return generateAuspiciousTimeSeries(startDateISO, lat, lon, chartData, navtaraMoonSettings, matrices, durationDays);
+}
+
+import { generatePanchangClockData } from '@/lib/clock_engine';
+
+export async function getPanchangClockDataAction(
+  startTimestamp: number, 
+  lat: number, 
+  lon: number, 
+  ayanamsha: string, 
+  baseMoonLon: number, 
+  baseLagnaLon: number, 
+  baseLagnaBav: number[],
+  baseMoonBav: number[]
+) {
+  try {
+    return await generatePanchangClockData(startTimestamp, lat, lon, ayanamsha, baseMoonLon, baseLagnaLon, baseLagnaBav, baseMoonBav);
+  } catch (error) {
+    console.error("Error generating panchang clock data:", error);
+    throw new Error("Failed to generate panchang clock data");
+  }
 }
