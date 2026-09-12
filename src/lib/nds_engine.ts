@@ -55,6 +55,8 @@ export interface NDSWeights {
   advanced8th9thLordPoints?: number;
   advancedYamaDispositorPoints?: number;
   advancedGulikaDispositorPoints?: number;
+  advancedKendraDoshaPoints?: number;
+  advancedKendraYogaPoints?: number;
   rahuKetuMoonConjunct?: number;
   version?: number;
   timingOptions?: TimingOptions;
@@ -183,6 +185,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   advanced8th9thLordPoints: 100,
   advancedYamaDispositorPoints: 100,
   advancedGulikaDispositorPoints: -100,
+  advancedKendraDoshaPoints: -80,
+  advancedKendraYogaPoints: 80,
   version: 4,
   timingOptions: {
     job: {
@@ -1176,13 +1180,37 @@ export function getAdvancedModifiers(planet: Planet, positions: any[], w: NDSWei
   if (planet === 'Moon' || planet === 'Rahu' || planet === 'Ketu') {
       if (moonPos && (rahuPos || ketuPos)) {
           if ((rahuPos && moonPos.sign === rahuPos.sign) || (ketuPos && moonPos.sign === ketuPos.sign)) {
-              // Wait, penalty applies to what planet? To Moon, Rahu, Ketu?
-              // The rule says penalty when Rahu/Ketu is conjunct Moon.
               const penalty = w.rahuKetuMoonConjunct || 0;
               score += penalty;
               conditions.push({ key: 'rahuKetuMoonConjunct', name: 'Moon conjunct Node (Rahu/Ketu)', value: penalty });
           }
       }
+  }
+
+  // Kendra Adhipati Dosha and Yoga
+  if (yogaState) {
+    const isBenefic = isNaturalBenefic(planet);
+    const isMalefic = isNaturalMalefic(planet);
+    const lordshipMap = buildLordshipMap(yogaState);
+    const ownedHouses = lordshipMap.get(planet) || [];
+    
+    const ownsKendra = ownedHouses.some(h => [1,4,7,10].includes(h));
+    const ownsTrine = ownedHouses.some(h => [1,5,9].includes(h));
+    const placedInHouse = yogaState.planets[planet].house;
+    const placedInTrine = [1,5,9].includes(placedInHouse);
+    const placedInKendra = [1,4,7,10].includes(placedInHouse);
+
+    // Kendra Adhipati Dosha
+    if (w.advancedKendraDoshaPoints && isBenefic && ownsKendra && !ownsTrine && placedInTrine) {
+      score += w.advancedKendraDoshaPoints;
+      conditions.push({ key: 'advancedKendraDoshaPoints', name: 'Kendra-Adhipati Dosha', value: w.advancedKendraDoshaPoints });
+    }
+
+    // Kendra Adhipati Yoga
+    if (w.advancedKendraYogaPoints && isMalefic && ownsKendra && placedInKendra) {
+      score += w.advancedKendraYogaPoints;
+      conditions.push({ key: 'advancedKendraYogaPoints', name: 'Kendra-Adhipati Yoga', value: w.advancedKendraYogaPoints });
+    }
   }
 
   return { score, conditions };

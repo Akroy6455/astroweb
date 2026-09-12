@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { NDSWeights, DEFAULT_NDS_WEIGHTS } from '@/lib/nds_engine';
@@ -222,7 +222,9 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
     {
       title: 'Module 9: Advanced Rules',
       keys: [
-        'rahuKetuMoonConjunct', 'advancedJupSatConjunctPoints', 'advanced8th9thLordPoints'
+        'rahuKetuMoonConjunct', 'advancedJupSatConjunctPoints', 'advanced8th9thLordPoints',
+        'advancedYamaDispositorPoints', 'advancedGulikaDispositorPoints',
+        'advancedKendraDoshaPoints', 'advancedKendraYogaPoints'
       ]
     }
   ];
