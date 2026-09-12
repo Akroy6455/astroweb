@@ -1195,6 +1195,7 @@ export default function Home() {
                             savedProfiles={savedTuningSettings}
                             onSaveProfile={saveTuningSetting}
                             onDeleteProfile={deleteTuningSetting}
+                            mainData={data}
                           />
                         </DashaChart>
                       </>

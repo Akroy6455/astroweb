@@ -10,6 +10,7 @@ interface Props {
   savedProfiles?: {name: string, weights: NDSWeights}[];
   onSaveProfile?: (name: string, weights: NDSWeights) => void;
   onDeleteProfile?: (name: string) => void;
+  mainData?: any;
 }
 
 const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
@@ -36,6 +37,8 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   advanced8th9thLordPoints: "When 8th lord is conjuct 9th lord and no planet is between them and difference is less than 10 degrees OR they exchange rasis OR they aspect each other.",
   advancedYamaDispositorPoints: "Points added to the Dasha scores if the planet is the Dispositor of Yamaghantak.",
   advancedGulikaDispositorPoints: "Points added to the Dasha scores if the planet is the Dispositor of Gulika.",
+  advancedKendraDoshaPoints: "Kendra Adhipati Dosha: Natural benefics (Jupiter, Venus, unafflicted Mercury, Waxing Moon) owning Kendras (1, 4, 7, 10) lose their beneficence. This point system is made using extracts from Bhavartha Ratnakara and Laghu Parashari.",
+  advancedKendraYogaPoints: "Kendra Adhipati Yoga: Natural malefics (Saturn, Mars, Sun, Waning Moon) owning Kendras (1, 4, 7, 10) lose their maleficence and give benefic results. This point system is made using extracts from Bhavartha Ratnakara and Laghu Parashari.",
   
   exaltation: "Percentage modifier applied if the planet is Exalted or in Moolatrikona.",
   ownSign: "Percentage modifier applied if the planet is in its Own Sign.",
@@ -97,7 +100,7 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   navamshaMalefic: "Penalty applied if the Navamsha sign lord is a natural Malefic.",
 };
 
-export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onSaveProfile, onDeleteProfile }: Props) {
+export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onSaveProfile, onDeleteProfile, mainData }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentProfileName, setCurrentProfileName] = useState<string>('V1 Setting (Default)');
   const [localWeights, setLocalWeights] = useState<NDSWeights>(weights);
@@ -1020,6 +1023,118 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
             </div>
           </div>    
 
+
+        <div style={{ 
+          marginBottom: '2rem',
+          opacity: localWeights.enableTaraNirnayNatalMatrix !== false ? 1 : 0.45, 
+          transition: 'all 0.3s ease' 
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+            <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--primary)' }}>
+              Tara Nirnay NDF Natal Chart Matrix
+            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: localWeights.enableTaraNirnayNatalMatrix !== false ? 'var(--primary)' : 'var(--text-muted)' }}>Enable</span>
+              <div 
+                onClick={() => setLocalWeights(prev => ({ ...prev, enableTaraNirnayNatalMatrix: prev.enableTaraNirnayNatalMatrix === false ? true : false }))}
+                style={{ width: '42px', height: '22px', background: localWeights.enableTaraNirnayNatalMatrix !== false ? 'var(--primary)' : 'rgba(46, 49, 49, 0.2)', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease', pointerEvents: 'auto' }}
+              >
+                <div style={{ position: 'absolute', top: '2px', left: localWeights.enableTaraNirnayNatalMatrix !== false ? '22px' : '2px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', transition: 'left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ pointerEvents: localWeights.enableTaraNirnayNatalMatrix !== false ? 'auto' : 'none', filter: localWeights.enableTaraNirnayNatalMatrix !== false ? 'none' : 'blur(0.5px)' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            {['Sun', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus'].map(planet => (
+              <button 
+                key={planet}
+                onClick={() => setSelectedNdfNatalSettingsPlanet(planet)}
+                style={{
+                  padding: '0.4rem 1rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  background: selectedNdfNatalSettingsPlanet === planet ? 'var(--primary)' : 'transparent',
+                  color: selectedNdfNatalSettingsPlanet === planet ? '#fff' : 'var(--foreground)',
+                  cursor: 'pointer',
+                  fontWeight: selectedNdfNatalSettingsPlanet === planet ? 600 : 400
+                }}
+              >
+                {planet}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '600px', fontSize: '0.8rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '4px', textAlign: 'left', color: 'var(--text-muted)' }}>Natal Point</th>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(house => (
+                    <th key={house} style={{ padding: '4px', textAlign: 'center', color: 'var(--foreground)' }}>H{house}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {['Sun', 'Moon', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus', 'Ascendant'].map(natalPlanet => {
+                  const rowKey = `from_${natalPlanet}`;
+                  const currentMatrix = localWeights.taraNirnayNdfNatalMatrix || DEFAULT_NDS_WEIGHTS.taraNirnayNdfNatalMatrix;
+                  const rowData = (currentMatrix as any)?.[selectedNdfNatalSettingsPlanet]?.[rowKey] || new Array(12).fill(0);
+                  
+                  let currentTransitHouse = -1;
+                  if (mainData && mainData.positions) {
+                    const tPlanetPos = mainData.positions.find((p: any) => p.name === selectedNdfNatalSettingsPlanet);
+                    let nPlanetPos = natalPlanet === 'Ascendant' ? mainData.lagna : mainData.positions.find((p: any) => p.name === natalPlanet);
+                    if (tPlanetPos && nPlanetPos) {
+                      const tRasi = Math.floor(tPlanetPos.longitude / 30);
+                      const nRasi = Math.floor(nPlanetPos.longitude / 30);
+                      currentTransitHouse = ((tRasi - nRasi + 12) % 12) + 1;
+                    }
+                  }
+
+                  return (
+                    <tr key={natalPlanet}>
+                      <td style={{ padding: '4px', fontWeight: 600, color: 'var(--foreground)' }}>From {natalPlanet}</td>
+                      {rowData.map((val: number, idx: number) => {
+                        const houseNumber = idx + 1;
+                        const isCurrent = currentTransitHouse === houseNumber;
+                        return (
+                          <td key={idx} style={{ padding: '2px' }}>
+                            <input
+                              type="number"
+                              value={val}
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value, 10);
+                                if (!isNaN(v)) handleNdfNatalMatrixChange(selectedNdfNatalSettingsPlanet, rowKey, idx, v);
+                              }}
+                              style={{
+                                width: '100%',
+                                minWidth: '40px',
+                                padding: '4px 2px',
+                                background: isCurrent ? 'rgba(56, 189, 248, 0.2)' : 'var(--bg)',
+                                border: isCurrent ? '1px solid #38bdf8' : '1px solid var(--border)',
+                                color: isCurrent ? '#38bdf8' : 'var(--foreground)',
+                                borderRadius: '4px',
+                                textAlign: 'center',
+                                fontWeight: (val !== 0 || isCurrent) ? 600 : 400
+                              }}
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Note: This point system is made using extracts from Yavanjataka.<br/>
+            This matrix is used to calculate the Tara Nirnay NDF Natal scores for Planet's MD and AD. Highlighted cells indicate valid points based on chart positions.
+          </div>
+          </div>
+        </div>
 
         <div style={{ 
           marginBottom: '2rem',

@@ -360,7 +360,7 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
       "from_Jupiter": [2, 17, 2, 16, 18, 14, 2, 2, 18, 18, 20, 3],
       "from_Saturn": [17, 19, 3, 16, 15, 18, 16, 12, 18, 18, 20, 3],
       "from_Venus": [2, 18, 4, 2, 3, 16, 18, 2, 4, 4, 17, 18],
-      "from_Ascendent": [19, 1, 18, 17, 2, 19, 2, 0, 2, 17, 19, 2]
+      "from_Ascendant": [19, 1, 18, 17, 2, 19, 2, 0, 2, 17, 19, 2]
     },
     "Mercury": {
       "from_Sun": [2, 2, 3, 2, 18, 18, 10, 2, 18, 2, 17, 18],
@@ -370,7 +370,7 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
       "from_Jupiter": [2, 2, 2, 3, 2, 19, 2, 17, 2, 2, 18, 4],
       "from_Saturn": [18, 18, 2, 18, 1, 2, 17, 16, 18, 18, 18, 3],
       "from_Venus": [18, 18, 18, 15, 18, 2, 1, 18, 18, 2, 19, 18],
-      "from_Ascendent": [19, 18, 2, 19, 19, 1, 19, 1, 19, 19, 19, 2]
+      "from_Ascendant": [19, 18, 2, 19, 19, 1, 19, 1, 19, 19, 19, 2]
     },
     "Mars": {
       "from_Sun": [10, 3, 18, 3, 18, 19, 2, 2, 19, 17, 18, 3],
@@ -380,7 +380,7 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
       "from_Jupiter": [2, 3, 2, 2, 2, 18, 2, 0, 2, 18, 18, 1],
       "from_Saturn": [16, 18, 2, 17, 1, 1, 18, 2, 17, 2, 18, 3],
       "from_Venus": [3, 4, 2, 2, 3, 17, 17, 18, 4, 2, 18, 15],
-      "from_Ascendent": [19, 2, 18, 1, 1, 19, 0, 1, 1, 1, 19, 1]
+      "from_Ascendant": [19, 2, 18, 1, 1, 19, 0, 1, 1, 1, 19, 1]
     },
     "Jupiter": {
       "from_Sun": [18, 17, 2, 17, 2, 1, 18, 2, 18, 18, 17, 3],
@@ -390,7 +390,7 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
       "from_Jupiter": [19, 19, 18, 18, 3, 3, 18, 18, 2, 18, 18, 4],
       "from_Saturn": [4, 3, 18, 2, 18, 18, 2, 2, 3, 2, 19, 19],
       "from_Venus": [3, 17, 3, 3, 18, 18, 3, 2, 18, 17, 18, 3],
-      "from_Ascendent": [19, 18, 3, 18, 18, 19, 19, 1, 19, 19, 19, 3]
+      "from_Ascendant": [19, 18, 3, 18, 18, 19, 19, 1, 19, 19, 19, 3]
     },
     "Saturn": {
       "from_Sun": [18, 17, 3, 16, 4, 4, 18, 16, 3, 17, 18, 3],
@@ -400,7 +400,7 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
       "from_Jupiter": [3, 2, 3, 2, 18, 17, 2, 0, 4, 3, 18, 16],
       "from_Saturn": [2, 4, 17, 3, 17, 17, 2, 1, 2, 3, 18, 3],
       "from_Venus": [2, 2, 2, 4, 1, 18, 3, 3, 2, 2, 18, 18],
-      "from_Ascendent": [18, 3, 18, 17, 19, 19, 1, 0, 1, 18, 18, 2]
+      "from_Ascendant": [18, 3, 18, 17, 19, 19, 1, 0, 1, 18, 18, 2]
     },
     "Venus": {
       "from_Sun": [4, 3, 2, 2, 2, 2, 2, 17, 3, 3, 17, 16],
@@ -410,7 +410,69 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
       "from_Jupiter": [3, 2, 3, 4, 18, 3, 16, 18, 18, 18, 18, 3],
       "from_Saturn": [3, 3, 17, 17, 18, 4, 3, 18, 18, 18, 19, 3],
       "from_Venus": [2, 3, 2, 18, 2, 18, 17, 4, 3, 2, 18, 18],
-      "from_Ascendent": [19, 18, 19, 19, 19, 2, 2, 18, 18, 2, 19, 2]
+      "from_Ascendant": [19, 18, 19, 19, 19, 2, 2, 18, 18, 2, 19, 2]
+    }
+  },
+  taraNirnayNdfNatalMatrix: {
+    "Sun": {
+      "from_Sun": [16, 18, 8, 16, 2, 5, 18, 17, 4, 18, 19, 3],
+      "from_Moon": [1, 3, 18, 1, 2, 19, 1, 0, 2, 17, 19, 4],
+      "from_Mercury": [2, 4, 17, 3, 17, 18, 2, 3, 17, 18, 19, 19],
+      "from_Mars": [17, 18, 2, 18, 2, 5, 18, 18, 17, 17, 18, 4],
+      "from_Jupiter": [2, 17, 2, 16, 18, 14, 2, 2, 18, 18, 20, 3],
+      "from_Saturn": [17, 19, 3, 16, 15, 18, 16, 12, 18, 18, 20, 3],
+      "from_Venus": [2, 18, 4, 2, 3, 16, 18, 2, 4, 4, 17, 18],
+      "from_Ascendant": [19, 1, 18, 17, 2, 19, 2, 0, 2, 17, 19, 2]
+    },
+    "Mercury": {
+      "from_Sun": [2, 2, 3, 2, 18, 18, 10, 2, 18, 2, 17, 18],
+      "from_Moon": [2, 2, 1, 18, 2, 19, 2, 18, 1, 18, 19, 3],
+      "from_Mercury": [18, 2, 17, 3, 18, 18, 2, 2, 18, 18, 18, 18],
+      "from_Mars": [18, 18, 3, 18, 2, 2, 17, 17, 18, 18, 18, 17],
+      "from_Jupiter": [2, 2, 2, 3, 2, 19, 2, 17, 2, 2, 18, 4],
+      "from_Saturn": [18, 18, 2, 18, 1, 2, 17, 16, 18, 18, 18, 3],
+      "from_Venus": [18, 18, 18, 15, 18, 2, 1, 18, 18, 2, 19, 18],
+      "from_Ascendant": [19, 18, 2, 19, 19, 1, 19, 1, 19, 19, 19, 2]
+    },
+    "Mars": {
+      "from_Sun": [10, 3, 18, 3, 18, 19, 2, 2, 19, 17, 18, 3],
+      "from_Moon": [1, 2, 18, 2, 1, 19, 1, 0, 1, 8, 19, 2],
+      "from_Mercury": [2, 5, 18, 4, 19, 18, 2, 1, 2, 2, 18, 2],
+      "from_Mars": [18, 18, 3, 18, 2, 2, 18, 18, 3, 3, 18, 2],
+      "from_Jupiter": [2, 3, 2, 2, 2, 18, 2, 0, 2, 18, 18, 1],
+      "from_Saturn": [16, 18, 2, 17, 1, 1, 18, 2, 17, 2, 18, 3],
+      "from_Venus": [3, 4, 2, 2, 3, 17, 17, 18, 4, 2, 18, 15],
+      "from_Ascendant": [19, 2, 18, 1, 1, 19, 0, 1, 1, 1, 19, 1]
+    },
+    "Jupiter": {
+      "from_Sun": [18, 17, 2, 17, 2, 1, 18, 2, 18, 18, 17, 3],
+      "from_Moon": [1, 19, 2, 1, 19, 2, 19, 1, 20, 1, 19, 3],
+      "from_Mercury": [17, 17, 2, 18, 2, 3, 17, 16, 3, 18, 19, 3],
+      "from_Mars": [17, 18, 3, 17, 16, 3, 2, 2, 2, 18, 18, 4],
+      "from_Jupiter": [19, 19, 18, 18, 3, 3, 18, 18, 2, 18, 18, 4],
+      "from_Saturn": [4, 3, 18, 2, 18, 18, 2, 2, 3, 2, 19, 19],
+      "from_Venus": [3, 17, 3, 3, 18, 18, 3, 2, 18, 17, 18, 3],
+      "from_Ascendant": [19, 18, 3, 18, 18, 19, 19, 1, 19, 19, 19, 3]
+    },
+    "Saturn": {
+      "from_Sun": [18, 17, 3, 16, 4, 4, 18, 16, 3, 17, 18, 3],
+      "from_Moon": [1, 3, 18, 2, 2, 18, 1, 0, 2, 2, 19, 3],
+      "from_Mercury": [2, 3, 3, 2, 3, 18, 4, 16, 18, 17, 17, 17],
+      "from_Mars": [2, 3, 10, 4, 18, 18, 3, 2, 4, 18, 19, 16],
+      "from_Jupiter": [3, 2, 3, 2, 18, 17, 2, 0, 4, 3, 18, 16],
+      "from_Saturn": [2, 4, 17, 3, 17, 17, 2, 1, 2, 3, 18, 3],
+      "from_Venus": [2, 2, 2, 4, 1, 18, 3, 3, 2, 2, 18, 18],
+      "from_Ascendant": [18, 3, 18, 17, 19, 19, 1, 0, 1, 18, 18, 2]
+    },
+    "Venus": {
+      "from_Sun": [4, 3, 2, 2, 2, 2, 2, 17, 3, 3, 17, 16],
+      "from_Moon": [19, 18, 19, 19, 19, 2, 3, 19, 19, 2, 19, 12],
+      "from_Mercury": [2, 2, 17, 3, 18, 18, 2, 3, 18, 4, 18, 4],
+      "from_Mars": [1, 1, 18, 16, 17, 18, 1, 2, 18, 3, 18, 16],
+      "from_Jupiter": [3, 2, 3, 4, 18, 3, 16, 18, 18, 18, 18, 3],
+      "from_Saturn": [3, 3, 17, 17, 18, 4, 3, 18, 18, 18, 19, 3],
+      "from_Venus": [2, 3, 2, 18, 2, 18, 17, 4, 3, 2, 18, 18],
+      "from_Ascendant": [19, 18, 19, 19, 19, 2, 2, 18, 18, 2, 19, 2]
     }
   }
 };
@@ -1106,6 +1168,108 @@ function isConjunctWithoutPlanetBetween(p1Name: Planet, p2Name: Planet, position
   return true;
 }
 
+
+function isPapaKartari(planetObj: any, positions: any[]): boolean {
+  if (!planetObj || typeof planetObj.longitude !== 'number') return false;
+  const lon = planetObj.longitude;
+  
+  const pName = planetObj.planet || planetObj.name;
+  if (pName !== 'Saturn') {
+    const saturn = positions.find(p => (p.planet || p.name) === 'Saturn');
+    if (saturn && typeof saturn.longitude === 'number') {
+      let diff = Math.abs(lon - saturn.longitude);
+      if (diff > 180) diff = 360 - diff;
+      if (diff <= 5) return true;
+    }
+  }
+  
+  const malefics = ['Sun', 'Mars', 'Saturn', 'Rahu', 'Ketu'];
+  let minAheadDist = 360;
+  let nearestAhead = null;
+  let minBehindDist = 360;
+  let nearestBehind = null;
+  
+  for (const p of positions) {
+    const name = p.planet || p.name;
+    if (name === (planetObj.planet || planetObj.name) || ['Ascendant', 'Lagna', 'Uranus', 'Neptune', 'Pluto'].includes(name)) continue;
+    if (typeof p.longitude !== 'number') continue;
+    
+    let diff = (p.longitude - lon + 360) % 360;
+    if (diff === 0) continue;
+    
+    if (diff < 180) {
+      if (diff < minAheadDist) {
+        minAheadDist = diff;
+        nearestAhead = name;
+      }
+    } else {
+      let backDiff = 360 - diff;
+      if (backDiff < minBehindDist) {
+        minBehindDist = backDiff;
+        nearestBehind = name;
+      }
+    }
+  }
+  
+  if (nearestAhead && nearestBehind && minAheadDist <= 30 && minBehindDist <= 30) {
+    if (malefics.includes(nearestAhead) && malefics.includes(nearestBehind)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+function isShubhaKartari(planetObj: any, positions: any[]): boolean {
+  if (!planetObj || typeof planetObj.longitude !== 'number') return false;
+  const lon = planetObj.longitude;
+  
+  const pName = planetObj.planet || planetObj.name;
+  if (pName !== 'Jupiter') {
+    const jup = positions.find(p => (p.planet || p.name) === 'Jupiter');
+    if (jup && typeof jup.longitude === 'number') {
+      let diff = Math.abs(lon - jup.longitude);
+      if (diff > 180) diff = 360 - diff;
+      if (diff <= 5) return true;
+    }
+  }
+  
+  const benefics = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+  let minAheadDist = 360;
+  let nearestAhead = null;
+  let minBehindDist = 360;
+  let nearestBehind = null;
+  
+  for (const p of positions) {
+    const name = p.planet || p.name;
+    if (name === (planetObj.planet || planetObj.name) || ['Ascendant', 'Lagna', 'Uranus', 'Neptune', 'Pluto'].includes(name)) continue;
+    if (typeof p.longitude !== 'number') continue;
+    
+    let diff = (p.longitude - lon + 360) % 360;
+    if (diff === 0) continue;
+    
+    if (diff < 180) {
+      if (diff < minAheadDist) {
+        minAheadDist = diff;
+        nearestAhead = name;
+      }
+    } else {
+      let backDiff = 360 - diff;
+      if (backDiff < minBehindDist) {
+        minBehindDist = backDiff;
+        nearestBehind = name;
+      }
+    }
+  }
+  
+  if (nearestAhead && nearestBehind && minAheadDist <= 30 && minBehindDist <= 30) {
+    if (benefics.includes(nearestAhead) && benefics.includes(nearestBehind)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
 export function getAdvancedModifiers(planet: Planet, positions: any[], w: NDSWeights, dashaLevel?: 'MD' | 'AD' | 'PD', yogaState?: YogaState): { score: number, conditions: AppliedCondition[] } {
   if (w.disabledParams?.advancedRules) return { score: 0, conditions: [] };
   let score = 0;
@@ -1122,7 +1286,59 @@ export function getAdvancedModifiers(planet: Planet, positions: any[], w: NDSWei
     }
   }
 
+  // Tara Nirnay NDF Natal Matrix evaluation
+  if ((dashaLevel === 'MD' || dashaLevel === 'AD') && w.taraNirnayNdfNatalMatrix) {
+    const pMatrix = (w.taraNirnayNdfNatalMatrix as any)[planet];
+    if (pMatrix) {
+      let totalNatalMatrixScore = 0;
+      
+      const pPosObj = positions.find(p => (p.planet || p.name) === planet);
+      
+      if (pPosObj) {
+        const tRasi = Math.floor(pPosObj.longitude / 30);
+        const natalPoints = ['Sun', 'Moon', 'Mercury', 'Mars', 'Jupiter', 'Saturn', 'Venus', 'Ascendant'];
+        for (const np of natalPoints) {
+          if (pMatrix[`from_${np}`]) {
+            let nRasi = -1;
+            if (np === 'Ascendant') {
+                if (yogaState) {
+                    const ZODIACS = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+                    nRasi = ZODIACS.indexOf(yogaState.houses[1].sign);
+                } else {
+                    const asc = positions.find(p => (p.planet || p.name) === 'Ascendant' || (p.planet || p.name) === 'Lagna');
+                    if (asc) nRasi = Math.floor((asc.longitude || 0) / 30);
+                }
+            } else {
+                const npObj = positions.find(p => (p.planet || p.name) === np);
+                if (npObj) nRasi = Math.floor((npObj.longitude || 0) / 30);
+            }
+            
+            if (nRasi !== -1) {
+                const houseNumber = ((tRasi - nRasi + 12) % 12) + 1;
+                const pt = pMatrix[`from_${np}`][houseNumber - 1] || 0;
+                totalNatalMatrixScore += pt;
+            }
+          }
+        }
+        if (totalNatalMatrixScore !== 0) {
+          score += totalNatalMatrixScore;
+          conditions.push({ key: 'taraNirnayNdfNatalMatrix', name: `Tara Nirnay NDF Natal Matrix (${dashaLevel})`, value: totalNatalMatrixScore });
+        }
+      }
+    }
+  }
+
   const pPos = positions.find(p => (p.planet || p.name) === planet);
+  // Kartari Yogas
+  if (w.papaKartari && isPapaKartari(pPos, positions)) {
+    score += w.papaKartari;
+    conditions.push({ key: 'papaKartari', name: 'Papa Kartari Yoga', value: w.papaKartari });
+  }
+  if (w.shubhaKartari && isShubhaKartari(pPos, positions)) {
+    score += w.shubhaKartari;
+    conditions.push({ key: 'shubhaKartari', name: 'Shubha Kartari Yoga', value: w.shubhaKartari });
+  }
+
   const mPos = positions.find(p => (p.planet || p.name) === 'Moon');
   
   // Navtara points
@@ -1158,6 +1374,74 @@ export function getAdvancedModifiers(planet: Planet, positions: any[], w: NDSWei
   }
 
 
+
+  if (yogaState && (w.advancedBeneficAsc || w.advancedMaleficAsc || w.advancedBeneficMoon || w.advancedMaleficMoon)) {
+    const planetInfo = yogaState.planets[planet];
+    if (planetInfo) {
+      const pDignity = planetInfo.dignity;
+      const pHouseAsc = planetInfo.house;
+      const isExalted = pDignity === 'Exaltation' || pDignity === 'Deep Exaltation';
+      const isDebilitated = pDignity === 'Debilitation' || pDignity === 'Deep Debilitation';
+      const isOwn = pDignity === 'Own Sign' || pDignity === 'Moolatrikona';
+
+      // --- Ascendant Check ---
+      let is159LordAsc = false;
+      let is6812LordAsc = false;
+      for (const h of [1, 5, 9]) { if (yogaState.houses[h as House]?.lord === planet) is159LordAsc = true; }
+      for (const h of [6, 8, 12]) { if (yogaState.houses[h as House]?.lord === planet) is6812LordAsc = true; }
+
+      const in159Asc = [1, 5, 9].includes(pHouseAsc);
+      const in6812Asc = [6, 8, 12].includes(pHouseAsc);
+
+      if (w.advancedBeneficAsc) {
+        if ((is159LordAsc && (isExalted || isOwn || in159Asc)) || (is6812LordAsc && (isDebilitated || in6812Asc))) {
+          score += w.advancedBeneficAsc;
+          conditions.push({ key: 'advancedBeneficAsc', name: 'Benefic Placement from Ascendant', value: w.advancedBeneficAsc });
+        }
+      }
+      if (w.advancedMaleficAsc) {
+        if ((is6812LordAsc && (isExalted || in159Asc)) || (is159LordAsc && (isDebilitated || in6812Asc))) {
+          score += w.advancedMaleficAsc;
+          conditions.push({ key: 'advancedMaleficAsc', name: 'Malefic Placement from Ascendant', value: w.advancedMaleficAsc });
+        }
+      }
+
+      // --- Moon Check ---
+      const moonPos = positions.find(p => (p.planet || p.name) === 'Moon');
+      if (moonPos && typeof moonPos.longitude === 'number' && typeof pPos?.longitude === 'number') {
+        const moonRasi = Math.floor(moonPos.longitude / 30);
+        const pRasi = Math.floor(pPos.longitude / 30);
+        const pHouseMoon = ((pRasi - moonRasi + 12) % 12) + 1;
+        const in159Moon = [1, 5, 9].includes(pHouseMoon);
+        const in6812Moon = [6, 8, 12].includes(pHouseMoon);
+
+        const ZODIAC_LORDS = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
+        let is159LordMoon = false;
+        let is6812LordMoon = false;
+
+        for (let i = 0; i < 12; i++) {
+          if (ZODIAC_LORDS[i] === planet) {
+            const hFromMoon = ((i - moonRasi + 12) % 12) + 1;
+            if ([1, 5, 9].includes(hFromMoon)) is159LordMoon = true;
+            if ([6, 8, 12].includes(hFromMoon)) is6812LordMoon = true;
+          }
+        }
+
+        if (w.advancedBeneficMoon) {
+          if ((is159LordMoon && (isExalted || isOwn || in159Moon)) || (is6812LordMoon && (isDebilitated || in6812Moon))) {
+            score += w.advancedBeneficMoon;
+            conditions.push({ key: 'advancedBeneficMoon', name: 'Benefic Placement from Moon', value: w.advancedBeneficMoon });
+          }
+        }
+        if (w.advancedMaleficMoon) {
+          if ((is6812LordMoon && (isExalted || in159Moon)) || (is159LordMoon && (isDebilitated || in6812Moon))) {
+            score += w.advancedMaleficMoon;
+            conditions.push({ key: 'advancedMaleficMoon', name: 'Malefic Placement from Moon', value: w.advancedMaleficMoon });
+          }
+        }
+      }
+    }
+  }
   // Advanced Yamaghantak Dispositor Rule
   if (w.advancedYamaDispositorPoints) {
     const yama = positions.find(p => p.name === 'Yamaghantak');
