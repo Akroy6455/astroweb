@@ -126,6 +126,10 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
     setLocalWeights(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleStringChange = (key: keyof NDSWeights, value: string) => {
+    setLocalWeights(prev => ({ ...prev, [key]: value }));
+  };
+
   const handleMatrixChange = (lordIndex: number, placedIndex: number, value: number) => {
     setLocalWeights(prev => {
       const newMatrix = prev.lordPlacementMatrix.map(row => [...row]);
@@ -389,6 +393,45 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
       </div>
 
       <div>
+
+        <div style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)' }}>Base Calculation Options</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div>
+               <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nakshatra to consider (Dasha & Navtara)</label>
+               <select value={localWeights.dashaNavtaraBasePoint || 'Moon'} onChange={e => handleStringChange('dashaNavtaraBasePoint' as any, e.target.value)} style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--foreground)' }}>
+                  <option value="Moon">Moon (Default)</option>
+                  <option value="Sun">Sun</option>
+                  <option value="Lagna">Ascendant (Lagna)</option>
+                  <option value="Kshema">Kshema (4th from Moon)</option>
+                  <option value="Utpanna">Utpanna (5th from Moon)</option>
+                  <option value="Aadhana">Aadhana (8th from Moon)</option>
+                  <option value="Mars">Mars</option>
+                  <option value="Mercury">Mercury</option>
+                  <option value="Jupiter">Jupiter</option>
+                  <option value="Venus">Venus</option>
+                  <option value="Saturn">Saturn</option>
+                  <option value="Rahu">Rahu</option>
+                  <option value="Ketu">Ketu</option>
+               </select>
+            </div>
+            <div>
+               <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Ascendant to consider (Lordship/Placements)</label>
+               <select value={localWeights.lordshipBaseAscendant || 'Lagna'} onChange={e => handleStringChange('lordshipBaseAscendant' as any, e.target.value)} style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--foreground)' }}>
+                  <option value="Lagna">D1 Ascendant (Default)</option>
+                  <option value="Moon">Moon</option>
+                  <option value="Sun">Sun</option>
+                  <option value="Mars">Mars</option>
+                  <option value="Mercury">Mercury</option>
+                  <option value="Jupiter">Jupiter</option>
+                  <option value="Venus">Venus</option>
+                  <option value="Saturn">Saturn</option>
+                  <option value="Rahu">Rahu</option>
+                  <option value="Ketu">Ketu</option>
+               </select>
+            </div>
+          </div>
+        </div>
         <div style={{ marginBottom: '2.5rem', padding: '1.25rem', background: 'rgba(201, 168, 106, 0.05)', borderRadius: '12px', border: '1px solid rgba(201, 168, 106, 0.2)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
@@ -1231,6 +1274,7 @@ export default function TaraNirnaySettings({ weights, onSave, savedProfiles, onS
           </div>
           </div>
         </div>
+
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
         {groups.map((group, idx) => {

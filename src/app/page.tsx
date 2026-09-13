@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { getKundliData, getTaraNirnayData } from './actions';
+import { getKundliData, getTaraNirnayData, fetchAyanamshaValues } from './actions';
 import KundliChart from '@/components/KundliChart';
 import SouthIndianChart from '@/components/SouthIndianChart';
 import { calculateVedha, calculateLatta, Arrow } from '@/lib/vedhaLatta';
@@ -87,7 +87,8 @@ export default function Home() {
   const [referencePlanetLeft, setReferencePlanetLeft] = useState('Lagna');
   const [referencePlanetRight, setReferencePlanetRight] = useState('Lagna');
   const [formLocation, setFormLocation] = useState({ lat: 25.78, lon: 87.48, ianaTz: 'Asia/Kolkata', label: 'Purnia, BR, IN' });
-  const [ayanamsha, setAyanamsha] = useState<'Raman' | 'Lahiri'>('Raman');
+  const [ayanamsha, setAyanamsha] = useState({ id: 'Raman', offset: 0, sign: 1, deg: 0, min: 0, sec: 0 });
+const [ayanamshaValues, setAyanamshaValues] = useState<Record<string, string>>({});
     const [showNatalVedha, setShowNatalVedha] = useState(false);
   const [showNatalLatta, setShowNatalLatta] = useState(false);
   const [showTransitVedha, setShowTransitVedha] = useState(false);
@@ -233,7 +234,10 @@ export default function Home() {
         const unsubscribeSettings = onSnapshot(settingsRef, (doc) => {
           if (doc.exists()) {
             const pref = doc.data();
-            if (pref.ayanamsha) setAyanamsha(pref.ayanamsha);
+            if (pref.ayanamsha) {
+  if (typeof pref.ayanamsha === 'string') setAyanamsha({ id: pref.ayanamsha, offset: 0, sign: 1, deg: 0, min: 0, sec: 0 });
+  else setAyanamsha(pref.ayanamsha);
+}
             if (pref.chartStyle) setChartStyle(pref.chartStyle);
             if (pref.ndsWeights && pref.ndsWeights.version === 4) setNdsWeights(pref.ndsWeights);
           }
@@ -299,7 +303,15 @@ export default function Home() {
         }
         
         const savedAyanamsha = localStorage.getItem('ayanamshaPref');
-        if (savedAyanamsha) setAyanamsha(savedAyanamsha as 'Raman' | 'Lahiri');
+        if (savedAyanamsha) {
+          try {
+            const parsed = JSON.parse(savedAyanamsha);
+            if (typeof parsed === 'string') setAyanamsha({ id: parsed, offset: 0, sign: 1, deg: 0, min: 0, sec: 0 });
+            else setAyanamsha(parsed);
+          } catch {
+            setAyanamsha({ id: savedAyanamsha, offset: 0, sign: 1, deg: 0, min: 0, sec: 0 });
+          }
+        }
         const savedChartStyle = localStorage.getItem('chartStylePref');
         if (savedChartStyle) setChartStyle(savedChartStyle as 'North' | 'South');
         
@@ -325,6 +337,22 @@ export default function Home() {
 
     return () => unsubscribeAuth();
   }, []);
+
+  
+  useEffect(() => {
+    if (isSettingsOpen && formRef.current) {
+      const formData = new FormData(formRef.current);
+      const dateStr = formData.get('date') as string;
+      const timeStr = formData.get('time') as string;
+      const tzOffset = parseFloat(formData.get('tzOffset') as string || '0');
+      const ianaTz = formData.get('ianaTz') as string;
+      if (dateStr && timeStr) {
+        fetchAyanamshaValues(dateStr, timeStr, tzOffset, ianaTz).then(vals => {
+          setAyanamshaValues(vals);
+        });
+      }
+    }
+  }, [isSettingsOpen]);
 
   const handleLogin = async () => {
     try {
@@ -489,20 +517,27 @@ export default function Home() {
     }, 1500); // Wait for components to mount and render
   };
 
-  const toggleAyanamsha = async () => {
-    const newVal = ayanamsha === 'Raman' ? 'Lahiri' : 'Raman';
+
+  const updateAyanamshaSetting = async (updates: any) => {
+    const newVal = { ...ayanamsha, ...updates };
+    // Recalculate offset based on deg, min, sec
+    if (updates.deg !== undefined || updates.min !== undefined || updates.sec !== undefined || updates.sign !== undefined) {
+      const d = newVal.deg || 0;
+      const m = newVal.min || 0;
+      const s = newVal.sec || 0;
+      newVal.offset = newVal.sign * (d + m / 60 + s / 3600);
+    }
     setAyanamsha(newVal);
     if (user) {
       try {
         const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences');
         await setDoc(settingsRef, { ayanamsha: newVal }, { merge: true });
-      } catch (err) {
-        console.error("Failed to sync ayanamsha setting:", err);
-      }
+      } catch (err) {}
     } else {
-      localStorage.setItem('ayanamshaPref', newVal);
+      localStorage.setItem('ayanamshaPref', JSON.stringify(newVal));
     }
   };
+
 
   const toggleChartStyle = async () => {
     const newVal = chartStyle === 'North' ? 'South' : 'North';
@@ -636,12 +671,56 @@ export default function Home() {
 
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', fontWeight: 600 }}>Ayanamsha</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card-bg)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: ayanamsha === 'Raman' ? 600 : 400, color: ayanamsha === 'Raman' ? 'var(--primary)' : 'var(--text-muted)' }}>Raman</span>
-                    <div onClick={toggleAyanamsha} style={{ width: '40px', height: '22px', background: ayanamsha === 'Raman' ? 'var(--primary)' : '#8b5cf6', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease' }}>
-                      <div style={{ position: 'absolute', top: '2px', left: ayanamsha === 'Raman' ? '2px' : '20px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', transition: 'left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                  <div style={{ background: 'var(--card-bg)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <select 
+                      value={ayanamsha.id} 
+                      onChange={(e) => updateAyanamshaSetting({ id: e.target.value })}
+                      style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: '0.8rem' }}
+                    >
+                      {[
+                        { id: 'Raman', name: 'Raman' },
+                        { id: 'TrueCitra', name: 'True Lahiri/Chitrapaksha' },
+                        { id: 'Lahiri', name: 'Traditional Lahiri' },
+                        { id: 'Pushya', name: 'Pushya-paksha ayanamsa' },
+                        { id: 'KP', name: 'Krishnamoorthy (KP)' },
+                        { id: 'SuryaSiddhanta', name: 'Sri Surya Siddhanta' },
+                        { id: 'UshaShashi', name: 'Usha-Shashi' },
+                        { id: 'Yukteshwar', name: 'Yukteshwar' },
+                        { id: 'JNBhasin', name: 'JN Bhasin' },
+                        { id: 'Fagan', name: 'Fagan' },
+                        { id: 'Deluce', name: 'Deluce' },
+                        { id: 'DjwhalKhul', name: 'Djwhal Khul' },
+                        { id: 'Aldebaran15', name: 'Aldebaran at 15Ta0' },
+                        { id: 'GalCenter0', name: 'Galaxy center at 0Sg0' },
+                        { id: 'Hipparchos', name: 'Hipparchos' },
+                        { id: 'Sassanian', name: 'Sassanian' },
+                        { id: 'Tropical', name: 'Tropical (sayana)' }
+                      ].map(opt => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.name} {ayanamshaValues[opt.id] ? `(${ayanamshaValues[opt.id]})` : ''}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                      <select 
+                        value={ayanamsha.sign} 
+                        onChange={(e) => updateAyanamshaSetting({ sign: parseInt(e.target.value) })}
+                        style={{ padding: '0.2rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: '0.75rem' }}
+                      >
+                        <option value={1}>Add</option>
+                        <option value={-1}>Subtract</option>
+                      </select>
+                      
+                      <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                        <input type="number" min="0" max="360" value={ayanamsha.deg} onChange={(e) => updateAyanamshaSetting({ deg: parseInt(e.target.value) || 0 })} style={{ width: '40px', padding: '0.2rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: '0.75rem', textAlign: 'center' }} title="Deg" />
+                        <span style={{ fontSize: '0.75rem' }}>°</span>
+                        <input type="number" min="0" max="59" value={ayanamsha.min} onChange={(e) => updateAyanamshaSetting({ min: parseInt(e.target.value) || 0 })} style={{ width: '35px', padding: '0.2rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: '0.75rem', textAlign: 'center' }} title="Min" />
+                        <span style={{ fontSize: '0.75rem' }}>'</span>
+                        <input type="number" min="0" max="59" value={ayanamsha.sec} onChange={(e) => updateAyanamshaSetting({ sec: parseInt(e.target.value) || 0 })} style={{ width: '35px', padding: '0.2rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: '0.75rem', textAlign: 'center' }} title="Sec" />
+                        <span style={{ fontSize: '0.75rem' }}>"</span>
+                      </div>
                     </div>
-                    <span style={{ fontSize: '0.8rem', fontWeight: ayanamsha === 'Lahiri' ? 600 : 400, color: ayanamsha === 'Lahiri' ? '#8b5cf6' : 'var(--text-muted)' }}>Lahiri</span>
                   </div>
                 </div>
 
@@ -715,7 +794,7 @@ export default function Home() {
           <input type="hidden" name="lon" value={formLocation.lon} />
           <input type="hidden" name="ianaTz" value={formLocation.ianaTz} />
           <input type="hidden" name="locationLabel" value={formLocation.label} />
-          <input type="hidden" name="ayanamsha" value={ayanamsha} />
+          <input type="hidden" name="ayanamsha" value={JSON.stringify(ayanamsha)} />
           <LocationAutocomplete 
             onSelect={(lat, lon, ianaTz, label) => setFormLocation({ lat, lon, ianaTz, label })} 
             defaultLabel={formLocation.label}
@@ -1076,7 +1155,7 @@ export default function Home() {
               {(activeTab === 'Panchang' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>
                   {isPrinting && <h2 className="print-only-heading">Panchang</h2>}
-                  <PanchangTab data={data} lat={formLocation.lat} lon={formLocation.lon} ayanamsha={ayanamsha} />
+                  <PanchangTab data={data} lat={formLocation.lat} lon={formLocation.lon} ayanamsha={JSON.stringify(ayanamsha)} />
                 </div>
               )}
               
@@ -1096,7 +1175,7 @@ export default function Home() {
               )}
               <div style={{ display: (activeTab === 'Transit' || isPrinting) ? 'block' : 'none' }} className={isPrinting ? 'print-section' : ''}>
                 {isPrinting && <h2 className="print-only-heading">Transit</h2>}
-                <TransitTab mainData={data} ayanamsha={ayanamsha} weights={ndsWeights} showTransitVedha={showTransitVedha} showTransitLatta={showTransitLatta} chartStyle={chartStyle} isPremium={isPremium} />
+                <TransitTab mainData={data} ayanamsha={JSON.stringify(ayanamsha)} weights={ndsWeights} showTransitVedha={showTransitVedha} showTransitLatta={showTransitLatta} chartStyle={chartStyle} isPremium={isPremium} />
               </div>
               {(activeTab === 'Awasthas' || isPrinting) && (
                 <div className={isPrinting ? 'print-section' : ''}>
@@ -1131,27 +1210,37 @@ export default function Home() {
                             It is compute-intensive and may take a few seconds.
                           </p>
                         </div>
-                        <button 
-                          onClick={() => handleGenerateTaraNirnay(ndsWeights)}
-                          className="submit-btn"
-                          style={{ 
-                            padding: '0.75rem 2rem', 
-                            borderRadius: '12px', 
-                            background: 'var(--primary)', 
-                            color: '#fff', 
-                            border: 'none', 
-                            cursor: 'pointer', 
-                            fontSize: '1rem', 
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            boxShadow: '0 4px 12px rgba(201, 168, 106, 0.3)',
-                            transition: 'all 0.3s ease'
-                          }}
-                        >
-                          <TrendingUp size={18} /> Generate Tara Nirnay
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <button 
+                            onClick={() => handleGenerateTaraNirnay(ndsWeights)}
+                            className="submit-btn"
+                            style={{ 
+                              padding: '0.75rem 2rem', 
+                              borderRadius: '12px', 
+                              background: 'var(--primary)', 
+                              color: '#fff', 
+                              border: 'none', 
+                              cursor: 'pointer', 
+                              fontSize: '1rem', 
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              boxShadow: '0 4px 12px rgba(201, 168, 106, 0.3)',
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            <TrendingUp size={18} /> Generate Tara Nirnay
+                          </button>
+                          <TaraNirnaySettings 
+                            weights={ndsWeights} 
+                            onSave={handleSaveNdsWeights}
+                            savedProfiles={savedTuningSettings}
+                            onSaveProfile={saveTuningSetting}
+                            onDeleteProfile={deleteTuningSetting}
+                            mainData={data}
+                          />
+                        </div>
                       </div>
                     )}
                     {taraNirnayLoading && (

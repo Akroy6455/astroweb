@@ -1,4 +1,5 @@
 import sweph from 'sweph';
+import { setAyanamshaMode } from './astrology';
 
 const PLANET_IDS: Record<string, number> = {
   Sun: sweph.constants.SE_SUN,
@@ -16,11 +17,7 @@ function norm(a: number) { return ((a % 360) + 360) % 360; }
 
 function getPlanetLon(jd: number, planetName: string, offsetDeg: number, ayanamsha: string): { lon: number, speed: number } {
   const flag = sweph.constants.SEFLG_SIDEREAL | sweph.constants.SEFLG_SPEED;
-  if (ayanamsha === 'Lahiri') {
-    sweph.set_sid_mode(sweph.constants.SE_SIDM_LAHIRI, 0, 0);
-  } else {
-    sweph.set_sid_mode(sweph.constants.SE_SIDM_RAMAN, 0, 0);
-  }
+  setAyanamshaMode(ayanamsha, jd);
 
   let id = PLANET_IDS[planetName];
   if (id === undefined) throw new Error("Invalid planet name");

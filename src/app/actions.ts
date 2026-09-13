@@ -142,3 +142,54 @@ export async function getPanchangClockDataAction(
     throw new Error("Failed to generate panchang clock data");
   }
 }
+
+
+export async function fetchAyanamshaValues(dateStr: string, timeStr: string, tzOffset: number, ianaTz: string) {
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hour, minute, second = 0] = timeStr.split(':').map(Number);
+    let offsetHours = tzOffset;
+    if (ianaTz) {
+      const { DateTime } = await import('luxon');
+      const dt = DateTime.fromObject({ year, month, day, hour, minute, second }, { zone: ianaTz });
+      offsetHours = dt.offset / 60;
+    }
+    let utDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+    utDate.setMinutes(utDate.getMinutes() - offsetHours * 60);
+    const jd = sweph.julday(utDate.getUTCFullYear(), utDate.getUTCMonth() + 1, utDate.getUTCDate(), utDate.getUTCHours() + utDate.getUTCMinutes() / 60 + utDate.getUTCSeconds() / 3600, sweph.constants.SE_GREG_CAL);
+    
+    const options = [
+      { id: 'TrueCitra', swephId: sweph.constants.SE_SIDM_TRUE_CITRA },
+      { id: 'Lahiri', swephId: sweph.constants.SE_SIDM_LAHIRI },
+      { id: 'Pushya', swephId: sweph.constants.SE_SIDM_TRUE_PUSHYA },
+      { id: 'Raman', swephId: sweph.constants.SE_SIDM_RAMAN },
+      { id: 'KP', swephId: sweph.constants.SE_SIDM_KRISHNAMURTI },
+      { id: 'SuryaSiddhanta', swephId: sweph.constants.SE_SIDM_SURYASIDDHANTA },
+      { id: 'UshaShashi', swephId: sweph.constants.SE_SIDM_USHASHASHI },
+      { id: 'Yukteshwar', swephId: sweph.constants.SE_SIDM_YUKTESHWAR },
+      { id: 'JNBhasin', swephId: sweph.constants.SE_SIDM_JN_BHASIN },
+      { id: 'Fagan', swephId: sweph.constants.SE_SIDM_FAGAN_BRADLEY },
+      { id: 'Deluce', swephId: sweph.constants.SE_SIDM_DELUCE },
+      { id: 'DjwhalKhul', swephId: sweph.constants.SE_SIDM_DJWHAL_KHUL },
+      { id: 'Aldebaran15', swephId: sweph.constants.SE_SIDM_ALDEBARAN_15TAU },
+      { id: 'GalCenter0', swephId: sweph.constants.SE_SIDM_GALCENT_0SAG },
+      { id: 'Hipparchos', swephId: sweph.constants.SE_SIDM_HIPPARCHOS },
+      { id: 'Sassanian', swephId: sweph.constants.SE_SIDM_SASSANIAN }
+    ];
+    
+    const vals: Record<string, string> = {};
+    for (const opt of options) {
+       sweph.set_sid_mode(opt.swephId, 0, 0);
+       const val = sweph.get_ayanamsa_ut(jd);
+       const deg = Math.floor(val);
+       const min = Math.floor((val - deg) * 60);
+       const sec = Math.floor(((val - deg) * 60 - min) * 60);
+       vals[opt.id] = `${deg}° ${String(min).padStart(2, '0')}' ${String(sec).padStart(2, '0')}"`;
+    }
+    vals['Tropical'] = `0° 00' 00"`;
+    return vals;
+  } catch (e) {
+    console.error("Error fetching ayanamsha values:", e);
+    return {};
+  }
+}

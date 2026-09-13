@@ -1,4 +1,5 @@
 import sweph from 'sweph';
+import { setAyanamshaMode } from './astrology';
 
 const NAKSHATRAS_27 = [
   "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra",
@@ -23,11 +24,9 @@ export async function generatePanchangClockData(
   sweph.set_ephe_path('./public/ephe');
   
   let flag = sweph.constants.SEFLG_SWIEPH | sweph.constants.SEFLG_SIDEREAL;
-  if (ayanamsha === 'Lahiri') {
-    sweph.set_sid_mode(sweph.constants.SE_SIDM_LAHIRI, 0, 0);
-  } else {
-    sweph.set_sid_mode(sweph.constants.SE_SIDM_RAMAN, 0, 0);
-  }
+    const sd = new Date(startTimestamp);
+  const startJd = sweph.julday(sd.getUTCFullYear(), sd.getUTCMonth() + 1, sd.getUTCDate(), sd.getUTCHours() + sd.getUTCMinutes()/60.0, sweph.constants.SE_GREG_CAL);
+  setAyanamshaMode(ayanamsha, startJd);
 
   const results = [];
 

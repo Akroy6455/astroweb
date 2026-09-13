@@ -61,6 +61,8 @@ export interface NDSWeights {
   version?: number;
   timingOptions?: TimingOptions;
   customQuestions?: CustomQuestion[];
+  dashaNavtaraBasePoint?: 'Moon' | 'Sun' | 'Lagna' | 'Kshema' | 'Utpanna' | 'Aadhana' | 'Mars' | 'Mercury' | 'Jupiter' | 'Venus' | 'Saturn' | 'Rahu' | 'Ketu';
+  lordshipBaseAscendant?: 'Lagna' | 'Moon' | 'Sun' | 'Mars' | 'Mercury' | 'Jupiter' | 'Venus' | 'Saturn' | 'Rahu' | 'Ketu';
   // Module 1: Lordship
   lordHouse1: number;
   lordHouse2: number;
@@ -187,6 +189,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   advancedKendraDoshaPoints: -80,
   advancedKendraYogaPoints: 80,
   version: 4,
+  dashaNavtaraBasePoint: 'Moon',
+  lordshipBaseAscendant: 'Lagna',
   timingOptions: {
     job: {
       enabled: true,

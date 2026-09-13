@@ -283,15 +283,62 @@ function getDivisionalSign(signIndex: number, degInSign: number, division: numbe
   }
 }
 
+
+export function setAyanamshaMode(ayanamshaSettingStr: string | any, jd: number) {
+   let ayanId = 'Raman';
+   let offset = 0;
+   try {
+     const parsed = typeof ayanamshaSettingStr === 'string' ? JSON.parse(ayanamshaSettingStr) : ayanamshaSettingStr;
+     if (parsed && typeof parsed === 'object') {
+       ayanId = parsed.id || 'Raman';
+       offset = parsed.offset || 0;
+     } else {
+       ayanId = ayanamshaSettingStr;
+     }
+   } catch {
+     ayanId = ayanamshaSettingStr; 
+   }
+   
+   if (ayanId === 'Tropical') {
+     sweph.set_sid_mode(sweph.constants.SE_SIDM_USER, jd, 0);
+     return;
+   }
+   
+   let mode: number = sweph.constants.SE_SIDM_RAMAN;
+   switch (ayanId) {
+      case 'TrueCitra': mode = sweph.constants.SE_SIDM_TRUE_CITRA; break;
+      case 'Lahiri': mode = sweph.constants.SE_SIDM_LAHIRI; break;
+      case 'Pushya': mode = sweph.constants.SE_SIDM_TRUE_PUSHYA; break;
+      case 'KP': mode = sweph.constants.SE_SIDM_KRISHNAMURTI; break;
+      case 'SuryaSiddhanta': mode = sweph.constants.SE_SIDM_SURYASIDDHANTA; break;
+      case 'UshaShashi': mode = sweph.constants.SE_SIDM_USHASHASHI; break;
+      case 'Yukteshwar': mode = sweph.constants.SE_SIDM_YUKTESHWAR; break;
+      case 'JNBhasin': mode = sweph.constants.SE_SIDM_JN_BHASIN; break;
+      case 'Fagan': mode = sweph.constants.SE_SIDM_FAGAN_BRADLEY; break;
+      case 'Deluce': mode = sweph.constants.SE_SIDM_DELUCE; break;
+      case 'DjwhalKhul': mode = sweph.constants.SE_SIDM_DJWHAL_KHUL; break;
+      case 'Aldebaran15': mode = sweph.constants.SE_SIDM_ALDEBARAN_15TAU; break;
+      case 'GalCenter0': mode = sweph.constants.SE_SIDM_GALCENT_0SAG; break;
+      case 'Hipparchos': mode = sweph.constants.SE_SIDM_HIPPARCHOS; break;
+      case 'Sassanian': mode = sweph.constants.SE_SIDM_SASSANIAN; break;
+      case 'Raman':
+      default:
+        mode = sweph.constants.SE_SIDM_RAMAN;
+        break;
+   }
+   
+   sweph.set_sid_mode(mode, 0, 0);
+   if (offset !== 0) {
+     const baseAyan = sweph.get_ayanamsa_ut(jd);
+     sweph.set_sid_mode(sweph.constants.SE_SIDM_USER, jd, baseAyan + offset);
+   }
+}
+
 export function calculateChart(year: number, month: number, day: number, hour: number, lat: number, lon: number, localDayOfWeek: number = 0, ayanamsha: string = 'Raman') {
-  if (ayanamsha === 'Lahiri') {
-    sweph.set_sid_mode(sweph.constants.SE_SIDM_LAHIRI, 0, 0);
-  } else {
-    sweph.set_sid_mode(sweph.constants.SE_SIDM_RAMAN, 0, 0);
-  }
+  const jd = sweph.julday(year, month, day, hour, sweph.constants.SE_GREG_CAL);
+  setAyanamshaMode(ayanamsha, jd);
 
   // hour should be UT hour
-  const jd = sweph.julday(year, month, day, hour, sweph.constants.SE_GREG_CAL);
   
   const flag = sweph.constants.SEFLG_SIDEREAL | sweph.constants.SEFLG_SPEED;
 
@@ -646,14 +693,67 @@ export function calculateChart(year: number, month: number, day: number, hour: n
  * This is expensive and should only be called when the user explicitly requests it.
  */
 export function calculateTaraNirnayData(chartData: any, customWeights?: any) {
-  const { dasha, yogaState, positions, specialLagnas, awasthas, ashtakavarga, panchang, lagna } = chartData;
+  const { yogaState, positions, specialLagnas, awasthas, ashtakavarga, panchang, lagna, birthDate } = chartData;
+  let dasha = chartData.dasha;
+  
   const alSignIndex = specialLagnas?.arudhaLagna?.rasi?.index ?? 0;
 
   const weights = customWeights || DEFAULT_NDS_WEIGHTS;
 
+  // Option 1: Base for Dasha and Navtara
+  let baseNakIndex = panchang?.nakshatra?.index ?? 0;
+  let dashaBasePoint = weights.dashaNavtaraBasePoint || 'Moon';
+  let moonLongitude = positions.find((p: any) => p.name === 'Moon')?.longitude || 0;
+  
+  if (dashaBasePoint !== 'Moon' && birthDate && dashaBasePoint) {
+      let baseLongitude = moonLongitude;
+      if (['Kshema', 'Utpanna', 'Aadhana'].includes(dashaBasePoint)) {
+          const shift = dashaBasePoint === 'Kshema' ? 3 : dashaBasePoint === 'Utpanna' ? 4 : 7;
+          baseNakIndex = (baseNakIndex + shift) % 27;
+          baseLongitude = (moonLongitude + shift * (360 / 27)) % 360;
+      } else if (dashaBasePoint === 'Lagna') {
+          baseLongitude = lagna.longitude;
+          baseNakIndex = lagna.nakshatra.index;
+      } else {
+          const p = positions.find((p: any) => p.name === dashaBasePoint);
+          if (p) {
+              baseLongitude = p.longitude;
+              baseNakIndex = p.nakshatra.index;
+          }
+      }
+      const dateObj = new Date(birthDate);
+      const { calculateVimshottariDasha } = require('./dasha');
+      // re-calculate dasha!
+      // calculateVimshottariDasha requires (moonLongitude, birthDate, positions, houses)
+      dasha = calculateVimshottariDasha(baseLongitude, dateObj, positions, chartData.houses);
+  }
+
+  // Option 2: Ascendant for Lordship/Placements
+  let localYogaState = yogaState;
+  let lordshipBaseAscendant = weights.lordshipBaseAscendant || 'Lagna';
+  if (lordshipBaseAscendant !== 'Lagna') {
+      let basePlanet = null;
+      if (lordshipBaseAscendant === 'Moon') basePlanet = positions.find((p: any) => p.name === 'Moon');
+      else if (lordshipBaseAscendant === 'Sun') basePlanet = positions.find((p: any) => p.name === 'Sun');
+      else basePlanet = positions.find((p: any) => p.name === lordshipBaseAscendant);
+      
+      if (basePlanet) {
+          const newAscSignIndex = basePlanet.rasi.index;
+          const newHouses: Record<number, any> = {};
+          const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+          for (let i = 1; i <= 12; i++) {
+              const signIndex = (newAscSignIndex + i - 1) % 12;
+              const targetSign = signs[signIndex];
+              const origHouseInfo = Object.values(yogaState.houses).find((h: any) => h.sign === targetSign) as any;
+              newHouses[i] = { ...origHouseInfo, house: i };
+          }
+          localYogaState = { ...yogaState, houses: newHouses };
+      }
+  }
+
   let dashaTimeSeries: any[] = [];
   try {
-    dashaTimeSeries = generateDashaTimeSeries(dasha, yogaState, positions, alSignIndex, awasthas, weights);
+    dashaTimeSeries = generateDashaTimeSeries(dasha, localYogaState, positions, alSignIndex, awasthas, weights);
   } catch (e) {
     console.warn('NDS time series generation failed:', e);
   }
@@ -661,7 +761,7 @@ export function calculateTaraNirnayData(chartData: any, customWeights?: any) {
   let transitTimeSeries: any[] = [];
   try {
     if (dashaTimeSeries.length > 0 && ashtakavarga?.bav) {
-      transitTimeSeries = generateMonthlyTransitTimeSeries(dashaTimeSeries, ashtakavarga, panchang, positions, lagna);
+      transitTimeSeries = generateMonthlyTransitTimeSeries(dashaTimeSeries, ashtakavarga, panchang, positions, lagna, baseNakIndex);
     }
   } catch (e) {
     console.warn('Transit time series generation failed:', e);
@@ -675,7 +775,8 @@ export function generateMonthlyTransitTimeSeries(
   ashtakavarga: any,
   panchang?: any,
   positions?: any[],
-  lagna?: any
+  lagna?: any,
+  baseNakIndex: number = 0
 ) {
   if (!dashaTimeSeries || dashaTimeSeries.length === 0 || !ashtakavarga?.bav) {
     return [];
@@ -719,7 +820,7 @@ export function generateMonthlyTransitTimeSeries(
   };
 
   const navtaraWeights = [1.0, 1.3, 0.8, 1.2, 0.8, 1.3, 0.7, 1.2, 1.4];
-  const moonNakIndex = panchang?.nakshatra?.index ?? 0;
+  const moonNakIndex = baseNakIndex;
 
   while (currentDateTs <= endDate) {
     const dDate = new Date(currentDateTs);
