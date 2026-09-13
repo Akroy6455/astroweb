@@ -105,6 +105,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
     const [sbcEnabledPlanets, setSbcEnabledPlanets] = useState<Record<string, boolean>>({
       Sun: true, Moon: true, Mars: true, Mercury: true, Jupiter: true, Venus: true, Saturn: true, Rahu: true, Ketu: true
     });
+  const [transitChartType, setTransitChartType] = useState('D1');
   const [subTab, setSubTab] = useState<'Overview' | 'SBC' | 'Sahamas' | 'Finder' | 'YogResult' | 'TaraNDF' | 'TaraNDFNatal' | 'AuspiciousTime'>('Overview');
   const [selectedNdfPlanet, setSelectedNdfPlanet] = useState('Sun');
 
@@ -1026,21 +1027,43 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
       {subTab === 'Overview' && transitData && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
           <div style={{ background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%', maxWidth: '600px' }}>
-             <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: 'var(--primary)' }}>Transit D-1 Chart</h3>
+             <h3 style={{ textAlign: 'center', marginBottom: '0.5rem', color: 'var(--primary)' }}>Transit Chart</h3>
+             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                <select value={transitChartType} onChange={e => setTransitChartType(e.target.value)} style={{ padding: '0.4rem', borderRadius: '6px', background: 'var(--bg)', color: 'var(--foreground)', border: '1px solid var(--border)', outline: 'none' }}>
+                    <option value="D1">D1 Chart</option>
+                    <option value="D2">D2 Chart</option>
+                    <option value="D3">D3 Chart</option>
+                    <option value="D4">D4 Chart</option>
+                    <option value="D7">D7 Chart</option>
+                    <option value="D9">D9 Chart</option>
+                    <option value="D10">D10 Chart</option>
+                    <option value="D12">D12 Chart</option>
+                    <option value="D16">D16 Chart</option>
+                    <option value="D20">D20 Chart</option>
+                    <option value="D24">D24 Chart</option>
+                    <option value="D27">D27 Chart</option>
+                    <option value="D30">D30 Chart</option>
+                    <option value="D40">D40 Chart</option>
+                    <option value="D45">D45 Chart</option>
+                    <option value="D60">D60 Chart</option>
+                </select>
+             </div>
              {(() => {
                 let arrows: Arrow[] = [];
                 if (showTransitVedha) arrows = [...arrows, ...calculateVedha(transitData.positions, Math.floor((mainData.positions.find((p: any) => p.name === 'Moon')?.longitude || mainData.lagna.longitude) / 30))];
                 if (showTransitLatta) arrows = [...arrows, ...calculateLatta(transitData.positions)];
                 
-                const housesWithSav = transitData.houses.map((h: any) => {
+                const targetChart = transitChartType === 'D1' ? transitData : (transitData.divisionalCharts?.[transitChartType] || transitData);
+
+                const housesWithSav = targetChart.houses.map((h: any) => {
                   const signIndex = h.signIndex;
-                  const natalSav = mainData?.ashtakavarga?.sav337?.[signIndex] ?? '-';
-                  const transitSav = transitData?.ashtakavarga?.sav337?.[signIndex] ?? '-';
+                  const natalSav = transitChartType === 'D1' ? (mainData?.ashtakavarga?.sav337?.[signIndex] ?? '-') : '-';
+                  const transitSav = transitChartType === 'D1' ? (transitData?.ashtakavarga?.sav337?.[signIndex] ?? '-') : '-';
                   
-                  const savPlanets = [
+                  const savPlanets = transitChartType === 'D1' ? [
                     { id: `sav-n-${h.house}`, name: `Natal SAV: ${natalSav}`, short: `${natalSav}`, color: '#ef4444', retrograde: false },
                     { id: `sav-t-${h.house}`, name: `Transit SAV: ${transitSav}`, short: `${transitSav}`, color: '#3b82f6', retrograde: false }
-                  ];
+                  ] : [];
 
                   return {
                     ...h,
@@ -1049,8 +1072,8 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 });
 
                 return chartStyle === 'South' 
-                  ? <SouthIndianChart data={{ lagna: transitData.lagna, houses: housesWithSav }} arrows={arrows} />
-                  : <KundliChart data={{ lagna: transitData.lagna, houses: housesWithSav }} arrows={arrows} />;
+                  ? <SouthIndianChart data={{ lagna: targetChart.lagna, houses: housesWithSav }} arrows={arrows} />
+                  : <KundliChart data={{ lagna: targetChart.lagna, houses: housesWithSav }} arrows={arrows} />;
               })()}
           </div>
           <div style={{ overflowX: 'auto', background: 'var(--card-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%' }}>
