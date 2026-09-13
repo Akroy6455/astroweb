@@ -190,7 +190,7 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   advancedGulikaDispositorPoints: -100,
   advancedKendraDoshaPoints: -80,
   advancedKendraYogaPoints: 80,
-  advancedBadhakaPoints: -100,
+  advancedBadhakaPoints: -80,
   advancedBadhakaWithNodePoints: -80,
   version: 4,
   dashaNavtaraBasePoint: 'Moon',
