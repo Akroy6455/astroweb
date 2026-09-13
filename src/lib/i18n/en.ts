@@ -2,7 +2,7 @@ import { Translations } from './translations';
 
 export const en: Translations = {
   header: {
-    subtitle: "One of the most advanced algorithmic predictive astrology web applications",
+    subtitle: "Let's deep dive into Modern Vedic astrology.",
     birthDetails: "Birth Details",
     savedProfiles: "Saved Profiles"
   },
