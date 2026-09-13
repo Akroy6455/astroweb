@@ -39,6 +39,8 @@ const DESCRIPTIONS: Partial<Record<keyof NDSWeights, string>> = {
   advancedGulikaDispositorPoints: "Points added to the Dasha scores if the planet is the Dispositor of Gulika.",
   advancedKendraDoshaPoints: "Kendra Adhipati Dosha: Natural benefics (Jupiter, Venus, unafflicted Mercury, Waxing Moon) owning Kendras (1, 4, 7, 10) lose their beneficence. This point system is made using extracts from Bhavartha Ratnakara and Laghu Parashari.",
   advancedKendraYogaPoints: "Kendra Adhipati Yoga: Natural malefics (Saturn, Mars, Sun, Waning Moon) owning Kendras (1, 4, 7, 10) lose their maleficence and give benefic results. This point system is made using extracts from Bhavartha Ratnakara and Laghu Parashari.",
+  advancedBadhakaPoints: "Points added if the planet is the Lord of the Badhaka house for the Ascendant during its MD/AD.",
+  advancedBadhakaWithNodePoints: "Points added if the planet is the Lord of the Badhaka house OR Rahu/Ketu, and Rahu/Ketu is sitting in the Badhaka house.",
   
   exaltation: "Percentage modifier applied if the planet is Exalted or in Moolatrikona.",
   ownSign: "Percentage modifier applied if the planet is in its Own Sign.",

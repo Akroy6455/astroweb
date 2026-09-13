@@ -57,6 +57,8 @@ export interface NDSWeights {
   advancedGulikaDispositorPoints?: number;
   advancedKendraDoshaPoints?: number;
   advancedKendraYogaPoints?: number;
+  advancedBadhakaPoints?: number;
+  advancedBadhakaWithNodePoints?: number;
   rahuKetuMoonConjunct?: number;
   version?: number;
   timingOptions?: TimingOptions;
@@ -188,6 +190,8 @@ export const DEFAULT_NDS_WEIGHTS: NDSWeights = {
   advancedGulikaDispositorPoints: -100,
   advancedKendraDoshaPoints: -80,
   advancedKendraYogaPoints: 80,
+  advancedBadhakaPoints: -100,
+  advancedBadhakaWithNodePoints: -80,
   version: 4,
   dashaNavtaraBasePoint: 'Moon',
   lordshipBaseAscendant: 'Lagna',
@@ -1278,6 +1282,43 @@ export function getAdvancedModifiers(planet: Planet, positions: any[], w: NDSWei
   if (w.disabledParams?.advancedRules) return { score: 0, conditions: [] };
   let score = 0;
   const conditions: AppliedCondition[] = [];
+
+
+  // Advanced Badhaka Rule
+  if (yogaState && (dashaLevel === 'MD' || dashaLevel === 'AD')) {
+    const ascSign = yogaState.houses[1].sign;
+    const movable = ['Aries', 'Cancer', 'Libra', 'Capricorn'];
+    const fixed = ['Taurus', 'Leo', 'Scorpio', 'Aquarius'];
+    const dual = ['Gemini', 'Virgo', 'Sagittarius', 'Pisces'];
+    
+    let badhakaHouseNumber = 0 as any;
+    if (movable.includes(ascSign)) badhakaHouseNumber = 11;
+    else if (fixed.includes(ascSign)) badhakaHouseNumber = 9;
+    else if (dual.includes(ascSign)) badhakaHouseNumber = 7;
+
+    if (badhakaHouseNumber > 0 && w.advancedBadhakaPoints !== undefined && w.advancedBadhakaWithNodePoints !== undefined) {
+      const houseKey = badhakaHouseNumber as keyof typeof yogaState.houses;
+      const badhakaHouse = yogaState.houses[houseKey];
+      const badhakaLord = badhakaHouse.lord;
+      const occupants = badhakaHouse.occupants || [];
+      const hasNode = occupants.includes('Rahu') || occupants.includes('Ketu');
+
+      if (hasNode) {
+        if (planet === badhakaLord) {
+          score += w.advancedBadhakaWithNodePoints;
+          conditions.push({ key: 'advancedBadhakaWithNodePoints', name: 'Badhaka Lord (with Node in Badhaka)', value: w.advancedBadhakaWithNodePoints });
+        } else if ((planet === 'Rahu' || planet === 'Ketu') && occupants.includes(planet)) {
+          score += w.advancedBadhakaWithNodePoints;
+          conditions.push({ key: 'advancedBadhakaWithNodePoints', name: 'Node in Badhaka House', value: w.advancedBadhakaWithNodePoints });
+        }
+      } else {
+        if (planet === badhakaLord) {
+          score += w.advancedBadhakaPoints;
+          conditions.push({ key: 'advancedBadhakaPoints', name: 'Badhaka Lord', value: w.advancedBadhakaPoints });
+        }
+      }
+    }
+  }
 
   // Taradasha specific tuning
   if (dashaLevel && w.taradashaMatrix) {
