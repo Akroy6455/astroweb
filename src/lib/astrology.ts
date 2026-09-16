@@ -1191,7 +1191,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
            }
         }
 
-        score = bavPoints * mult;
+        score = score * mult;
         breakdown[p] = { bav: bavPoints, navtaraPts, mult, score, rasiIndex, nakIndex };
 
         totalScore += score;
@@ -1252,7 +1252,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
          }
       }
 
-      const lagnaScore = lagnaBavPoints * lagnaMult;
+      const lagnaScore = (lagnaBavPoints + lagnaNavtaraPts) * lagnaMult;
       breakdown['Lagna'] = { bav: lagnaBavPoints, navtaraPts: lagnaNavtaraPts, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
       
       totalScore += lagnaScore;
