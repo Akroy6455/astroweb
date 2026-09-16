@@ -127,11 +127,11 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausDuration, setAusDuration] = useState<number>(90);
   const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly' | 'Monthly'>('Hourly');
   const [selectedChartPoint, setSelectedChartPoint] = useState<any>(null);
-  const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(false);
+  const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(true);
   const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
   const [showNavtaraMoonSettings, setShowNavtaraMoonSettings] = useState(false);
 
-  const [moonNavtaraMatrixEnabled, setMoonNavtaraMatrixEnabled] = useState(false);
+  const [moonNavtaraMatrixEnabled, setMoonNavtaraMatrixEnabled] = useState(true);
   const [moonNavtaraMatrix, setMoonNavtaraMatrix] = useState<Record<string, number[]>>(() => {
     const init: any = {};
     ['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna'].forEach(p => init[p] = [1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
