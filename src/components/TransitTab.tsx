@@ -128,7 +128,7 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly' | 'Monthly'>('Hourly');
   const [selectedChartPoint, setSelectedChartPoint] = useState<any>(null);
   const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(true);
-  const [navtaraPointsEnabled, setNavtaraPointsEnabled] = useState(true);
+  const [navtaraPointsEnabled, setNavtaraPointsEnabled] = useState(false);
   const [navtaraPointsMatrix, setNavtaraPointsMatrix] = useState<number[]>([0, 1, 0, 1, 0, 1, 0, 1, 2]);
   const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
   const [showNavtaraMoonSettings, setShowNavtaraMoonSettings] = useState(false);
@@ -595,10 +595,10 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                 <div style={{ marginTop: '1rem', padding: '1.5rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)' }}>
                   
                   
-                    {/* Navtara Ashtakavarga Point System */}
+                    {/* Nakshtrashtakvarga Point System */}
                     <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <label style={{ fontWeight: 'bold' }}>Enable Navtara Point System (Added to BAV)</label>
+                        <label style={{ fontWeight: 'bold' }}>Enable Nakshtrashtakvarga (Added to BAV)</label>
                         <input 
                           type="checkbox" 
                           checked={navtaraPointsEnabled}
