@@ -128,6 +128,8 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
   const [ausZoom, setAusZoom] = useState<'Hourly' | 'Daily' | 'Weekly' | 'Monthly'>('Hourly');
   const [selectedChartPoint, setSelectedChartPoint] = useState<any>(null);
   const [navtaraMoonMultiplierEnabled, setNavtaraMoonMultiplierEnabled] = useState(true);
+  const [navtaraPointsEnabled, setNavtaraPointsEnabled] = useState(true);
+  const [navtaraPointsMatrix, setNavtaraPointsMatrix] = useState<number[]>([0, 1, 0, 1, 0, 1, 0, 1, 2]);
   const [navtaraMoonWeights, setNavtaraMoonWeights] = useState<number[]>([1, 1.8, 0.8, 1.4, 0.6, 1.6, 0.1, 1.8, 2.2]);
   const [showNavtaraMoonSettings, setShowNavtaraMoonSettings] = useState(false);
 
@@ -182,19 +184,19 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
     try {
       const startISO = new Date(ausStartDate).toISOString();
       const result = await getAuspiciousTimeData(startISO, parseFloat(tLat), parseFloat(tLon), mainData, { enabled: navtaraMoonMultiplierEnabled, weights: navtaraMoonWeights, taraEnabled: basicTaraEnabled }, {
-        moonMatrixEnabled: moonNavtaraMatrixEnabled,
-        moonMatrix: moonNavtaraMatrix,
-        moonMatrixPlanetsEnabled: moonMatrixPlanetsEnabled,
-        moonMatrixTaraEnabled: moonMatrixTaraEnabled,
-        ownMatrixEnabled: ownNavtaraMatrixEnabled,
-        ownMatrix: ownNavtaraMatrix,
-        ownMatrixPlanetsEnabled: ownMatrixPlanetsEnabled,
-        ownMatrixTaraEnabled: ownMatrixTaraEnabled,
-        lagnaMatrixEnabled: lagnaNavtaraMatrixEnabled,
-        lagnaMatrix: lagnaNavtaraMatrix,
-        lagnaMatrixPlanetsEnabled: lagnaMatrixPlanetsEnabled,
-        lagnaMatrixTaraEnabled: lagnaMatrixTaraEnabled
-      }, ausDuration);
+          moonMatrixEnabled: moonNavtaraMatrixEnabled,
+          moonMatrix: moonNavtaraMatrix,
+          moonMatrixPlanetsEnabled: moonMatrixPlanetsEnabled,
+          moonMatrixTaraEnabled: moonMatrixTaraEnabled,
+          ownMatrixEnabled: ownNavtaraMatrixEnabled,
+          ownMatrix: ownNavtaraMatrix,
+          ownMatrixPlanetsEnabled: ownMatrixPlanetsEnabled,
+          ownMatrixTaraEnabled: ownMatrixTaraEnabled,
+          lagnaMatrixEnabled: lagnaNavtaraMatrixEnabled,
+          lagnaMatrix: lagnaNavtaraMatrix,
+          lagnaMatrixPlanetsEnabled: lagnaMatrixPlanetsEnabled,
+          lagnaMatrixTaraEnabled: lagnaMatrixTaraEnabled
+        }, ausDuration, { enabled: navtaraPointsEnabled, matrix: navtaraPointsMatrix });
       
       const formatted = result.map((r: any) => ({
         ...r,
@@ -592,7 +594,46 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
               {showNavtaraMoonSettings && (
                 <div style={{ marginTop: '1rem', padding: '1.5rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)' }}>
                   
-                  {/* Basic Moon Settings */}
+                  
+                    {/* Navtara Ashtakavarga Point System */}
+                    <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <label style={{ fontWeight: 'bold' }}>Enable Navtara Point System (Added to BAV)</label>
+                        <input 
+                          type="checkbox" 
+                          checked={navtaraPointsEnabled}
+                          onChange={e => setNavtaraPointsEnabled(e.target.checked)}
+                          style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                        />
+                      </div>
+                      {navtaraPointsEnabled && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                          {['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyari', 'Sadhak', 'Naidhana', 'Mitra', 'Parama Mitra'].map((tara, idx) => (
+                            <div key={tara} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label style={{ fontSize: '0.9rem', fontWeight: 600 }}>{idx + 1}. {tara}</label>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 'bold' }}>+{navtaraPointsMatrix[idx]}</span>
+                              </div>
+                              <input 
+                                type="range" 
+                                min="0" 
+                                max="10" 
+                                step="1"
+                                value={navtaraPointsMatrix[idx]}
+                                onChange={e => {
+                                  const newM = [...navtaraPointsMatrix];
+                                  newM[idx] = parseInt(e.target.value);
+                                  setNavtaraPointsMatrix(newM);
+                                }}
+                                style={{ width: '100%', cursor: 'pointer' }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Basic Moon Settings */}
                   <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
                       <label style={{ fontWeight: 'bold' }}>Enable Basic Moon Navtara Multiplier</label>
@@ -984,12 +1025,13 @@ export default function TransitTab({ mainData, ayanamsha = 'Raman', weights, sho
                   </thead>
                   <tbody>
                     {selectedChartPoint.breakdown && Object.entries(selectedChartPoint.breakdown).map(([planet, details]: [string, any]) => (
-                      <tr key={planet}>
-                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 500 }}>{planet}</td>
-                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>{details.bav}</td>
-                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>x{details.mult.toFixed(2)}</td>
-                        <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'right', fontWeight: 600 }}>{details.score.toFixed(2)}</td>
-                      </tr>
+                                              <tr key={planet}>
+                          <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 500 }}>{planet}</td>
+                          <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>{details.bav}</td>
+                          <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>+{details.navtaraPts || 0}</td>
+                          <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>x{details.mult.toFixed(2)}</td>
+                          <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', textAlign: 'right', fontWeight: 600 }}>{details.score.toFixed(2)}</td>
+                        </tr>
                     ))}
                   </tbody>
                 </table>

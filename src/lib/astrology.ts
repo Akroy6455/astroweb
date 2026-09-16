@@ -1061,7 +1061,7 @@ const signLords: Record<string, string> = {
   return points;
 }
 
-export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any, durationDays?: number) {
+export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, lon: number, chartData: any, navtaraMoonSettings?: { enabled: boolean, weights: number[], taraEnabled?: boolean[] }, matrices?: any, durationDays?: number, navtaraPointsSettings?: { enabled: boolean, matrix: number[] }) {
   if (!chartData?.ashtakavarga?.bav) return [];
 
   const days = durationDays || 90;
@@ -1129,9 +1129,24 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
         const long = calc.data[0];
         const rasiIndex = Math.floor(long / 30);
         
-        let bavPoints = chartData.ashtakavarga.bav[p][rasiIndex] || 0;
-        let score = bavPoints;
+                let bavPoints = chartData.ashtakavarga.bav[p][rasiIndex] || 0;
         const nakIndex = Math.floor(long / (360 / 27));
+        
+        let navtaraPts = 0;
+        if (navtaraPointsSettings?.enabled) {
+           const natalPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+           for (const np of natalPlanets) {
+              const natalPos = chartData.positions.find((pos: any) => pos.name === np);
+              if (natalPos && natalPos.nakshatra) {
+                 const natalNakIndex = natalPos.nakshatra.index;
+                 const dist = (nakIndex - natalNakIndex + 27) % 27;
+                 const navatara = dist % 9;
+                 navtaraPts += navtaraPointsSettings.matrix[navatara];
+              }
+           }
+        }
+        
+        let score = bavPoints + navtaraPts;
 
         let mult = 1;
 
@@ -1177,7 +1192,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
         }
 
         score = bavPoints * mult;
-        breakdown[p] = { bav: bavPoints, mult, score, rasiIndex, nakIndex };
+        breakdown[p] = { bav: bavPoints, navtaraPts, mult, score, rasiIndex, nakIndex };
 
         totalScore += score;
       }
@@ -1188,9 +1203,23 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
       const ascLongitude = housePoints ? housePoints[0] : 0;
       const lagnaRasiIndex = Math.floor(ascLongitude / 30);
       const lagnaBavPoints = chartData.ashtakavarga.bav['Lagna'][lagnaRasiIndex] || 0;
-      const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
-      
-      let lagnaMult = 1;
+              const lagnaNakIndex = Math.floor(ascLongitude / (360 / 27));
+        
+        let lagnaNavtaraPts = 0;
+        if (navtaraPointsSettings?.enabled) {
+           const natalPlanets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+           for (const np of natalPlanets) {
+              const natalPos = chartData.positions.find((pos: any) => pos.name === np);
+              if (natalPos && natalPos.nakshatra) {
+                 const natalNakIndex = natalPos.nakshatra.index;
+                 const dist = (lagnaNakIndex - natalNakIndex + 27) % 27;
+                 const navatara = dist % 9;
+                 lagnaNavtaraPts += navtaraPointsSettings.matrix[navatara];
+              }
+           }
+        }
+        
+        let lagnaMult = 1;
       
       if (matrices?.moonMatrixEnabled && matrices.moonMatrix) {
          if (!matrices.moonMatrixPlanetsEnabled || matrices.moonMatrixPlanetsEnabled['Lagna']) {
@@ -1224,7 +1253,7 @@ export function generateAuspiciousTimeSeries(startDateISO: string, lat: number, 
       }
 
       const lagnaScore = lagnaBavPoints * lagnaMult;
-      breakdown['Lagna'] = { bav: lagnaBavPoints, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
+      breakdown['Lagna'] = { bav: lagnaBavPoints, navtaraPts: lagnaNavtaraPts, mult: lagnaMult, score: lagnaScore, rasiIndex: lagnaRasiIndex, nakIndex: lagnaNakIndex };
       
       totalScore += lagnaScore;
 
